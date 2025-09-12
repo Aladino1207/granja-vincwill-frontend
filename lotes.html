@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Granja Avícola VincWill - Lotes</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Granja Avícola VincWill</h1>
+    <nav>
+      <a href="index.html">Dashboard</a>
+      <a href="lotes.html">Lotes</a>
+      <a href="ventas.html">Ventas</a>
+      <a href="salud.html">Salud</a>
+      <a href="costos.html">Costos</a>
+      <a href="inventario.html">Inventario</a>
+      <a href="reportes.html">Reportes</a>
+      <a href="usuarios.html">Usuarios</a>
+      <a href="configuracion.html">Configuración</a>
+      <button onclick="logout()">Cerrar Sesión</button>
+    </nav>
+  </header>
+  <main>
+    <section id="lotesSection">
+      <h2>Gestión de Lotes</h2>
+      <div id="accessDenied" style="display: none;">
+        <h3>Acceso Denegado</h3>
+        <p>Solo los usuarios con rol de Administrador o Empleado pueden gestionar lotes.</p>
+      </div>
+      <form id="loteForm" style="display: none;" onsubmit="guardarLote(event)">
+        <label for="loteId">ID del Lote:</label>
+        <input type="text" id="loteId" required>
+        <label for="cantidad">Cantidad:</label>
+        <input type="number" id="cantidad" required>
+        <label for="pesoInicial">Peso Inicial (kg):</label>
+        <input type="number" step="0.01" id="pesoInicial" required>
+        <label for="fechaIngreso">Fecha de Ingreso:</label>
+        <input type="date" id="fechaIngreso" required>
+        <label for="estado">Estado:</label>
+        <select id="estado" required>
+          <option value="Activo">Activo</option>
+          <option value="Inactivo">Inactivo</option>
+        </select>
+        <button type="submit">Guardar</button>
+      </form>
+      <table id="loteTable" style="display: none;">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Cantidad</th>
+            <th>Peso Inicial</th>
+            <th>Fecha Ingreso</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="loteTableBody"></tbody>
+      </table>
+    </section>
+  </main>
+  <script src="app.js"></script>
+  <script src="lotes.js"></script>
+</body>
+</html>
