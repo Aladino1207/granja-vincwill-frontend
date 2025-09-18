@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Granja Avícola VincWill</title>
+    <link rel="stylesheet" href="Style.css">
+</head>
+<body>
+    <header>
+        <h1>Granja Avícola VincWill</h1>
+        <nav>
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="lotes.html">Parvadas</a></li>
+                <li><a href="inventarios.html">Inventarios</a></li>
+                <li><a href="ventas.html">Ventas</a></li>
+                <li><a href="salud.html">Control Sanitario</a></li>
+                <li><a href="costos.html">Costos de Producción</a></li>
+                <li><a href="reportes.html">Reportes</a></li>
+                <li><a href="seguimiento.html">Seguimiento</a></li>
+                <li><a href="usuarios.html">Usuarios</a></li>
+                <li><a href="configuracion.html">Configuración</a></li>
+                <li><a href="#" onclick="logout()">Cerrar Sesión</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section id="accessDenied" style="display:none;">
+            <h2>Acceso denegado. Solo los administradores pueden gestionar usuarios.</h2>
+        </section>
+        <section id="userSection">
+            <h2>Usuarios</h2>
+            <form id="userForm">
+                <label>Nombre: <input type="text" id="name" required></label>
+                <label>Email: <input type="email" id="email" required></label>
+                <label>Contraseña: <input type="password" id="password"></label>
+                <label>Rol:
+                    <select id="role">
+                        <option value="admin">Administrador</option>
+                        <option value="empleado">Empleado</option>
+                        <option value="viewer">Visualizador</option>
+                    </select>
+                </label>
+                <button type="submit">Agregar/Editar Usuario</button>
+            </form>
+            <table>
+                <thead>
+                    <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="userTable"></tbody>
+            </table>
+        </section>
+    </main>
+    <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="usuarios.js"></script>
+</body>
+</html>

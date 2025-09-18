@@ -1,4 +1,4 @@
-const API_URL = 'https://granja-vincwill-backend.onrender.com'; // Actualiza con la URL de Render
+const API_URL = 'https://granja-vincwill-backend.onrender.com'; // Asegúrate de que sea tu URL de Render
 
 async function login(e) {
   e.preventDefault();
@@ -23,7 +23,8 @@ async function login(e) {
       errorMessage.textContent = data.error || 'Error en login';
     }
   } catch (error) {
-    errorMessage.textContent = 'Error de conexión';
+    errorMessage.textContent = 'Error de conexión al servidor. Verifica que el backend esté activo.';
+    console.error('Login error:', error);
   }
 }
 
@@ -39,11 +40,17 @@ async function checkAccess() {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const path = window.location.pathname.split('/').pop();
 
+  // ¡CAMBIO CLAVE: No ejecutar checkAccess en login.html para evitar loop!
+  if (path === 'login.html') {
+    return; // Sal de la función si es login
+  }
+
   if (!token || !currentUser) {
     window.location.href = 'login.html';
     return;
   }
 
+  // Verificar token con el backend
   try {
     const res = await fetch(`${API_URL}/users`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -53,6 +60,7 @@ async function checkAccess() {
       return;
     }
   } catch (error) {
+    console.error('Token verification error:', error);
     logout();
     return;
   }
@@ -75,6 +83,7 @@ async function checkAccess() {
   }
 }
 
+// Funciones del dashboard (sin cambios)
 async function actualizarDashboard() {
   try {
     const [lotes, salud, costos, seguimiento, ventas] = await Promise.all([
@@ -166,9 +175,13 @@ function mostrarAlertasProduccion() {
     });
 }
 
+// ¡CAMBIO CLAVE: Solo ejecutar checkAccess si NO es login.html!
 document.addEventListener('DOMContentLoaded', () => {
-  checkAccess();
-  if (window.location.pathname.endsWith('index.html')) {
+  const path = window.location.pathname.split('/').pop();
+  if (path !== 'login.html') {
+    checkAccess();
+  }
+  if (path === 'index.html') {
     actualizarDashboard();
     mostrarGraficosDashboard();
     mostrarAlertasProduccion();

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Granja Avícola VincWill</title>
+    <link rel="stylesheet" href="Style.css">
+</head>
+<body>
+    <header>
+        <h1>Granja Avícola VincWill</h1>
+        <nav>
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="lotes.html">Parvadas</a></li>
+                <li><a href="inventarios.html">Inventarios</a></li>
+                <li><a href="ventas.html">Ventas</a></li>
+                <li><a href="salud.html">Control Sanitario</a></li>
+                <li><a href="costos.html">Costos de Producción</a></li>
+                <li><a href="reportes.html">Reportes</a></li>
+                <li><a href="seguimiento.html">Seguimiento</a></li>
+                <li><a href="usuarios.html">Usuarios</a></li>
+                <li><a href="configuracion.html">Configuración</a></li>
+                <li><a href="#" onclick="logout()">Cerrar Sesión</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section>
+            <h2>Configuración</h2>
+            <form id="configForm">
+                <label>Notificaciones:
+                    <select id="notificaciones">
+                        <option value="Activadas">Activadas</option>
+                        <option value="Desactivadas">Desactivadas</option>
+                    </select>
+                </label>
+                <label>Idioma:
+                    <select id="idioma">
+                        <option value="Español">Español</option>
+                        <option value="Inglés">Inglés</option>
+                    </select>
+                </label>
+                <label>Nombre de la Granja: <input type="text" id="nombreGranja"></label>
+                <label>Programa de Vacunación (semanas):</label>
+                <label>Gallinas: <input type="text" id="vacunasGallinas"></label>
+                <label>Pollos: <input type="text" id="vacunasPollos"></label>
+                <label>Pavos: <input type="text" id="vacunasPavos"></label>
+                <button type="submit">Guardar Configuración</button>
+            </form>
+        </section>
+    </main>
+    <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
+    <script src="configuracion.js"></script>
+</body>
+</html>

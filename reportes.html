@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Granja Avícola VincWill</title>
+    <link rel="stylesheet" href="Style.css">
+</head>
+<body>
+    <header>
+        <h1>Granja Avícola VincWill</h1>
+        <nav>
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="lotes.html">Parvadas</a></li>
+                <li><a href="inventarios.html">Inventarios</a></li>
+                <li><a href="ventas.html">Ventas</a></li>
+                <li><a href="salud.html">Control Sanitario</a></li>
+                <li><a href="costos.html">Costos de Producción</a></li>
+                <li><a href="reportes.html">Reportes</a></li>
+                <li><a href="seguimiento.html">Seguimiento</a></li>
+                <li><a href="usuarios.html">Usuarios</a></li>
+                <li><a href="configuracion.html">Configuración</a></li>
+                <li><a href="#" onclick="logout()">Cerrar Sesión</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section>
+            <h2>Generar Reporte</h2>
+            <form id="reporteForm">
+                <label>Tipo de Reporte:
+                    <select id="tipoReporte">
+                        <option value="produccion">Producción</option>
+                        <option value="costos">Costos</option>
+                        <option value="ventas">Ventas</option>
+                        <option value="sanitario">Sanitario</option>
+                        <option value="seguimiento">Seguimiento</option>
+                    </select>
+                </label>
+                <label>Lote (opcional): <select id="loteSelect"></select></label>
+                <label>Fecha Inicio: <input type="date" id="fechaInicio"></label>
+                <label>Fecha Fin: <input type="date" id="fechaFin"></label>
+                <button type="submit">Generar Reporte PDF</button>
+            </form>
+        </section>
+    </main>
+    <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.13/jspdf.plugin.autotable.min.js"></script>
+    <script src="reportes.js"></script>
+</body>
+</html>

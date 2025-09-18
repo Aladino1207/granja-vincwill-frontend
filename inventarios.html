@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventario de Insumos</title>
+    <link rel="stylesheet" href="Style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="lotes.html">Parvadas</a></li>
+                <li><a href="inventarios.html">Inventarios</a></li>
+                <li><a href="ventas.html">Ventas</a></li>
+                <li><a href="salud.html">Control Sanitario</a></li>
+                <li><a href="costos.html">Costos de Producción</a></li>
+                <li><a href="reportes.html">Reportes</a></li>
+                <li><a href="seguimiento.html">Seguimiento</a></li>
+                <li><a href="usuarios.html">Usuarios</a></li>
+                <li><a href="configuracion.html">Configuración</a></li>
+                <li><a href="#" onclick="logout()">Cerrar Sesión</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section>
+            <h2>Registrar Insumo</h2>
+            <form id="inventarioForm">
+                <label>Producto: <input type="text" id="producto" required></label>
+                <label>Categoría:
+                    <select id="categoria">
+                        <option value="Alimento">Alimento</option>
+                        <option value="Vacuna">Vacuna</option>
+                        <option value="Cama">Cama</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </label>
+                <label>Cantidad (kg/unidades): <input type="number" id="cantidad" min="1" required></label>
+                <label>Costo Unitario (USD): <input type="number" id="costo" min="0" step="0.01" required></label>
+                <label>Fecha de Ingreso: <input type="date" id="fecha" required></label>
+                <button type="submit">Agregar Insumo</button>
+            </form>
+        </section>
+        <section>
+            <h2>Inventario Actual</h2>
+            <table>
+                <thead>
+                    <tr><th>Producto</th><th>Categoría</th><th>Cantidad</th><th>Costo Unitario</th><th>Fecha</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="tablaInventario"></tbody>
+            </table>
+        </section>
+    </main>
+    <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
+    <script src="inventario.js"></script>
+</body>
+</html>

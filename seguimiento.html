@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Seguimiento Semanal por Lote</title>
+    <link rel="stylesheet" href="Style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="lotes.html">Parvadas</a></li>
+                <li><a href="inventarios.html">Inventarios</a></li>
+                <li><a href="ventas.html">Ventas</a></li>
+                <li><a href="salud.html">Control Sanitario</a></li>
+                <li><a href="costos.html">Costos de Producción</a></li>
+                <li><a href="reportes.html">Reportes</a></li>
+                <li><a href="seguimiento.html">Seguimiento</a></li>
+                <li><a href="usuarios.html">Usuarios</a></li>
+                <li><a href="configuracion.html">Configuración</a></li>
+                <li><a href="#" onclick="logout()">Cerrar Sesión</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section>
+            <h2>Registrar Seguimiento</h2>
+            <form id="seguimientoForm">
+                <label>Lote: <select id="loteSelect"></select></label>
+                <label>Semana #: <input type="number" id="semana" min="1" required></label>
+                <label>Peso Promedio (kg): <input type="number" id="peso" min="0" step="0.01" required></label>
+                <label>Consumo de Alimento (kg): <input type="number" id="consumo" min="0" step="0.01" required></label>
+                <label>Observaciones: <input type="text" id="observaciones"></label>
+                <button type="submit">Guardar Seguimiento</button>
+            </form>
+        </section>
+        <section>
+            <h2>Historial de Seguimiento</h2>
+            <table>
+                <thead>
+                    <tr><th>Lote</th><th>Semana</th><th>Peso</th><th>Consumo</th><th>Observaciones</th></tr>
+                </thead>
+                <tbody id="tablaSeguimiento"></tbody>
+            </table>
+        </section>
+    </main>
+    <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
+    <script src="seguimiento.js"></script>
+</body>
+</html>

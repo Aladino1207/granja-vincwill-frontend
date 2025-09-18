@@ -1,0 +1,52 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{noto}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{pdflscape}
+\usepackage{siunitx}
+
+\begin{document}
+
+% Defining title and header
+\begin{center}
+    \textbf{\Large Factura de Venta} \\
+    \vspace{0.5cm}
+    Granja Avícola VincWill \\
+    Dirección: Dirección de la Granja \\
+    Teléfono: (123) 456-7890 \\
+    Email: contacto@vincwill.com \\
+    \vspace{0.5cm}
+    Fecha: \today \\
+    Factura No: $INVOICE_ID$ \\
+\end{center}
+
+% Client Information
+\section*{Información del Cliente}
+\begin{tabular}{ll}
+    Nombre: & $CLIENT_NAME$ \\
+    Dirección: & $CLIENT_ADDRESS$ \\
+\end{tabular}
+
+% Sale Details
+\section*{Detalles de la Venta}
+\begin{longtable}{p{5cm} p{3cm} p{3cm} p{3cm}}
+    \toprule
+    \textbf{Producto/Parvada} & \textbf{Cantidad} & \textbf{Precio Unitario} & \textbf{Total} \\
+    \midrule
+    \endhead
+    $SALE_ITEMS$
+    \bottomrule
+    \textbf{Total General:} & & & \textbf{\$\ $TOTAL_AMOUNT$} \\
+\end{longtable}
+
+% Footer
+\begin{center}
+    \vspace{1cm}
+    Gracias por su compra \\
+    Granja Avícola VincWill
+\end{center}
+
+\end{document}

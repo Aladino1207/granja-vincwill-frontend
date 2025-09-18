@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Control Sanitario por Lote</title>
+    <link rel="stylesheet" href="Style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="lotes.html">Parvadas</a></li>
+                <li><a href="inventarios.html">Inventarios</a></li>
+                <li><a href="ventas.html">Ventas</a></li>
+                <li><a href="salud.html">Control Sanitario</a></li>
+                <li><a href="costos.html">Costos de Producción</a></li>
+                <li><a href="reportes.html">Reportes</a></li>
+                <li><a href="seguimiento.html">Seguimiento</a></li>
+                <li><a href="usuarios.html">Usuarios</a></li>
+                <li><a href="configuracion.html">Configuración</a></li>
+                <li><a href="#" onclick="logout()">Cerrar Sesión</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section>
+            <h2>Registrar Evento Sanitario</h2>
+            <form id="saludForm">
+                <label>Lote: <select id="loteSelect"></select></label>
+                <label>Tipo de Evento:
+                    <select id="eventoTipo">
+                        <option value="Vacuna">Vacuna</option>
+                        <option value="Tratamiento">Tratamiento</option>
+                        <option value="Mortalidad">Mortalidad</option>
+                    </select>
+                </label>
+                <label>Nombre del Evento: <input type="text" id="eventoNombre" required></label>
+                <label>Cantidad Afectada: <input type="number" id="cantidad" min="0" required></label>
+                <label>Fecha: <input type="date" id="fecha" required></label>
+                <button type="submit">Registrar Evento</button>
+            </form>
+        </section>
+        <section>
+            <h2>Historial Sanitario</h2>
+            <table>
+                <thead>
+                    <tr><th>Lote</th><th>Tipo</th><th>Evento</th><th>Cantidad</th><th>Fecha</th></tr>
+                </thead>
+                <tbody id="tablaSalud"></tbody>
+            </table>
+        </section>
+    </main>
+    <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
+    <script src="salud.js"></script>
+</body>
+</html>
