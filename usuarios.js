@@ -1,5 +1,3 @@
-const API_URL = 'https://granja-vincwill-backend.onrender.com';
-
 async function cargarUsuarios() {
   try {
     const token = localStorage.getItem('token');
@@ -53,7 +51,7 @@ async function guardarUsuario(e) {
       document.getElementById('userForm').reset();
       cargarUsuarios();
     } else {
-      alert('Error al guardar usuario');
+      alert('Error al guardar usuario: ' + (await res.json()).error);
     }
   } catch (error) {
     alert('Error de conexión');
