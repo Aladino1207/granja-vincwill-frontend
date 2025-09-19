@@ -16,6 +16,7 @@
       <a href="salud.html">Salud</a>
       <a href="costos.html">Costos</a>
       <a href="inventario.html">Inventario</a>
+      <a href="seguimiento.html">Seguimiento</a>
       <a href="reportes.html">Reportes</a>
       <a href="usuarios.html">Usuarios</a>
       <a href="configuracion.html">Configuración</a>
@@ -39,8 +40,16 @@
         <p>Rentabilidad: <span id="rentabilidad">$0</span></p>
       </div>
       <div>
-        <h3>Gráficos</h3>
-        <canvas id="produccionChart"></canvas>
+        <h3>Gráfico de Peso Promedio por Semana</h3>
+        <canvas id="produccionChart" width="400" height="200"></canvas>
+      </div>
+      <div>
+        <h3>Distribución de Costos por Categoría (Pastel)</h3>
+        <canvas id="costosPieChart" width="400" height="200"></canvas>
+      </div>
+      <div>
+        <h3>Ingresos vs Costos por Lote (Barras)</h3>
+        <canvas id="ingresosCostosBarChart" width="400" height="200"></canvas>
       </div>
       <div>
         <h3>Alertas de Producción</h3>

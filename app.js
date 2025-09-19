@@ -40,9 +40,9 @@ async function checkAccess() {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const path = window.location.pathname.split('/').pop();
 
-  // ¡CAMBIO CLAVE: No ejecutar checkAccess en login.html para evitar loop!
+  // No ejecutar checkAccess en login.html
   if (path === 'login.html') {
-    return; // Sal de la función si es login
+    return;
   }
 
   if (!token || !currentUser) {
@@ -50,7 +50,6 @@ async function checkAccess() {
     return;
   }
 
-  // Verificar token con el backend
   try {
     const res = await fetch(`${API_URL}/users`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -83,7 +82,6 @@ async function checkAccess() {
   }
 }
 
-// Funciones del dashboard (sin cambios)
 async function actualizarDashboard() {
   try {
     const [lotes, salud, costos, seguimiento, ventas] = await Promise.all([
@@ -160,6 +158,69 @@ function mostrarGraficosDashboard() {
     });
 }
 
+function mostrarCostosPieChart(costos) {
+  const categories = {};
+  costos.forEach(c => {
+    categories[c.categoria] = (categories[c.categoria] || 0) + c.monto;
+  });
+
+  const labels = Object.keys(categories);
+  const data = Object.values(categories);
+
+  const ctx = document.getElementById('costosPieChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
+      }]
+    },
+    options: {
+      responsive: true,
+      title: {
+        display: true,
+        text: 'Distribución de Costos por Categoría'
+      }
+    }
+  });
+}
+
+function mostrarIngresosCostosBarChart(lotes, ventas, costos) {
+  const dataIngresos = {};
+  const dataCostos = {};
+
+  lotes.forEach(l => {
+    dataIngresos[l.loteId] = ventas.filter(v => v.loteId === l.id).reduce((sum, v) => sum + (v.peso * v.precio), 0);
+    dataCostos[l.loteId] = costos.filter(c => c.loteId === l.id).reduce((sum, c) => sum + c.monto, 0);
+  });
+
+  const labels = Object.keys(dataIngresos);
+  const ingresosData = Object.values(dataIngresos);
+  const costosData = Object.values(dataCostos);
+
+  const ctx = document.getElementById('ingresosCostosBarChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Ingresos', data: ingresosData, backgroundColor: '#36A2EB' },
+        { label: 'Costos', data: costosData, backgroundColor: '#FF6384' }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true } },
+      title: {
+        display: true,
+        text: 'Ingresos vs Costos por Lote'
+      }
+    }
+  });
+}
+
 function mostrarAlertasProduccion() {
   fetch(`${API_URL}/salud`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
     .then(res => res.json())
@@ -175,7 +236,7 @@ function mostrarAlertasProduccion() {
     });
 }
 
-// ¡CAMBIO CLAVE: Solo ejecutar checkAccess si NO es login.html!
+// Ejecutar todo al cargar
 document.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname.split('/').pop();
   if (path !== 'login.html') {
@@ -184,6 +245,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (path === 'index.html') {
     actualizarDashboard();
     mostrarGraficosDashboard();
+    fetch(`${API_URL}/costos`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(res => res.json()).then(mostrarCostosPieChart);
+    Promise.all([
+      fetch(`${API_URL}/lotes`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(res => res.json()),
+      fetch(`${API_URL}/ventas`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(res => res.json()),
+      fetch(`${API_URL}/costos`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(res => res.json())
+    ]).then(([lotes, ventas, costos]) => mostrarIngresosCostosBarChart(lotes, ventas, costos));
     mostrarAlertasProduccion();
   }
 });
