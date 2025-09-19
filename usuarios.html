@@ -1,58 +1,58 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Granja Avícola VincWill</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Usuarios - Granja VincWill</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header>
-        <h1>Granja Avícola VincWill</h1>
-        <nav>
-            <ul>
-                <a href="index.html">Inicio</a>
-                <a href="lotes.html">Parvadas</a>
-                <a href="inventarios.html">Inventarios</a>
-                <a href="ventas.html">Ventas</a>
-                <a href="salud.html">Control Sanitario</a>
-                <a href="costos.html">Costos de Producción</a>
-                <a href="reportes.html">Reportes</a>
-                <a href="seguimiento.html">Seguimiento</a>
-                <a href="usuarios.html">Usuarios</a>
-                <a href="configuracion.html">Configuración</a>
-                <a href="#" onclick="logout()">Cerrar Sesión</a>
-            </ul>
-        </nav>
-    </header>
-    <main>
-        <section id="accessDenied" style="display:none;">
-            <h2>Acceso denegado. Solo los administradores pueden gestionar usuarios.</h2>
-        </section>
-        <section id="userSection">
-            <h2>Usuarios</h2>
-            <form id="userForm">
-                <label>Nombre: <input type="text" id="name" required></label>
-                <label>Email: <input type="email" id="email" required></label>
-                <label>Contraseña: <input type="password" id="password"></label>
-                <label>Rol:
-                    <select id="role">
-                        <option value="admin">Administrador</option>
-                        <option value="empleado">Empleado</option>
-                        <option value="viewer">Visualizador</option>
-                    </select>
-                </label>
-                <button type="submit">Agregar/Editar Usuario</button>
-            </form>
-            <table>
-                <thead>
-                    <tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Acciones</th></tr>
-                </thead>
-                <tbody id="userTable"></tbody>
-            </table>
-        </section>
-    </main>
-    <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script src="usuarios.js"></script>
+  <header>
+    <h1>Gestión de Usuarios</h1>
+    <nav>
+      <a href="index.html">Dashboard</a>
+      <a href="lotes.html">Lotes</a>
+      <a href="ventas.html">Ventas</a>
+      <a href="salud.html">Salud</a>
+      <a href="costos.html">Costos</a>
+      <a href="inventario.html">Inventario</a>
+      <a href="seguimiento.html">Seguimiento</a>
+      <a href="reportes.html">Reportes</a>
+      <a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
+    </nav>
+  </header>
+  <main>
+    <section id="accessDenied" style="display: none;">
+      <h2>Acceso Denegado</h2>
+      <p>Solo los administradores pueden gestionar usuarios.</p>
+      <a href="index.html">Volver al Dashboard</a>
+    </section>
+    <section id="userSection">
+      <form id="userForm" style="display: none;">
+        <input type="text" id="name" placeholder="Nombre" required>
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Contraseña" required>
+        <select id="role" required>
+          <option value="admin">Administrador</option>
+          <option value="empleado">Empleado</option>
+          <option value="viewer">Viewer</option>
+        </select>
+        <button type="submit">Guardar</button>
+      </form>
+      <table id="userTable" style="display: none;">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Rol</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody"></tbody>
+      </table>
+    </section>
+  </main>
+  <script src="app.js"></script>
+  <script src="usuarios.js"></script>
 </body>
 </html>
