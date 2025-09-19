@@ -1,7 +1,7 @@
 async function cargarUsuarios() {
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado:', token); // Depuración: muestra el token
+    console.log('Token usado:', token); // Depuración
     const res = await fetch(`${API_URL}/users`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -30,6 +30,7 @@ async function cargarUsuarios() {
 
 async function guardarUsuario(e) {
   e.preventDefault();
+  console.log('Intentando guardar usuario...'); // Depuración
   const usuario = {
     name: document.getElementById('name').value,
     email: document.getElementById('email').value,
@@ -50,10 +51,14 @@ async function guardarUsuario(e) {
     if (res.ok) {
       document.getElementById('userForm').reset();
       cargarUsuarios();
+      console.log('Usuario guardado exitosamente');
     } else {
-      alert('Error al guardar usuario: ' + (await res.json()).error);
+      const errorData = await res.json();
+      console.error('Error del servidor:', errorData);
+      alert('Error al guardar usuario: ' + (errorData.error || 'Desconocido'));
     }
   } catch (error) {
+    console.error('Error de conexión:', error);
     alert('Error de conexión');
   }
 }
@@ -114,7 +119,11 @@ async function eliminarUsuario(id) {
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   if (currentUser && currentUser.role === 'admin') {
-    document.getElementById('userForm').style.display = 'grid';
+    const userForm = document.getElementById('userForm');
+    if (userForm) {
+      userForm.style.display = 'grid';
+      userForm.onsubmit = guardarUsuario; // Vincula el evento explícitamente
+    }
     document.getElementById('userTable').style.display = 'table';
   } else if (currentUser) {
     document.getElementById('accessDenied').style.display = 'block';
