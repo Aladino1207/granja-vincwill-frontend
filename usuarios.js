@@ -2,11 +2,15 @@ const API_URL = 'https://granja-vincwill-backend.onrender.com';
 
 async function cargarUsuarios() {
   try {
+    const token = localStorage.getItem('token');
+    console.log('Token usado:', token); // Depuración: muestra el token
     const res = await fetch(`${API_URL}/users`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      headers: { Authorization: `Bearer ${token}` }
     });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const usuarios = await res.json();
     const tbody = document.getElementById('userTableBody');
+    if (!tbody) throw new Error('Elemento userTableBody no encontrado');
     tbody.innerHTML = '';
     usuarios.forEach(usuario => {
       const tr = document.createElement('tr');
@@ -35,11 +39,13 @@ async function guardarUsuario(e) {
     role: document.getElementById('role').value
   };
   try {
+    const token = localStorage.getItem('token');
+    console.log('Token usado para guardar:', token); // Depuración
     const res = await fetch(`${API_URL}/users`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`
+        Authorization: `Bearer ${token}`
       },
       body: JSON.stringify(usuario)
     });
@@ -56,8 +62,10 @@ async function guardarUsuario(e) {
 
 async function editarUsuario(id) {
   try {
+    const token = localStorage.getItem('token');
+    console.log('Token usado para editar:', token); // Depuración
     const res = await fetch(`${API_URL}/users/${id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      headers: { Authorization: `Bearer ${token}` }
     });
     const usuario = await res.json();
     document.getElementById('name').value = usuario.name;
@@ -76,7 +84,7 @@ async function editarUsuario(id) {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify(updatedUser)
       });
@@ -92,9 +100,11 @@ async function editarUsuario(id) {
 async function eliminarUsuario(id) {
   if (confirm('¿Seguro que quieres eliminar este usuario?')) {
     try {
+      const token = localStorage.getItem('token');
+      console.log('Token usado para eliminar:', token); // Depuración
       await fetch(`${API_URL}/users/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       cargarUsuarios();
     } catch (error) {
