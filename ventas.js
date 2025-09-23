@@ -1,4 +1,5 @@
 
+
 async function cargarLotesForSelect() {
   try {
     const token = localStorage.getItem('token');
@@ -37,6 +38,7 @@ async function cargarVentas() {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${venta.loteId}</td>
+        <td>${venta.cantidadVendida}</td> <!-- NUEVO CAMPO -->
         <td>${venta.peso}</td>
         <td>${venta.precio}</td>
         <td>${new Date(venta.fecha).toLocaleDateString()}</td>
@@ -58,6 +60,7 @@ async function guardarVenta(e) {
   console.log('Intentando guardar venta...'); // Depuración
   const venta = {
     loteId: parseInt(document.getElementById('loteId').value),
+    cantidadVendida: parseInt(document.getElementById('cantidadVendida').value), // NUEVO CAMPO
     peso: parseFloat(document.getElementById('peso').value),
     precio: parseFloat(document.getElementById('precio').value),
     fecha: document.getElementById('fecha').value,
@@ -98,6 +101,7 @@ async function editarVenta(id) {
     });
     const venta = await res.json();
     document.getElementById('loteId').value = venta.loteId;
+    document.getElementById('cantidadVendida').value = venta.cantidadVendida; // NUEVO CAMPO
     document.getElementById('peso').value = venta.peso;
     document.getElementById('precio').value = venta.precio;
     document.getElementById('fecha').value = venta.fecha.split('T')[0];
@@ -106,6 +110,7 @@ async function editarVenta(id) {
       e.preventDefault();
       const updatedVenta = {
         loteId: parseInt(document.getElementById('loteId').value),
+        cantidadVendida: parseInt(document.getElementById('cantidadVendida').value), // NUEVO CAMPO
         peso: parseFloat(document.getElementById('peso').value),
         precio: parseFloat(document.getElementById('precio').value),
         fecha: document.getElementById('fecha').value,
