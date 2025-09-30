@@ -13,46 +13,58 @@ async function cargarLotesForSelect() {
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
     lotes.forEach(lote => {
       const option = document.createElement('option');
-      option.value = lote.loteId;
-      option.textContent = lote.loteId + ' (Cantidad: ' + lote.cantidad + ')'; // Mostrar cantidad en la opción
-      option.dataset.cantidad = lote.cantidad; // Almacenar cantidad para auto-relleno
+      option.value = lote.id; // Usar id como valor, que es INTEGER en el backend
+      option.textContent = `${lote.loteId} (Cantidad: ${lote.cantidad})`;
+      option.dataset.cantidad = lote.cantidad;
       select.appendChild(option);
     });
   } catch (error) {
     console.error('Error al cargar lotes para select:', error);
+    alert('Error al cargar lotes: ' + error.message);
   }
 }
 
 async function cargarVentas() {
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado:', token);
+    console.log('Token usado para cargar ventas:', token);
+    if (!token) throw new Error('No autenticado');
     const res = await fetch(`${API_URL}/ventas`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
+    }
     const ventas = await res.json();
+    console.log('Ventas recibidas:', ventas); // Depuración
     const tbody = document.getElementById('ventaTableBody');
     if (!tbody) throw new Error('Elemento ventaTableBody no encontrado');
     tbody.innerHTML = '';
-    ventas.forEach(venta => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${venta.loteId}</td>
-        <td>${venta.cantidadVendida}</td>
-        <td>${venta.peso}</td>
-        <td>${venta.precio}</td>
-        <td>${new Date(venta.fecha).toLocaleDateString()}</td>
-        <td>${venta.cliente}</td>
-        <td>
-          <button onclick="editarVenta(${venta.id})">Editar</button>
-          <button onclick="eliminarVenta(${venta.id})">Eliminar</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
+    if (Array.isArray(ventas) && ventas.length > 0) {
+      ventas.forEach(venta => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${venta.loteId}</td>
+          <td>${venta.cantidadVendida}</td>
+          <td>${venta.peso.toFixed(2)}</td>
+          <td>${venta.precio.toFixed(2)}</td>
+          <td>${new Date(venta.fecha).toLocaleDateString()}</td>
+          <td>${venta.cliente || 'Sin cliente'}</td>
+          <td>
+            <button onclick="editarVenta(${venta.id})">Editar</button>
+            <button onclick="eliminarVenta(${venta.id})">Eliminar</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } else {
+      tbody.innerHTML = '<tr><td colspan="7">No hay ventas registradas</td></tr>';
+    }
   } catch (error) {
     console.error('Error al cargar ventas:', error);
+    const tbody = document.getElementById('ventaTableBody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="7">Error al cargar ventas: ${error.message}</td></tr>`;
   }
 }
 
@@ -72,7 +84,7 @@ async function guardarVenta(e) {
   }
 
   const venta = {
-    loteId,
+    loteId: parseInt(loteId), // Asegurar que se envíe como INTEGER
     cantidadVendida,
     peso,
     precio,
@@ -96,6 +108,7 @@ async function guardarVenta(e) {
       document.getElementById('ventaForm').reset();
       cargarVentas();
       console.log('Venta guardada exitosamente');
+      alert('Venta guardada exitosamente');
     } else {
       const errorData = await res.json();
       console.error('Error del servidor:', errorData);
@@ -105,10 +118,7 @@ async function guardarVenta(e) {
     console.error('Error de conexión:', error);
     alert('Error de conexión');
   }
-}
-
-// Evento para auto-rellenar cantidadVendida al seleccionar un lote
-document.addEventListener('DOMContentLoaded', () => {
+}document.addEventListener('DOMContentLoaded', () => {
   const loteSelect = document.getElementById('loteSelect');
   if (loteSelect) {
     loteSelect.addEventListener('change', (e) => {
@@ -117,8 +127,8 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('cantidadVendida').value = cantidad;
     });
   }
-  cargarLotesForSelect(); // Llama a la función para llenar el select
-  cargarVentas(); // Llama a la función para llenar la tabla
+  cargarLotesForSelect();
+  cargarVentas();
 });
 
 // Funciones para editar y eliminar (implementar si es necesario)
