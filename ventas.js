@@ -146,7 +146,7 @@ async function guardarVenta(e) {
     console.error('Error de conexión:', error);
     alert('Error de conexión');
   }
-}
+
 
 async function editarVenta(id) {
   try {
