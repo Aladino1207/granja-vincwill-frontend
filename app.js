@@ -6,22 +6,28 @@ async function login(e) {
   const password = document.getElementById('password').value;
   const errorMessage = document.getElementById('errorMessage');
 
+  if (!email || !password) {
+    errorMessage.textContent = 'Por favor, ingresa email y contraseña.';
+    return;
+  }
+
   try {
+    console.log('Intentando login con email:', email, 'y contraseña:', password); // Depuración
     const res = await fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
+    const text = await res.text(); // Obtener texto primero
+    console.log('Respuesta del servidor:', text, 'Status:', res.status); // Depuración
     if (!res.ok) {
-      const text = await res.text();
-      console.error('Login error response:', text);
-      errorMessage.textContent = 'Error en login: ' + (JSON.parse(text).error || text);
+      const errorData = text ? JSON.parse(text).error || text : 'Error desconocido';
+      errorMessage.textContent = `Error en login: ${errorData}`;
       return;
     }
-    const data = await res.json();
-    localStorage.setItem('isAuthenticated', 'true');
-    localStorage.setItem('currentUser', JSON.stringify(data.user));
+    const data = JSON.parse(text); // Parsear solo si es exitoso
     localStorage.setItem('token', data.token);
+    localStorage.setItem('currentUser', JSON.stringify(data.user));
     errorMessage.textContent = '';
     window.location.href = 'index.html';
   } catch (error) {
