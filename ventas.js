@@ -1,5 +1,3 @@
-// URL base de la API (ajusta según tu configuración)
-const API_URL = 'https://granja-vincwill-backend.onrender.com';
 
 async function cargarLotesForSelect() {
   try {
@@ -61,26 +59,53 @@ async function guardarVenta(e) {
   e.preventDefault();
   console.log('Intentando guardar venta...');
 
-  // Verificar y obtener valores del formulario
-  const loteIdInput = document.getElementById('loteId');
-  const cantidadVendidaInput = document.getElementById('cantidadVendida');
-  const pesoInput = document.getElementById('peso');
-  const precioInput = document.getElementById('precio');
-  const fechaInput = document.getElementById('fecha');
-  const clienteInput = document.getElementById('cliente');
+  const loteId = document.getElementById('loteId').value; // Asegurarse de que sea string
+  const cantidadVendida = parseInt(document.getElementById('cantidadVendida').value);
+  const peso = parseFloat(document.getElementById('peso').value);
+  const precio = parseFloat(document.getElementById('precio').value);
+  const fecha = document.getElementById('fecha').value;
+  const cliente = document.getElementById('cliente')?.value || null;
 
-  if (!loteIdInput || !cantidadVendidaInput || !pesoInput || !precioInput || !fechaInput || !clienteInput) {
-    console.error('Uno o más campos del formulario no fueron encontrados:', {
-      loteId: loteIdInput,
-      cantidadVendida: cantidadVendidaInput,
-      peso: pesoInput,
-      precio: precioInput,
-      fecha: fechaInput,
-      cliente: clienteInput
-    });
-    alert('Error: Algunos campos del formulario no están disponibles. Verifica el HTML.');
+  if (!loteId || isNaN(cantidadVendida) || isNaN(peso) || isNaN(precio) || !fecha) {
+    alert('Por favor, completa todos los campos correctamente.');
     return;
   }
+
+  const venta = {
+    loteId: loteId.toString(), // Forzar a string
+    cantidadVendida,
+    peso,
+    precio,
+    fecha,
+    cliente
+  };
+
+  try {
+    const token = localStorage.getItem('token');
+    console.log('Token usado para guardar:', token);
+    console.log('Datos enviados:', venta);
+    const res = await fetch(`${API_URL}/ventas`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(venta)
+    });
+    if (res.ok) {
+      document.getElementById('ventaForm').reset();
+      cargarVentas(); // Asegúrate de tener esta función
+      console.log('Venta guardada exitosamente');
+    } else {
+      const errorData = await res.json();
+      console.error('Error del servidor:', errorData);
+      alert('Error al guardar venta: ' + (errorData.error || 'Desconocido'));
+    }
+  } catch (error) {
+    console.error('Error de conexión:', error);
+    alert('Error de conexión');
+  }
+}
 
   const venta = {
     loteId: parseInt(loteIdInput.value) || null,
