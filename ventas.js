@@ -4,7 +4,7 @@ const API_URL = 'https://granja-vincwill-backend.onrender.com';
 async function cargarLotesForSelect() {
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado para cargar lotes:', token); // Depuración
+    console.log('Token usado para cargar lotes:', token);
     const res = await fetch(`${API_URL}/lotes`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -27,7 +27,7 @@ async function cargarLotesForSelect() {
 async function cargarVentas() {
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado:', token); // Depuración
+    console.log('Token usado:', token);
     const res = await fetch(`${API_URL}/ventas`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -40,11 +40,11 @@ async function cargarVentas() {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${venta.loteId}</td>
-        <td>${venta.cantidadVendida}</td>
-        <td>${venta.peso}</td>
-        <td>${venta.precio}</td>
+        <td>${venta.cantidadVendida || 0}</td>
+        <td>${venta.peso || 0}</td>
+        <td>${venta.precio || 0}</td>
         <td>${new Date(venta.fecha).toLocaleDateString()}</td>
-        <td>${venta.cliente}</td>
+        <td>${venta.cliente || 'Sin cliente'}</td>
         <td>
           <button onclick="editarVenta(${venta.id})">Editar</button>
           <button onclick="eliminarVenta(${venta.id})">Eliminar</button>
@@ -59,8 +59,9 @@ async function cargarVentas() {
 
 async function guardarVenta(e) {
   e.preventDefault();
-  console.log('Intentando guardar venta...'); // Depuración
-  // Verificar que todos los elementos existan antes de acceder a .value
+  console.log('Intentando guardar venta...');
+
+  // Verificar y obtener valores del formulario
   const loteIdInput = document.getElementById('loteId');
   const cantidadVendidaInput = document.getElementById('cantidadVendida');
   const pesoInput = document.getElementById('peso');
@@ -82,17 +83,23 @@ async function guardarVenta(e) {
   }
 
   const venta = {
-    loteId: parseInt(loteIdInput.value),
-    cantidadVendida: parseInt(cantidadVendidaInput.value),
-    peso: parseFloat(pesoInput.value),
-    precio: parseFloat(precioInput.value),
-    fecha: fechaInput.value,
-    cliente: clienteInput.value
+    loteId: parseInt(loteIdInput.value) || null,
+    cantidadVendida: parseInt(cantidadVendidaInput.value) || 0, // Valor por defecto si está vacío
+    peso: parseFloat(pesoInput.value) || 0,
+    precio: parseFloat(precioInput.value) || 0,
+    fecha: fechaInput.value || new Date().toISOString().split('T')[0],
+    cliente: clienteInput.value || 'Sin cliente'
   };
+
+  if (!venta.loteId) {
+    alert('Por favor, selecciona un lote.');
+    return;
+  }
 
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado para guardar:', token); // Depuración
+    console.log('Token usado para guardar:', token);
+    console.log('Datos enviados:', venta); // Depuración
     const res = await fetch(`${API_URL}/ventas`, {
       method: 'POST',
       headers: {
@@ -119,26 +126,26 @@ async function guardarVenta(e) {
 async function editarVenta(id) {
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado para editar:', token); // Depuración
+    console.log('Token usado para editar:', token);
     const res = await fetch(`${API_URL}/ventas/${id}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const venta = await res.json();
     document.getElementById('loteId').value = venta.loteId;
-    document.getElementById('cantidadVendida').value = venta.cantidadVendida;
-    document.getElementById('peso').value = venta.peso;
-    document.getElementById('precio').value = venta.precio;
+    document.getElementById('cantidadVendida').value = venta.cantidadVendida || 0;
+    document.getElementById('peso').value = venta.peso || 0;
+    document.getElementById('precio').value = venta.precio || 0;
     document.getElementById('fecha').value = venta.fecha.split('T')[0];
-    document.getElementById('cliente').value = venta.cliente;
+    document.getElementById('cliente').value = venta.cliente || '';
     document.getElementById('ventaForm').onsubmit = async (e) => {
       e.preventDefault();
       const updatedVenta = {
         loteId: parseInt(document.getElementById('loteId').value),
-        cantidadVendida: parseInt(document.getElementById('cantidadVendida').value),
-        peso: parseFloat(document.getElementById('peso').value),
-        precio: parseFloat(document.getElementById('precio').value),
+        cantidadVendida: parseInt(document.getElementById('cantidadVendida').value) || 0,
+        peso: parseFloat(document.getElementById('peso').value) || 0,
+        precio: parseFloat(document.getElementById('precio').value) || 0,
         fecha: document.getElementById('fecha').value,
-        cliente: document.getElementById('cliente').value
+        cliente: document.getElementById('cliente').value || ''
       };
       await fetch(`${API_URL}/ventas/${id}`, {
         method: 'PUT',
@@ -161,7 +168,7 @@ async function eliminarVenta(id) {
   if (confirm('¿Seguro que quieres eliminar esta venta?')) {
     try {
       const token = localStorage.getItem('token');
-      console.log('Token usado para eliminar:', token); // Depuración
+      console.log('Token usado para eliminar:', token);
       await fetch(`${API_URL}/ventas/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
@@ -179,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ventaForm = document.getElementById('ventaForm');
     if (ventaForm) {
       ventaForm.style.display = 'grid';
-      ventaForm.onsubmit = guardarVenta; // Vincula el evento explícitamente
+      ventaForm.onsubmit = guardarVenta;
     } else {
       console.error('Elemento ventaForm no encontrado');
     }
@@ -189,8 +196,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       console.error('Elemento ventaTable no encontrado');
     }
-    cargarLotesForSelect(); // Carga lotes en el select
-    cargarVentas(); // Carga ventas al iniciar
+    cargarLotesForSelect();
+    cargarVentas();
   } else if (currentUser) {
     document.querySelector('main').innerHTML = `
       <section>
