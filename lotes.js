@@ -1,4 +1,5 @@
-
+// URL base de la API
+const API_URL = 'https://granja-vincwill-backend.onrender.com';
 
 async function cargarLotes() {
   try {
@@ -21,8 +22,8 @@ async function cargarLotes() {
         <td>${new Date(lote.fechaIngreso).toLocaleDateString()}</td>
         <td>${lote.estado}</td>
         <td>
-          <button onclick="editarLote(${lote.id})">Editar</button>
-          <button onclick="eliminarLote(${lote.id})">Eliminar</button>
+          <button onclick="editarLote('${lote.loteId}')">Editar</button> <!-- Usar loteId como string -->
+          <button onclick="eliminarLote('${lote.loteId}')">Eliminar</button> <!-- Usar loteId como string -->
         </td>
       `;
       tbody.appendChild(tr);
@@ -35,16 +36,31 @@ async function cargarLotes() {
 async function guardarLote(e) {
   e.preventDefault();
   console.log('Intentando guardar lote...'); // Depuración
+
+  const loteId = document.getElementById('loteId').value;
+  const cantidad = parseInt(document.getElementById('cantidad').value);
+  const pesoInicial = parseFloat(document.getElementById('pesoInicial').value);
+  const fechaIngreso = document.getElementById('fechaIngreso').value;
+  const estado = document.getElementById('estado').value === 'Activo' ? 'disponible' : 'vendido'; // Mapear estados
+
+  // Validación básica
+  if (!loteId || isNaN(cantidad) || isNaN(pesoInicial) || !fechaIngreso) {
+    alert('Por favor, completa todos los campos correctamente.');
+    return;
+  }
+
   const lote = {
-    loteId: document.getElementById('loteId').value,
-    cantidad: parseInt(document.getElementById('cantidad').value),
-    pesoInicial: parseFloat(document.getElementById('pesoInicial').value),
-    fechaIngreso: document.getElementById('fechaIngreso').value,
-    estado: document.getElementById('estado').value
+    loteId,
+    cantidad,
+    pesoInicial,
+    fechaIngreso,
+    estado
   };
+
   try {
     const token = localStorage.getItem('token');
     console.log('Token usado para guardar:', token); // Depuración
+    console.log('Datos enviados:', lote); // Depuración
     const res = await fetch(`${API_URL}/lotes`, {
       method: 'POST',
       headers: {
@@ -68,19 +84,21 @@ async function guardarLote(e) {
   }
 }
 
-async function editarLote(id) {
+async function editarLote(loteId) {
   try {
     const token = localStorage.getItem('token');
     console.log('Token usado para editar:', token); // Depuración
-    const res = await fetch(`${API_URL}/lotes/${id}`, {
+    const res = await fetch(`${API_URL}/lotes?loteId=${loteId}`, { // Ajuste para buscar por loteId
       headers: { Authorization: `Bearer ${token}` }
     });
-    const lote = await res.json();
+    const lotes = await res.json();
+    const lote = lotes.find(l => l.loteId === loteId); // Buscar el lote específico
+    if (!lote) throw new Error('Lote no encontrado');
     document.getElementById('loteId').value = lote.loteId;
     document.getElementById('cantidad').value = lote.cantidad;
     document.getElementById('pesoInicial').value = lote.pesoInicial;
     document.getElementById('fechaIngreso').value = lote.fechaIngreso.split('T')[0]; // Formato YYYY-MM-DD
-    document.getElementById('estado').value = lote.estado;
+    document.getElementById('estado').value = lote.estado === 'disponible' ? 'Activo' : 'Terminado';
     document.getElementById('loteForm').onsubmit = async (e) => {
       e.preventDefault();
       const updatedLote = {
@@ -88,9 +106,9 @@ async function editarLote(id) {
         cantidad: parseInt(document.getElementById('cantidad').value),
         pesoInicial: parseFloat(document.getElementById('pesoInicial').value),
         fechaIngreso: document.getElementById('fechaIngreso').value,
-        estado: document.getElementById('estado').value
+        estado: document.getElementById('estado').value === 'Activo' ? 'disponible' : 'vendido'
       };
-      await fetch(`${API_URL}/lotes/${id}`, {
+      await fetch(`${API_URL}/lotes/${lote.id}`, { // Usar el ID interno si existe, de lo contrario ajustar
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -107,12 +125,12 @@ async function editarLote(id) {
   }
 }
 
-async function eliminarLote(id) {
+async function eliminarLote(loteId) {
   if (confirm('¿Seguro que quieres eliminar este lote?')) {
     try {
       const token = localStorage.getItem('token');
       console.log('Token usado para eliminar:', token); // Depuración
-      await fetch(`${API_URL}/lotes/${id}`, {
+      await fetch(`${API_URL}/lotes?loteId=${loteId}`, { // Ajuste para buscar por loteId
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
