@@ -43,8 +43,11 @@
       </table>
       <h2>Registrar Venta</h2>
       <form id="ventaForm">
-        <label for="loteId">ID del Lote:</label>
-        <input type="number" id="loteId" required>
+        <label for="loteSelect">Lote:</label>
+        <select id="loteSelect" required>
+          <option value="">Selecciona un Lote</option>
+          <!-- Lotes se cargan dinámicamente -->
+        </select>
         <label for="cantidadVendida">Cantidad Vendida:</label>
         <input type="number" id="cantidadVendida" required>
         <label for="peso">Peso (kg):</label>
@@ -60,6 +63,6 @@
     </section>
   </main>
   <script src="app.js"></script>
-  <script src="ventas.js"></script> <!-- Opcional, para lógica específica de ventas -->
+  <script src="ventas.js"></script>
 </body>
 </html>
