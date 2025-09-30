@@ -1,5 +1,3 @@
-// URL base de la API
-const API_URL = 'https://granja-vincwill-backend.onrender.com';
 
 async function cargarLotes() {
   try {
