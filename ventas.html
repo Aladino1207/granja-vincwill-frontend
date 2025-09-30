@@ -3,57 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestión de Ventas - Granja VincWill</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Granja Vincwill - Ventas</title>
 </head>
 <body>
-  <header>
-    <h1>Gestión de Ventas</h1>
-    <nav>
-      <a href="index.html">Dashboard</a>
-      <a href="lotes.html">Lotes</a>
-      <a href="ventas.html">Ventas</a>
-      <a href="salud.html">Salud</a>
-      <a href="costos.html">Costos</a>
-      <a href="inventario.html">Inventario</a>
-      <a href="seguimiento.html">Seguimiento</a>
-      <a href="reportes.html">Reportes</a>
-      <a href="usuarios.html">Usuarios</a>
-      <a href="configuracion.html">Configuración</a>
-      <a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
-    </nav>
-  </header>
-  <main>
-    <section>
-      <h2>Lista de Ventas</h2>
-      <table id="ventaTable">
-        <thead>
-          <tr>
-            <th>Lote</th>
-            <th>Peso (kg)</th>
-            <th>Precio ($/kg)</th>
-            <th>Fecha</th>
-            <th>Cliente</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="ventaTableBody"></tbody>
-      </table>
-      <h2>Agregar Nueva Venta</h2>
-      <form id="ventaForm">
-        <select id="loteId" required>
-          <option value="">Selecciona un Lote</option>
-          <!-- Lotes se cargan dinámicamente -->
-        </select>
-        <input type="number" step="0.1" id="peso" placeholder="Peso (kg)" required>
-        <input type="number" step="0.01" id="precio" placeholder="Precio ($/kg)" required>
-        <input type="date" id="fecha" required>
-        <input type="text" id="cliente" placeholder="Cliente" required>
-        <button type="submit">Guardar</button>
-      </form>
-    </section>
-  </main>
-  <script src="app.js"></script>
+  <h2>Registrar Venta</h2>
+  <form id="ventaForm">
+    <label>Cantidad Vendida:</label><br>
+    <input type="number" id="cantidadVendida" required><br><br>
+    <label>Precio Unitario:</label><br>
+    <input type="number" id="precioUnitario" step="0.01" required><br><br>
+    <label>Fecha Venta:</label><br>
+    <input type="date" id="fechaVenta" required><br><br>
+    <label>ID Lote:</label><br>
+    <input type="text" id="loteId" required><br><br>
+    <button type="submit">Guardar Venta</button>
+  </form>
+
+  <h2>Ventas</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Cantidad</th>
+        <th>Precio Unitario</th>
+        <th>Fecha</th>
+      </tr>
+    </thead>
+    <tbody id="ventas-body"></tbody>
+  </table>
+
   <script src="ventas.js"></script>
 </body>
 </html>
