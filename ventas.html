@@ -7,39 +7,57 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h2>Registrar Venta</h2>
-  <form id="ventaForm">
-    <label>Lote:</label>
-    <select id="loteId" required></select><br>
-    <label>Cantidad Vendida:</label>
-    <input type="number" id="cantidadVendida" required><br>
-    <label>Peso:</label>
-    <input type="number" id="peso" step="0.01" required><br>
-    <label>Precio:</label>
-    <input type="number" id="precio" step="0.01" required><br>
-    <label>Fecha:</label>
-    <input type="date" id="fecha" required><br>
-    <label>Cliente:</label>
-    <input type="text" id="cliente" required><br>
-    <button type="submit">Guardar Venta</button>
-  </form>
-
-  <h2>Ventas</h2>
-  <table id="ventaTable">
-    <thead>
-      <tr>
-        <th>Lote</th>
-        <th>Cantidad Vendida</th>
-        <th>Peso</th>
-        <th>Precio</th>
-        <th>Fecha</th>
-        <th>Cliente</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
-    <tbody id="ventaTableBody"></tbody>
-  </table>
-
+  <header>
+    <h1>Gestión de Usuarios</h1>
+        <nav>
+            <ul>
+                <a href="index.html">Inicio</a>
+                <a href="lotes.html">Parvadas</a>
+                <a href="inventarios.html">Inventarios</a>
+                <a href="ventas.html">Ventas</a>
+                <a href="salud.html">Control Sanitario</a>
+                <a href="costos.html">Costos de Producción</a>
+                <a href="reportes.html">Reportes</a>
+                <a href="seguimiento.html">Seguimiento</a>
+                <a href="usuarios.html">Usuarios</a>
+                <a href="configuracion.html">Configuración</a>
+                <a href="#" onclick="logout()">Cerrar Sesión</a>
+            </ul>
+        </nav>
+  </header>
+  <main>
+    <form id="ventaForm">
+      <label>Lote:</label>
+      <select id="loteId" required></select><br>
+      <label>Cantidad Vendida:</label>
+      <input type="number" id="cantidadVendida" required><br>
+      <label>Peso:</label>
+      <input type="number" id="peso" step="0.01" required><br>
+      <label>Precio:</label>
+      <input type="number" id="precio" step="0.01" required><br>
+      <label>Fecha:</label>
+      <input type="date" id="fecha" required><br>
+      <label>Cliente:</label>
+      <input type="text" id="cliente" required><br>
+      <button type="submit">Guardar Venta</button>
+    </form>
+  
+    <h2>Ventas</h2>
+    <table id="ventaTable">
+      <thead>
+        <tr>
+          <th>Lote</th>
+          <th>Cantidad Vendida</th>
+          <th>Peso</th>
+          <th>Precio</th>
+          <th>Fecha</th>
+          <th>Cliente</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="ventaTableBody"></tbody>
+    </table>
+  </main>
   <script src="ventas.js"></script>
 </body>
 </html>
