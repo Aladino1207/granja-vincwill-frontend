@@ -12,20 +12,20 @@ async function login(e) {
   }
 
   try {
-    console.log('Intentando login con email:', email, 'y contraseña:', password); // Depuración
+    console.log('Intentando login con email:', email, 'y contraseña:', password);
     const res = await fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
-    const text = await res.text(); // Obtener texto primero
-    console.log('Respuesta del servidor:', text, 'Status:', res.status); // Depuración
+    const text = await res.text();
+    console.log('Respuesta del servidor:', text, 'Status:', res.status);
     if (!res.ok) {
       const errorData = text ? JSON.parse(text).error || text : 'Error desconocido';
       errorMessage.textContent = `Error en login: ${errorData}`;
       return;
     }
-    const data = JSON.parse(text); // Parsear solo si es exitoso
+    const data = JSON.parse(text);
     localStorage.setItem('token', data.token);
     localStorage.setItem('currentUser', JSON.stringify(data.user));
     errorMessage.textContent = '';
@@ -285,6 +285,13 @@ document.addEventListener('DOMContentLoaded', () => {
     mostrarCostosPieChart();
     mostrarIngresosCostosBarChart();
     mostrarAlertasProduccion();
+  }
+  // Vincular el evento onsubmit solo para login.html
+  if (path === 'login.html') {
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+      loginForm.onsubmit = login;
+    }
   }
 });
 

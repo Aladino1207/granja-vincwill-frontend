@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Iniciar Sesión</title>
+  <title>Login - Granja VincWill</title>
   <link rel="stylesheet" href="styles.css">
+  <!-- Opcional: Añade un favicon -->
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
   <main>
     <section>
       <h2>Iniciar Sesión</h2>
-      <form id="loginForm" onsubmit="login(event)">
-        <label for="email">Email:</label>
-        <input type="email" id="email" required>
-        <label for="password">Contraseña:</label>
-        <input type="password" id="password" required>
+      <form id="loginForm">
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Contraseña" required>
         <button type="submit">Iniciar Sesión</button>
-        <p id="errorMessage" style="color: red;"></p>
       </form>
+      <p id="errorMessage" style="color: red;"></p>
     </section>
   </main>
   <script src="app.js"></script>
