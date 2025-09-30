@@ -8,8 +8,39 @@
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
+  <header>
+    <h1>Gestión de Ventas</h1>
+    <nav>
+      <a href="index.html">Dashboard</a>
+      <a href="lotes.html">Lotes</a>
+      <a href="ventas.html">Ventas</a>
+      <a href="salud.html">Salud</a>
+      <a href="costos.html">Costos</a>
+      <a href="inventario.html">Inventario</a>
+      <a href="seguimiento.html">Seguimiento</a>
+      <a href="reportes.html">Reportes</a>
+      <a href="usuarios.html">Usuarios</a>
+      <a href="configuracion.html">Configuración</a>
+      <a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
+    </nav>
+  </header>
   <main>
     <section>
+      <h2>Lista de Ventas</h2>
+      <table id="ventaTable">
+        <thead>
+          <tr>
+            <th>ID del Lote</th>
+            <th>Cantidad Vendida</th>
+            <th>Peso (kg)</th>
+            <th>Precio</th>
+            <th>Fecha</th>
+            <th>Cliente</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="ventaTableBody"></tbody>
+      </table>
       <h2>Registrar Venta</h2>
       <form id="ventaForm">
         <label for="loteId">ID del Lote:</label>
@@ -29,5 +60,6 @@
     </section>
   </main>
   <script src="app.js"></script>
+  <script src="ventas.js"></script> <!-- Opcional, para lógica específica de ventas -->
 </body>
 </html>
