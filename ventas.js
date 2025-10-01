@@ -71,12 +71,13 @@ async function cargarVentas() {
 async function guardarVenta(e) {
   e.preventDefault();
   console.log('Intentando guardar venta...');
-  const loteId = document.getElementById('loteSelect').value;
+
+  const loteId = parseInt(document.getElementById('loteId').value);
   const cantidadVendida = parseInt(document.getElementById('cantidadVendida').value);
   const peso = parseFloat(document.getElementById('peso').value);
   const precio = parseFloat(document.getElementById('precio').value);
   const fecha = document.getElementById('fecha').value;
-  const cliente = document.getElementById('cliente').value;
+  const cliente = document.getElementById('cliente').value || 'Sin cliente';
 
   if (!loteId || isNaN(cantidadVendida) || isNaN(peso) || isNaN(precio) || !fecha) {
     alert('Por favor, completa todos los campos correctamente.');
@@ -84,7 +85,7 @@ async function guardarVenta(e) {
   }
 
   const venta = {
-    loteId: parseInt(loteId), // Asegurar que se envíe como INTEGER
+    loteId,
     cantidadVendida,
     peso,
     precio,
@@ -104,21 +105,27 @@ async function guardarVenta(e) {
       },
       body: JSON.stringify(venta)
     });
-    if (res.ok) {
-      document.getElementById('ventaForm').reset();
-      cargarVentas();
-      console.log('Venta guardada exitosamente');
-      alert('Venta guardada exitosamente');
-    } else {
-      const errorData = await res.json();
+    console.log('Respuesta del servidor:', res.status, res.statusText); // Depuración
+    const responseText = await res.text();
+    console.log('Respuesta cruda:', responseText); // Depuración
+    if (!res.ok) {
+      const errorData = responseText ? JSON.parse(responseText).error || responseText : 'Error desconocido';
       console.error('Error del servidor:', errorData);
-      alert('Error al guardar venta: ' + (errorData.error || 'Desconocido'));
+      alert('Error al guardar venta: ' + errorData);
+      return;
     }
+    const data = JSON.parse(responseText);
+    console.log('Venta guardada:', data);
+    document.getElementById('ventaForm').reset();
+    cargarVentas();
+    alert('Venta guardada exitosamente');
   } catch (error) {
     console.error('Error de conexión:', error);
     alert('Error de conexión');
   }
-}document.addEventListener('DOMContentLoaded', () => {
+}
+
+document.addEventListener('DOMContentLoaded', () => {
   const loteSelect = document.getElementById('loteSelect');
   if (loteSelect) {
     loteSelect.addEventListener('change', (e) => {
