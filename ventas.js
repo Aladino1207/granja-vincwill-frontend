@@ -80,7 +80,7 @@ async function guardarVenta(e) {
   const fecha = document.getElementById('fecha').value;
   const cliente = document.getElementById('cliente').value || 'Sin cliente';
 
-  console.log('Datos del formulario:', { loteId, cantidadVendida, peso, precio, fecha, cliente }); // Depuración
+  console.log('Datos del formulario antes de enviar:', { loteId, cantidadVendida, peso, precio, fecha, cliente }); // Depuración
 
   if (!loteId || isNaN(cantidadVendida) || isNaN(peso) || isNaN(precio) || !fecha) {
     alert('Por favor, completa todos los campos correctamente.');
