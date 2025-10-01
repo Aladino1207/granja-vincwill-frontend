@@ -72,12 +72,15 @@ async function guardarVenta(e) {
   e.preventDefault();
   console.log('Intentando guardar venta...');
 
-  const loteId = parseInt(document.getElementById('loteId').value);
+  const loteSelect = document.getElementById('loteSelect');
+  const loteId = loteSelect.value;
   const cantidadVendida = parseInt(document.getElementById('cantidadVendida').value);
   const peso = parseFloat(document.getElementById('peso').value);
   const precio = parseFloat(document.getElementById('precio').value);
   const fecha = document.getElementById('fecha').value;
   const cliente = document.getElementById('cliente').value || 'Sin cliente';
+
+  console.log('Datos del formulario:', { loteId, cantidadVendida, peso, precio, fecha, cliente }); // Depuración
 
   if (!loteId || isNaN(cantidadVendida) || isNaN(peso) || isNaN(precio) || !fecha) {
     alert('Por favor, completa todos los campos correctamente.');
@@ -85,7 +88,7 @@ async function guardarVenta(e) {
   }
 
   const venta = {
-    loteId,
+    loteId: parseInt(loteId),
     cantidadVendida,
     peso,
     precio,
