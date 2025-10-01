@@ -80,7 +80,7 @@ async function guardarVenta(e) {
   const fecha = document.getElementById('fecha').value;
   const cliente = document.getElementById('cliente').value || 'Sin cliente';
 
-  console.log('Datos del formulario antes de enviar:', { loteId, cantidadVendida, peso, precio, fecha, cliente }); // Depuración
+  console.log('Datos del formulario antes de enviar:', { loteId, cantidadVendida, peso, precio, fecha, cliente });
 
   if (!loteId || isNaN(cantidadVendida) || isNaN(peso) || isNaN(precio) || !fecha) {
     alert('Por favor, completa todos los campos correctamente.');
@@ -108,9 +108,9 @@ async function guardarVenta(e) {
       },
       body: JSON.stringify(venta)
     });
-    console.log('Respuesta del servidor:', res.status, res.statusText); // Depuración
+    console.log('Respuesta del servidor antes de texto:', res.status, res.statusText); // Depuración adicional
     const responseText = await res.text();
-    console.log('Respuesta cruda:', responseText); // Depuración
+    console.log('Respuesta cruda:', responseText);
     if (!res.ok) {
       const errorData = responseText ? JSON.parse(responseText).error || responseText : 'Error desconocido';
       console.error('Error del servidor:', errorData);
