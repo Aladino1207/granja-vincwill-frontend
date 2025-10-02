@@ -101,7 +101,7 @@ async function guardarVenta(e) {
     console.log('Token usado para guardar:', token);
     console.log('Datos enviados:', venta);
     const startTime = Date.now();
-    const res = await fetch(`${API_URL}/ventas`, {
+    const res = await fetch(`${window.API_URL}/ventas`, { // Usa window.API_URL
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
