@@ -1,30 +1,38 @@
 
-
 async function cargarSalud() {
   try {
-    const res = await fetch(`${API_URL}/salud`, {
+    const res = await fetch(`${window.API_URL}/salud`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
+    console.log('Respuesta de /salud - Status:', res.status, 'Status Text:', res.statusText);
     const salud = await res.json();
+    console.log('Datos recibidos de /salud:', salud);
     const tbody = document.getElementById('saludTableBody');
+    if (!tbody) throw new Error('Elemento saludTableBody no encontrado');
     tbody.innerHTML = '';
-    salud.forEach(s => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${s.loteId}</td>
-        <td>${s.tipo}</td>
-        <td>${s.nombre}</td>
-        <td>${s.cantidad}</td>
-        <td>${new Date(s.fecha).toLocaleDateString()}</td>
-        <td>
-          <button onclick="editarSalud(${s.id})">Editar</button>
-          <button onclick="eliminarSalud(${s.id})">Eliminar</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
+    if (Array.isArray(salud) && salud.length > 0) {
+      salud.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${s.loteId || 'N/A'}</td>
+          <td>${s.tipo || 'N/A'}</td>
+          <td>${s.nombre || 'N/A'}</td>
+          <td>${s.cantidad || 0}</td>
+          <td>${s.fecha ? new Date(s.fecha).toLocaleDateString() : 'N/A'}</td>
+          <td>
+            <button onclick="editarSalud(${s.id || 0})">Editar</button>
+            <button onclick="eliminarSalud(${s.id || 0})">Eliminar</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } else {
+      tbody.innerHTML = '<tr><td colspan="6">No hay eventos de salud registrados</td></tr>';
+    }
   } catch (error) {
     console.error('Error al cargar salud:', error);
+    const tbody = document.getElementById('saludTableBody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6">Error al cargar salud: ${error.message}</td></tr>`;
   }
 }
 
@@ -107,5 +115,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('saludForm').style.display = 'grid';
     document.getElementById('saludTable').style.display = 'table';
   }
+  cargarLotesForSelect(); 
   cargarSalud();
 });

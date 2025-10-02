@@ -25,19 +25,21 @@
     <main>
         <section>
             <h2>Registrar Evento Sanitario</h2>
-            <form id="saludForm">
-                <label>Lote: <select id="loteSelect"></select></label>
-                <label>Tipo de Evento:
-                    <select id="eventoTipo">
-                        <option value="Vacuna">Vacuna</option>
-                        <option value="Tratamiento">Tratamiento</option>
-                        <option value="Mortalidad">Mortalidad</option>
-                    </select>
-                </label>
-                <label>Nombre del Evento: <input type="text" id="eventoNombre" required></label>
-                <label>Cantidad Afectada: <input type="number" id="cantidad" min="0" required></label>
-                <label>Fecha: <input type="date" id="fecha" required></label>
-                <button type="submit">Registrar Evento</button>
+            <form id="saludForm" onsubmit="guardarSalud(event); return false;">
+                <label for="loteId">Lote:</label>
+                <select id="loteId" required>
+                <option value="">Selecciona un Lote</option>
+                <!-- Se llenará dinámicamente -->
+                </select>
+                <label for="tipo">Tipo:</label>
+                <input type="text" id="tipo" required>
+                <label for="nombre">Nombre:</label>
+                <input type="text" id="nombre" required>
+                <label for="cantidad">Cantidad:</label>
+                <input type="number" id="cantidad" required>
+                <label for="fecha">Fecha:</label>
+                <input type="date" id="fecha" required>
+                <button type="submit">Guardar Evento de Salud</button>
             </form>
         </section>
         <section>
