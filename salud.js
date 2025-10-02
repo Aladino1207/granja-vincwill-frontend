@@ -111,10 +111,25 @@ async function eliminarSalud(id) {
 
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const saludForm = document.getElementById('saludForm');
+  const saludTable = document.getElementById('saludTable');
+  
+  console.log('Verificando elementos - saludForm:', saludForm, 'saludTable:', saludTable);
+
   if (currentUser && currentUser.role !== 'viewer') {
-    document.getElementById('saludForm').style.display = 'grid';
-    document.getElementById('saludTable').style.display = 'table';
+    if (saludForm) {
+      saludForm.style.display = 'grid';
+    } else {
+      console.error('Elemento saludForm no encontrado en el DOM');
+    }
+    if (saludTable) {
+      saludTable.style.display = 'table';
+    } else {
+      console.error('Elemento saludTable no encontrado en el DOM');
+    }
+  } else {
+    console.log('Rol de usuario:', currentUser ? currentUser.role : 'No autenticado');
   }
-  cargarLotesForSelect(); 
+  cargarLotesForSelect();
   cargarSalud();
 });

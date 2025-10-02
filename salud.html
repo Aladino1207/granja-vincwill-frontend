@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Control Sanitario por Lote</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salud - Granja VincWill</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
-    <header>
-    <h1>Control Sanitario</h1>
+  <header>
+    <h1>Gestión de Salud</h1>
     <nav>
       <a href="index.html">Dashboard</a>
       <a href="lotes.html">Lotes</a>
@@ -22,37 +24,42 @@
       <a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
     </nav>
   </header>
-    <main>
-        <section>
-            <h2>Registrar Evento Sanitario</h2>
-            <form id="saludForm" onsubmit="guardarSalud(event); return false;">
-                <label for="loteId">Lote:</label>
-                <select id="loteId" required>
-                <option value="">Selecciona un Lote</option>
-                <!-- Se llenará dinámicamente -->
-                </select>
-                <label for="tipo">Tipo:</label>
-                <input type="text" id="tipo" required>
-                <label for="nombre">Nombre:</label>
-                <input type="text" id="nombre" required>
-                <label for="cantidad">Cantidad:</label>
-                <input type="number" id="cantidad" required>
-                <label for="fecha">Fecha:</label>
-                <input type="date" id="fecha" required>
-                <button type="submit">Guardar Evento de Salud</button>
-            </form>
-        </section>
-        <section>
-            <h2>Historial Sanitario</h2>
-            <table>
-                <thead>
-                    <tr><th>Lote</th><th>Tipo</th><th>Evento</th><th>Cantidad</th><th>Fecha</th></tr>
-                </thead>
-                <tbody id="tablaSalud"></tbody>
-            </table>
-        </section>
-    </main>
-    <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
-    <script src="salud.js"></script>
+  <main>
+    <section>
+      <h2>Lista de Eventos de Salud</h2>
+      <table id="saludTable">
+        <thead>
+          <tr>
+            <th>ID del Lote</th>
+            <th>Tipo</th>
+            <th>Nombre</th>
+            <th>Cantidad</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="saludTableBody"></tbody>
+      </table>
+      <h2>Registrar Evento de Salud</h2>
+      <form id="saludForm" onsubmit="guardarSalud(event); return false;">
+        <label for="loteId">Lote:</label>
+        <select id="loteId" required>
+          <option value="">Selecciona un Lote</option>
+          <!-- Se llenará dinámicamente -->
+        </select>
+        <label for="tipo">Tipo:</label>
+        <input type="text" id="tipo" required>
+        <label for="nombre">Nombre:</label>
+        <input type="text" id="nombre" required>
+        <label for="cantidad">Cantidad:</label>
+        <input type="number" id="cantidad" required>
+        <label for="fecha">Fecha:</label>
+        <input type="date" id="fecha" required>
+        <button type="submit">Guardar Evento de Salud</button>
+      </form>
+    </section>
+  </main>
+  <script src="app.js"></script>
+  <script src="salud.js"></script>
 </body>
 </html>
