@@ -36,6 +36,28 @@ async function cargarSalud() {
   }
 }
 
+async function cargarLotesForSelect() {
+  try {
+    const res = await fetch(`${window.API_URL}/lotes`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const lotes = await res.json();
+    const select = document.getElementById('loteId');
+    if (!select) throw new Error('Elemento loteId no encontrado');
+    select.innerHTML = '<option value="">Selecciona un Lote</option>';
+    lotes.forEach(lote => {
+      const option = document.createElement('option');
+      option.value = lote.id;
+      option.textContent = `${lote.loteId} (Cantidad: ${lote.cantidad})`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error al cargar lotes para select:', error);
+    alert('Error al cargar lotes: ' + error.message);
+  }
+}
+
 async function guardarSalud(e) {
   e.preventDefault();
   const salud = {
