@@ -69,10 +69,15 @@ async function cargarVentas() {
 }
 
 async function guardarVenta(e) {
-  e.preventDefault();
+  e.preventDefault(); // Asegura que se captura el evento
   console.log('Intentando guardar venta...');
 
   const loteSelect = document.getElementById('loteSelect');
+  if (!loteSelect) {
+    console.error('Elemento loteSelect no encontrado');
+    alert('Error: El select de lotes no está disponible.');
+    return;
+  }
   const loteId = loteSelect.value;
   const cantidadVendida = parseInt(document.getElementById('cantidadVendida').value);
   const peso = parseFloat(document.getElementById('peso').value);
@@ -100,8 +105,9 @@ async function guardarVenta(e) {
     const token = localStorage.getItem('token');
     console.log('Token usado para guardar:', token);
     console.log('Datos enviados:', venta);
+    console.log('URL de la petición:', `${window.API_URL}/ventas`); // Verifica la URL
     const startTime = Date.now();
-    const res = await fetch(`${window.API_URL}/ventas`, { // Usa window.API_URL
+    const res = await fetch(`${window.API_URL}/ventas`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

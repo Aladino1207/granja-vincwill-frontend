@@ -42,7 +42,7 @@
         <tbody id="ventaTableBody"></tbody>
       </table>
       <h2>Registrar Venta</h2>
-      <form id="ventaForm">
+      <form id="ventaForm" onsubmit="guardarVenta(event); return false;">
         <label for="loteSelect">Lote:</label>
         <select id="loteSelect" required>
           <option value="">Selecciona un Lote</option>
