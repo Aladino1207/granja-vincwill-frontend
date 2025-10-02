@@ -100,6 +100,7 @@ async function guardarVenta(e) {
     const token = localStorage.getItem('token');
     console.log('Token usado para guardar:', token);
     console.log('Datos enviados:', venta);
+    const startTime = Date.now();
     const res = await fetch(`${API_URL}/ventas`, {
       method: 'POST',
       headers: {
@@ -108,7 +109,9 @@ async function guardarVenta(e) {
       },
       body: JSON.stringify(venta)
     });
-    console.log('Respuesta del servidor antes de texto:', res.status, res.statusText); // Depuración adicional
+    const endTime = Date.now();
+    console.log(`Tiempo de respuesta: ${endTime - startTime}ms`);
+    console.log('Respuesta del servidor antes de texto:', res.status, res.statusText);
     const responseText = await res.text();
     console.log('Respuesta cruda:', responseText);
     if (!res.ok) {
