@@ -25,6 +25,19 @@
   </header>
   <main>
     <section>
+      
+      <h2>Agregar Nuevo Lote</h2>
+      <form id="loteForm">
+        <input type="text" id="loteId" placeholder="ID del Lote" required>
+        <input type="number" id="cantidad" placeholder="Cantidad" required>
+        <input type="number" step="0.1" id="pesoInicial" placeholder="Peso Inicial (kg)" required>
+        <input type="date" id="fechaIngreso" required>
+        <select id="estado" required>
+          <option value="Activo">Activo</option>
+          <option value="Terminado">Terminado</option>
+        </select>
+        <button type="submit">Guardar</button>
+      </form>
       <h2>Lista de Lotes</h2>
       <table id="loteTable">
         <thead>
@@ -39,18 +52,6 @@
         </thead>
         <tbody id="loteTableBody"></tbody>
       </table>
-      <h2>Agregar Nuevo Lote</h2>
-      <form id="loteForm">
-        <input type="text" id="loteId" placeholder="ID del Lote" required>
-        <input type="number" id="cantidad" placeholder="Cantidad" required>
-        <input type="number" step="0.1" id="pesoInicial" placeholder="Peso Inicial (kg)" required>
-        <input type="date" id="fechaIngreso" required>
-        <select id="estado" required>
-          <option value="Activo">Activo</option>
-          <option value="Terminado">Terminado</option>
-        </select>
-        <button type="submit">Guardar</button>
-      </form>
     </section>
   </main>
   <script src="app.js"></script>
