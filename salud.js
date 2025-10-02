@@ -9,7 +9,8 @@ async function cargarSalud() {
     console.log('Datos recibidos de /salud:', salud);
     const tbody = document.getElementById('saludTableBody');
     if (!tbody) throw new Error('Elemento saludTableBody no encontrado');
-    tbody.innerHTML = '';
+    tbody.innerHTML = ''; // Limpia la tabla antes de rellenar
+    console.log('Intentando rellenar tabla con', salud.length, 'registros');
     if (Array.isArray(salud) && salud.length > 0) {
       salud.forEach(s => {
         const tr = document.createElement('tr');
@@ -26,8 +27,10 @@ async function cargarSalud() {
         `;
         tbody.appendChild(tr);
       });
+      console.log('Tabla rellenada con éxito');
     } else {
       tbody.innerHTML = '<tr><td colspan="6">No hay eventos de salud registrados</td></tr>';
+      console.log('Tabla vacía, mostrando mensaje');
     }
   } catch (error) {
     console.error('Error al cargar salud:', error);
@@ -68,7 +71,7 @@ async function guardarSalud(e) {
     fecha: document.getElementById('fecha').value
   };
   try {
-    const res = await fetch(`${API_URL}/salud`, {
+    const res = await fetch(`${window.API_URL}/salud`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -76,13 +79,18 @@ async function guardarSalud(e) {
       },
       body: JSON.stringify(salud)
     });
+    console.log('Respuesta de guardarSalud - Status:', res.status, 'Status Text:', res.statusText);
     if (res.ok) {
       document.getElementById('saludForm').reset();
-      cargarSalud();
+      await cargarSalud(); // Asegúrate de esperar la recarga
+      console.log('Evento de salud guardado y tabla recargada');
     } else {
-      alert('Error al guardar evento de salud');
+      const errorText = await res.text();
+      console.error('Error al guardar evento de salud:', errorText);
+      alert('Error al guardar evento de salud: ' + (errorText || 'Desconocido'));
     }
   } catch (error) {
+    console.error('Error de conexión:', error);
     alert('Error de conexión');
   }
 }
