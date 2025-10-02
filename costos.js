@@ -4,9 +4,11 @@ async function cargarLotesForSelect() {
     const res = await fetch(`${window.API_URL}/lotes`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
+    console.log('Respuesta de /lotes - Status:', res.status, 'Status Text:', res.statusText);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
-    const select = document.getElementById('loteSelect'); // Usa el ID correcto del HTML
+    console.log('Datos recibidos de /lotes:', lotes);
+    const select = document.getElementById('loteSelect');
     if (!select) throw new Error('Elemento loteSelect no encontrado');
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
     lotes.forEach(lote => {
@@ -15,6 +17,7 @@ async function cargarLotesForSelect() {
       option.textContent = `${lote.loteId} (Cantidad: ${lote.cantidad})`;
       select.appendChild(option);
     });
+    console.log('Lotes cargados en select con éxito');
   } catch (error) {
     console.error('Error al cargar lotes para select:', error);
     alert('Error al cargar lotes: ' + error.message);
@@ -30,7 +33,7 @@ async function cargarCostos() {
     console.log('Respuesta de /costos - Status:', res.status, 'Status Text:', res.statusText);
     const costos = await res.json();
     console.log('Datos recibidos de /costos:', costos);
-    const tbody = document.getElementById('tablaCostos'); // Cambia a tablaCostos para coincidir con el HTML
+    const tbody = document.getElementById('tablaCostos');
     if (!tbody) throw new Error('Elemento tablaCostos no encontrado');
     tbody.innerHTML = '';
     if (Array.isArray(costos) && costos.length > 0) {
@@ -64,7 +67,7 @@ async function cargarCostos() {
 async function guardarCosto(e) {
   e.preventDefault();
   const costo = {
-    loteId: parseInt(document.getElementById('loteSelect').value), // Usa loteSelect en lugar de loteId
+    loteId: parseInt(document.getElementById('loteSelect').value),
     categoria: document.getElementById('categoria').value,
     descripcion: document.getElementById('descripcion').value,
     monto: parseFloat(document.getElementById('monto').value),
@@ -82,7 +85,7 @@ async function guardarCosto(e) {
     console.log('Respuesta de guardarCosto - Status:', res.status, 'Status Text:', res.statusText);
     if (res.ok) {
       document.getElementById('costoForm').reset();
-      await cargarCostos(); // Asegura la recarga
+      await cargarCostos();
       console.log('Costo guardado y tabla recargada');
     } else {
       const errorText = await res.text();
@@ -101,7 +104,7 @@ async function editarCosto(id) {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     const costo = await res.json();
-    document.getElementById('loteSelect').value = costo.loteId; // Usa loteSelect
+    document.getElementById('loteSelect').value = costo.loteId;
     document.getElementById('categoria').value = costo.categoria;
     document.getElementById('descripcion').value = costo.descripcion;
     document.getElementById('monto').value = costo.monto;
@@ -142,7 +145,7 @@ async function eliminarCosto(id) {
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const costoForm = document.getElementById('costoForm');
-  const costoTable = document.getElementById('costoTable'); // Cambia a costoTable para coincidir con el HTML
+  const costoTable = document.getElementById('costoTable');
   
   console.log('Verificando elementos - costoForm:', costoForm, 'costoTable:', costoTable);
 
@@ -160,6 +163,6 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     console.log('Rol de usuario:', currentUser ? currentUser.role : 'No autenticado');
   }
-  cargarLotesForSelect(); 
+  cargarLotesForSelect();
   cargarCostos();
 });
