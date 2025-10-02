@@ -1,4 +1,4 @@
-window.API_URL = 'https://granja-vincwill-backend.onrender.com';
+const API_URL = 'https://granja-vincwill-backend.onrender.com';
 
 async function login(e) {
   e.preventDefault();
