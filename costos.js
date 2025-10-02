@@ -73,6 +73,7 @@ async function guardarCosto(e) {
     monto: parseFloat(document.getElementById('monto').value),
     fecha: document.getElementById('fecha').value
   };
+  console.log('Datos enviados a /costos:', costo); // Añade este log
   try {
     const res = await fetch(`${window.API_URL}/costos`, {
       method: 'POST',
@@ -83,14 +84,15 @@ async function guardarCosto(e) {
       body: JSON.stringify(costo)
     });
     console.log('Respuesta de guardarCosto - Status:', res.status, 'Status Text:', res.statusText);
+    const responseText = await res.text(); // Lee la respuesta completa
+    console.log('Respuesta cruda de guardarCosto:', responseText);
     if (res.ok) {
       document.getElementById('costoForm').reset();
       await cargarCostos();
       console.log('Costo guardado y tabla recargada');
     } else {
-      const errorText = await res.text();
-      console.error('Error al guardar costo:', errorText);
-      alert('Error al guardar costo: ' + (errorText || 'Desconocido'));
+      console.error('Error al guardar costo - Detalle:', responseText);
+      alert('Error al guardar costo: ' + (responseText || 'Desconocido'));
     }
   } catch (error) {
     console.error('Error de conexión:', error);
