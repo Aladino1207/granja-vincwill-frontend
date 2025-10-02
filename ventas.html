@@ -26,21 +26,7 @@
   </header>
   <main>
     <section>
-      <h2>Lista de Ventas</h2>
-      <table id="ventaTable">
-        <thead>
-          <tr>
-            <th>ID del Lote</th>
-            <th>Cantidad Vendida</th>
-            <th>Peso (kg)</th>
-            <th>Precio</th>
-            <th>Fecha</th>
-            <th>Cliente</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="ventaTableBody"></tbody>
-      </table>
+      
       <h2>Registrar Venta</h2>
       <form id="ventaForm" onsubmit="guardarVenta(event); return false;">
         <label for="loteSelect">Lote:</label>
@@ -59,6 +45,21 @@
         <label for="cliente">Cliente:</label>
         <input type="text" id="cliente">
         <button type="submit">Guardar Venta</button>
+      <h2>Lista de Ventas</h2>
+      <table id="ventaTable">
+        <thead>
+          <tr>
+            <th>ID del Lote</th>
+            <th>Cantidad Vendida</th>
+            <th>Peso (kg)</th>
+            <th>Precio</th>
+            <th>Fecha</th>
+            <th>Cliente</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="ventaTableBody"></tbody>
+      </table>
       </form>
     </section>
   </main>
