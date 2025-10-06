@@ -73,7 +73,7 @@ async function guardarCosto(e) {
     monto: parseFloat(document.getElementById('monto').value),
     fecha: document.getElementById('fecha').value
   };
-  console.log('Datos enviados a /costos:', costo); // Añade este log
+  console.log('Datos enviados a /costos:', costo); // Log de los datos enviados
   try {
     const res = await fetch(`${window.API_URL}/costos`, {
       method: 'POST',
@@ -95,8 +95,8 @@ async function guardarCosto(e) {
       alert('Error al guardar costo: ' + (responseText || 'Desconocido'));
     }
   } catch (error) {
-    console.error('Error de conexión:', error);
-    alert('Error de conexión');
+    console.error('Error de conexión o inesperado:', error);
+    alert('Error de conexión o inesperado');
   }
 }
 
