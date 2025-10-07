@@ -73,7 +73,7 @@ async function guardarCosto(e) {
     monto: parseFloat(document.getElementById('monto').value),
     fecha: document.getElementById('fecha').value
   };
-  console.log('Datos enviados a /costos:', costo); // Log de los datos enviados
+  console.log('Datos enviados a /costos:', costo);
   try {
     const res = await fetch(`${window.API_URL}/costos`, {
       method: 'POST',
@@ -84,7 +84,7 @@ async function guardarCosto(e) {
       body: JSON.stringify(costo)
     });
     console.log('Respuesta de guardarCosto - Status:', res.status, 'Status Text:', res.statusText);
-    const responseText = await res.text(); // Lee la respuesta completa
+    const responseText = await res.text();
     console.log('Respuesta cruda de guardarCosto:', responseText);
     if (res.ok) {
       document.getElementById('costoForm').reset();
@@ -154,6 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (currentUser && currentUser.role !== 'viewer') {
     if (costoForm) {
       costoForm.style.display = 'grid';
+      costoForm.onsubmit = guardarCosto; // Vincula el evento submit
     } else {
       console.error('Elemento costoForm no encontrado en el DOM');
     }
