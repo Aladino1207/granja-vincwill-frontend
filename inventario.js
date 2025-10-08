@@ -78,12 +78,14 @@ async function guardarInventario(e) {
 
 async function editarInventario(id) {
   try {
+    console.log('Intentando editar inventario con id:', id);
     const res = await fetch(`${window.API_URL}/inventario/${id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     console.log('Respuesta de editarInventario - Status:', res.status, 'Status Text:', res.statusText);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const item = await res.json();
+    console.log('Datos recibidos para edición:', item);
     document.getElementById('producto').value = item.producto;
     document.getElementById('categoria').value = item.categoria;
     document.getElementById('cantidad').value = item.cantidad;
