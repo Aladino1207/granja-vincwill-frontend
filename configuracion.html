@@ -25,7 +25,7 @@
     <main>
         <section>
             <h2>Configuración</h2>
-            <form id="configForm" onsubmit="guardarConfiguracion(event); return false;">
+            <form id="configForm">
                 <label>Notificaciones:
                     <select id="notificaciones">
                         <option value="Activadas">Activadas</option>
@@ -38,46 +38,13 @@
                         <option value="Inglés">Inglés</option>
                     </select>
                 </label>
-                <label>Nombre de la Granja: <input type="text" id="nombreGranja" required></label>
-                <label>Umbral de Alerta de Mortalidad: <input type="number" id="umbralMortalidad" min="0" required></label>
-                <label>Formato de Fecha:
-                    <select id="formatoFecha">
-                        <option value="dd/MM/yyyy">dd/MM/yyyy</option>
-                        <option value="MM/dd/yyyy">MM/dd/yyyy</option>
-                    </select>
-                </label>
-                <h3>Programa de Vacunación</h3>
-                <table id="vacunasTable">
-                    <thead>
-                        <tr>
-                            <th>Tipo</th>
-                            <th>Semana</th>
-                            <th>Nombre</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="vacunasBody"></tbody>
-                </table>
-                <button type="button" onclick="agregarVacuna()">Agregar Vacuna</button>
+                <label>Nombre de la Granja: <input type="text" id="nombreGranja"></label>
+                <label>Programa de Vacunación para Gallinas (semanas): <input type="text" id="vacunasGallinas"></label> <!-- Solo gallinas -->
                 <button type="submit">Guardar Configuración</button>
             </form>
-            <div id="mensaje" style="margin-top: 10px;"></div>
-            <h3>Configuraciones Existentes</h3>
-            <table id="configTable">
-                <thead>
-                    <tr>
-                        <th>Nombre Granja</th>
-                        <th>Notificaciones</th>
-                        <th>Idioma</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="configTableBody"></tbody>
-            </table>
         </section>
     </main>
     <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
-    <script src="app.js"></script>
     <script src="configuracion.js"></script>
 </body>
 </html>

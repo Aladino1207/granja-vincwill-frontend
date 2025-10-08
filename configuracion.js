@@ -1,56 +1,59 @@
 async function cargarConfiguracion() {
   try {
-    const res = await fetch(`${window.API_URL}/config`, {
+    const res = await fetch(`${API_URL}/config`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
-    const configs = await res.json();
+    const config = await res.json();
     const form = document.getElementById('configForm');
-    const tbody = document.getElementById('configTableBody');
-    tbody.innerHTML = '';
-
-    if (configs.length > 0) {
-      const config = configs[0]; // Asume la primera configuración como activa
-      document.getElementById('notificaciones').value = config.notificaciones;
-      document.getElementById('idioma').value = config.idioma;
-      document.getElementById('nombreGranja').value = config.nombreGranja;
-      document.getElementById('umbralMortalidad').value = config.umbralMortalidad || 10;
-      document.getElementById('formatoFecha').value = config.formatoFecha || 'dd/MM/yyyy';
-
-      // Cargar vacunas
-      const vacunas = {
-        gallinas: config.vacunasGallinas ? config.vacunasGallinas.split(',').map(v => v.trim()) : [],
-        pollos: config.vacunasPollos ? config.vacunasPollos.split(',').map(v => v.trim()) : [],
-        pavos: config.vacunasPavos ? config.vacunasPavos.split(',').map(v => v.trim()) : []
-      };
-      const vacunasBody = document.getElementById('vacunasBody');
-      vacunasBody.innerHTML = '';
-      for (const [tipo, lista] of Object.entries(vacunas)) {
-        lista.forEach(v => {
-          const [semana, nombre] = v.split(':').map(s => s.trim());
-          agregarFilaVacuna(tipo, semana, nombre);
-        });
-      }
-
-      // Mostrar configuraciones existentes
-      configs.forEach(c => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${c.nombreGranja}</td>
-          <td>${c.notificaciones}</td>
-          <td>${c.idioma}</td>
-          <td>
-            <button onclick="editarConfiguracion(${c.id})">Editar</button>
-            <button onclick="eliminarConfiguracion(${c.id})">Eliminar</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
+    if (config.length > 0) {
+      document.getElementById('notificaciones').value = config[0].notificaciones;
+      document.getElementById('idioma').value = config[0].idioma;
+      document.getElementById('nombreGranja').value = config[0].nombreGranja;
+      document.getElementById('vacunasGallinas').value = config[0].vacunasGallinas;
+      // Eliminadas referencias a pollos y pavos
     }
   } catch (error) {
     console.error('Error al cargar configuración:', error);
-    document.getElementById('mensaje').textContent = 'Error al cargar configuración.';
   }
 }
+
+async function guardarConfiguracion(e) {
+  e.preventDefault();
+  const config = {
+    notificaciones: document.getElementById('notificaciones').value,
+    idioma: document.getElementById('idioma').value,
+    nombreGranja: document.getElementById('nombreGranja').value,
+    vacunasGallinas: document.getElementById('vacunasGallinas').value
+    // Eliminadas vacunasPollos y vacunasPavos
+  };
+  try {
+    const res = await fetch(`${API_URL}/config`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(config)
+    });
+    if (res.ok) {
+      document.getElementById('configForm').reset();
+      cargarConfiguracion();
+      alert('Configuración guardada');
+    } else {
+      alert('Error al guardar configuración');
+    }
+  } catch (error) {
+    alert('Error de conexión');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  if (currentUser && currentUser.role !== 'viewer') {
+    document.getElementById('configForm').style.display = 'grid';
+  }
+  cargarConfiguracion();
+});
 
 function agregarVacuna() {
   agregarFilaVacuna('Gallinas', '', '');
@@ -176,7 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   if (currentUser && currentUser.role !== 'viewer') {
     document.getElementById('configForm').style.display = 'grid';
-    document.getElementById('configTable').style.display = 'table';
   }
   cargarConfiguracion();
 });
