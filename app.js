@@ -100,6 +100,17 @@ async function actualizarDashboard() {
       fetch(`${API_URL}/ventas`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
     ]);
 
+    // Carga configuración para notificaciones
+    const resConfig = await fetch(`${window.API_URL}/config`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+    const config = await resConfig.json();
+    if (config.length > 0 && config[0].notificaciones === 'Activadas') {
+      mostrarAlertasProduccion();
+    } else {
+      document.getElementById('alertasList').innerHTML = '<li>No hay alertas activadas.</li>';
+    }
+
     let totalVivos = 0;
     lotes.forEach(lote => {
       const muertos = salud.filter(s => s.loteId === lote.id && s.tipo === 'Mortalidad').reduce((sum, s) => sum + s.cantidad, 0);

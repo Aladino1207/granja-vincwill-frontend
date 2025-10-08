@@ -1,63 +1,49 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Granja Avícola VincWill - Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <title>Granja Avícola VincWill - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <header>
-    <h1>Granja Avicola Vincwill</h1>
-    <nav>
-      <a href="index.html">Dashboard</a>
-      <a href="lotes.html">Lotes</a>
-      <a href="ventas.html">Ventas</a>
-      <a href="salud.html">Salud</a>
-      <a href="costos.html">Costos</a>
-      <a href="inventarios.html">Inventario</a>
-      <a href="seguimiento.html">Seguimiento</a>
-      <a href="reportes.html">Reportes</a>
-      <a href="usuarios.html">Usuarios</a>
-      <a href="configuracion.html">Configuración</a>
-      <a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
-    </nav>
-  </header>
-  <main>
-    <section>
-      <h2>Dashboard</h2>
-      <div id="accessDenied" style="display: none;">
-        <h3>Acceso Denegado</h3>
-        <p>Solo los usuarios con rol de Administrador o Empleado pueden acceder a esta página.</p>
-      </div>
-      <div>
-        <h3>Resumen</h3>
-        <p>Total Pollos Vivos: <span id="totalVivos">0</span></p>
-        <p>Conversión Promedio: <span id="conversionPromedio">0</span></p>
-        <p>Ganancia Diaria Promedio: <span id="gananciaPromedio">0</span></p>
-        <p>Costos Totales: <span id="costosTotales">$0</span></p>
-        <p>Ingresos Totales: <span id="ingresosTotales">$0</span></p>
-        <p>Rentabilidad: <span id="rentabilidad">$0</span></p>
-      </div>
-      <div>
-        <h3>Gráfico de Peso Promedio por Semana</h3>
-        <canvas id="produccionChart" width="400" height="200"></canvas>
-      </div>
-      <div>
-        <h3>Distribución de Costos por Categoría (Pastel)</h3>
-        <canvas id="costosPieChart" width="400" height="200"></canvas>
-      </div>
-      <div>
-        <h3>Ingresos vs Costos por Lote (Barras)</h3>
-        <canvas id="ingresosCostosBarChart" width="400" height="200"></canvas>
-      </div>
-      <div>
-        <h3>Alertas de Producción</h3>
-        <ul id="alertasList"></ul>
-      </div>
-    </section>
-  </main>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="app.js"></script>
+    <header>
+        <h1>Dashboard</h1>
+        <nav>
+            <a href="index.html">Dashboard</a>
+            <a href="lotes.html">Lotes</a>
+            <a href="ventas.html">Ventas</a>
+            <a href="salud.html">Salud</a>
+            <a href="costos.html">Costos</a>
+            <a href="inventarios.html">Inventario</a>
+            <a href="seguimiento.html">Seguimiento</a>
+            <a href="reportes.html">Reportes</a>
+            <a href="usuarios.html">Usuarios</a>
+            <a href="configuracion.html">Configuración</a>
+            <a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
+        </nav>
+    </header>
+    <main>
+        <section>
+            <h2>Resumen General</h2>
+            <div>
+                <p>Total de Aves Vivas: <span id="totalVivos">0</span></p>
+                <p>Conversión Promedio: <span id="conversionPromedio">0</span></p>
+                <p>Ganancia Promedio (kg/semana): <span id="gananciaPromedio">0</span></p>
+                <p>Costos Totales: <span id="costosTotales">$0.00</span></p>
+                <p>Ingresos Totales: <span id="ingresosTotales">$0.00</span></p>
+                <p>Rentabilidad: <span id="rentabilidad">$0.00</span></p>
+            </div>
+            <canvas id="produccionChart" width="400" height="200"></canvas>
+            <canvas id="costosPieChart" width="400" height="200"></canvas>
+            <canvas id="ingresosCostosBarChart" width="400" height="200"></canvas>
+            <section id="alertasSection">
+                <h3>Alertas de Producción</h3>
+                <ul id="alertasList"></ul>
+            </section>
+        </section>
+    </main>
+    <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
+    <script src="app.js"></script>
 </body>
 </html>
