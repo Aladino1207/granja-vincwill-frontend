@@ -1,15 +1,20 @@
 
 async function cargarInventario() {
-  
   try {
-    const res = await fetch(`${window.API_URL}/inventario`, { // Cambia a window.API_URL
+    console.log('Intentando cargar inventario desde:', `${window.API_URL}/inventario`);
+    console.log('Token enviado:', localStorage.getItem('token'));
+    const res = await fetch(`${window.API_URL}/inventario`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     console.log('Respuesta de /inventario - Status:', res.status, 'Status Text:', res.statusText);
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('Detalles del error:', errorText);
+      throw new Error(`HTTP error! status: ${res.status} - ${errorText}`);
+    }
     const inventario = await res.json();
     console.log('Datos recibidos de /inventario:', inventario);
-    const tbody = document.getElementById('tablaInventario'); // Cambia a tablaInventario
+    const tbody = document.getElementById('tablaInventario');
     if (!tbody) throw new Error('Elemento tablaInventario no encontrado');
     tbody.innerHTML = '';
     if (Array.isArray(inventario) && inventario.length > 0) {
