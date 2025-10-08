@@ -1,10 +1,10 @@
-
 async function cargarSalud() {
   try {
     const res = await fetch(`${window.API_URL}/salud`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     console.log('Respuesta de /salud - Status:', res.status, 'Status Text:', res.statusText);
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const salud = await res.json();
     console.log('Datos recibidos de /salud:', salud);
     const tbody = document.getElementById('saludTableBody');
@@ -46,7 +46,7 @@ async function cargarLotesForSelect() {
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
-    const select = document.getElementById('loteId');
+    const select = document.getElementById('loteId'); // Cambiado a 'loteId' para coincidir con salud.html
     if (!select) throw new Error('Elemento loteId no encontrado');
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
     lotes.forEach(lote => {
@@ -67,7 +67,7 @@ async function guardarSalud(e) {
     loteId: parseInt(document.getElementById('loteId').value),
     tipo: document.getElementById('tipo').value,
     nombre: document.getElementById('nombre').value,
-    cantidad: parseInt(document.getElementById('cantidad').value),
+    cantidad: parseFloat(document.getElementById('cantidad').value), // Cambiado a parseFloat para consistencia
     fecha: document.getElementById('fecha').value
   };
   try {
@@ -97,10 +97,13 @@ async function guardarSalud(e) {
 
 async function editarSalud(id) {
   try {
-    const res = await fetch(`${API_URL}/salud/${id}`, {
+    const res = await fetch(`${window.API_URL}/salud/${id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
+    console.log('Respuesta de GET /salud/:id - Status:', res.status, 'Status Text:', res.statusText);
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const s = await res.json();
+    console.log('Datos recibidos para edición:', s);
     document.getElementById('loteId').value = s.loteId;
     document.getElementById('tipo').value = s.tipo;
     document.getElementById('nombre').value = s.nombre;
@@ -108,32 +111,57 @@ async function editarSalud(id) {
     document.getElementById('fecha').value = s.fecha.split('T')[0];
     document.getElementById('saludForm').onsubmit = async (e) => {
       e.preventDefault();
-      await fetch(`${API_URL}/salud/${id}`, {
+      const updatedSalud = {
+        loteId: parseInt(document.getElementById('loteId').value),
+        tipo: document.getElementById('tipo').value,
+        nombre: document.getElementById('nombre').value,
+        cantidad: parseFloat(document.getElementById('cantidad').value),
+        fecha: document.getElementById('fecha').value
+      };
+      const putRes = await fetch(`${window.API_URL}/salud/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify(s)
+        body: JSON.stringify(updatedSalud)
       });
-      document.getElementById('saludForm').reset();
-      document.getElementById('saludForm').onsubmit = guardarSalud;
-      cargarSalud();
+      console.log('Respuesta de PUT /salud/:id - Status:', putRes.status, 'Status Text:', putRes.statusText);
+      if (putRes.ok) {
+        document.getElementById('saludForm').reset();
+        document.getElementById('saludForm').onsubmit = guardarSalud;
+        await cargarSalud();
+        console.log('Evento de salud actualizado y tabla recargada');
+      } else {
+        const errorText = await putRes.text();
+        console.error('Error al actualizar evento de salud:', errorText);
+        alert('Error al actualizar evento de salud: ' + (errorText || 'Desconocido'));
+      }
     };
   } catch (error) {
     console.error('Error al editar salud:', error);
+    alert('Error al editar evento de salud: ' + error.message);
   }
 }
 
 async function eliminarSalud(id) {
   if (confirm('¿Seguro que quieres eliminar este evento de salud?')) {
     try {
-      await fetch(`${API_URL}/salud/${id}`, {
+      const res = await fetch(`${window.API_URL}/salud/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      cargarSalud();
+      console.log('Respuesta de DELETE /salud/:id - Status:', res.status, 'Status Text:', res.statusText);
+      if (res.ok) {
+        await cargarSalud();
+        console.log('Evento de salud eliminado y tabla recargada');
+      } else {
+        const errorText = await res.text();
+        console.error('Error al eliminar evento de salud:', errorText);
+        alert('Error al eliminar evento de salud: ' + (errorText || 'Desconocido'));
+      }
     } catch (error) {
+      console.error('Error al eliminar salud:', error);
       alert('Error al eliminar evento de salud');
     }
   }
