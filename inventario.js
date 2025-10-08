@@ -1,11 +1,6 @@
 
 async function cargarInventario() {
-  console.log('Valor de window.API_URL antes de fetch:', window.API_URL);
-if (!window.API_URL) {
-  console.error('window.API_URL no está definido. Verifica app.js');
-  alert('Error: URL de la API no configurada. Contacta al administrador.');
-  return;
-}
+  
   try {
     const res = await fetch(`${window.API_URL}/inventario`, { // Cambia a window.API_URL
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -83,9 +78,11 @@ async function guardarInventario(e) {
 
 async function editarInventario(id) {
   try {
-    const res = await fetch(`${window.API_URL}/inventario/${id}`, { // Cambia a window.API_URL
+    const res = await fetch(`${window.API_URL}/inventario/${id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
+    console.log('Respuesta de editarInventario - Status:', res.status, 'Status Text:', res.statusText);
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const item = await res.json();
     document.getElementById('producto').value = item.producto;
     document.getElementById('categoria').value = item.categoria;
@@ -94,33 +91,47 @@ async function editarInventario(id) {
     document.getElementById('fecha').value = item.fecha.split('T')[0];
     document.getElementById('inventarioForm').onsubmit = async (e) => {
       e.preventDefault();
-      await fetch(`${window.API_URL}/inventario/${id}`, { // Cambia a window.API_URL
+      const updatedItem = {
+        producto: document.getElementById('producto').value,
+        categoria: document.getElementById('categoria').value,
+        cantidad: parseFloat(document.getElementById('cantidad').value),
+        costo: parseFloat(document.getElementById('costo').value),
+        fecha: document.getElementById('fecha').value
+      };
+      const putRes = await fetch(`${window.API_URL}/inventario/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify(item)
+        body: JSON.stringify(updatedItem)
       });
+      console.log('Respuesta de PUT - Status:', putRes.status, 'Status Text:', putRes.statusText);
+      if (!putRes.ok) throw new Error(`HTTP error! status: ${putRes.status}`);
       document.getElementById('inventarioForm').reset();
       document.getElementById('inventarioForm').onsubmit = guardarInventario;
       cargarInventario();
     };
   } catch (error) {
     console.error('Error al editar inventario:', error);
+    alert('Error al editar inventario: ' + error.message);
   }
 }
 
 async function eliminarInventario(id) {
   if (confirm('¿Seguro que quieres eliminar este inventario?')) {
     try {
-      await fetch(`${window.API_URL}/inventario/${id}`, { // Cambia a window.API_URL
+      console.log('Intentando eliminar inventario con id:', id);
+      const res = await fetch(`${window.API_URL}/inventario/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
+      console.log('Respuesta de eliminarInventario - Status:', res.status, 'Status Text:', res.statusText);
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       cargarInventario();
     } catch (error) {
-      alert('Error al eliminar inventario');
+      console.error('Error al eliminar inventario:', error);
+      alert('Error al eliminar inventario: ' + error.message);
     }
   }
 }
