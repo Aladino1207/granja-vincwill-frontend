@@ -39,12 +39,13 @@
                     </select>
                 </label>
                 <label>Nombre de la Granja: <input type="text" id="nombreGranja"></label>
-                <label>Programa de Vacunación para Gallinas (semanas): <input type="text" id="vacunasGallinas"></label> <!-- Solo gallinas -->
+                <label>Programa de Vacunación para Gallinas (semanas): <input type="text" id="vacunasGallinas"></label>
                 <button type="submit">Guardar Configuración</button>
             </form>
         </section>
     </main>
     <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
-    <script src="configuracion.js"></script>
+    <script src="app.js"></script> <!-- Cargar primero app.js -->
+    <script src="configuracion.js"></script> <!-- Luego configuracion.js -->
 </body>
 </html>
