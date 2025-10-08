@@ -41,15 +41,13 @@ async function cargarSalud() {
 
 async function cargarLotesForSelect() {
   try {
-    const token = localStorage.getItem('token');
-    console.log('Token usado para cargar lotes:', token);
     const res = await fetch(`${window.API_URL}/lotes`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
-    const select = document.getElementById('loteSelect');
-    if (!select) throw new Error('Elemento loteSelect no encontrado');
+    const select = document.getElementById('loteId');
+    if (!select) throw new Error('Elemento loteId no encontrado');
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
     lotes.forEach(lote => {
       const option = document.createElement('option');
