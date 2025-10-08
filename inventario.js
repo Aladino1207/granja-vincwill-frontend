@@ -1,5 +1,11 @@
 
 async function cargarInventario() {
+  console.log('Valor de window.API_URL antes de fetch:', window.API_URL);
+if (!window.API_URL) {
+  console.error('window.API_URL no está definido. Verifica app.js');
+  alert('Error: URL de la API no configurada. Contacta al administrador.');
+  return;
+}
   try {
     const res = await fetch(`${window.API_URL}/inventario`, { // Cambia a window.API_URL
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
