@@ -1,16 +1,17 @@
 
 async function cargarSalud() {
   try {
+    const token = localStorage.getItem('token');
+    console.log('Token usado para cargar salud:', token);
     const res = await fetch(`${window.API_URL}/salud`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      headers: { Authorization: `Bearer ${token}` }
     });
-    console.log('Respuesta de /salud - Status:', res.status, 'Status Text:', res.statusText);
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const salud = await res.json();
     console.log('Datos recibidos de /salud:', salud);
     const tbody = document.getElementById('saludTableBody');
     if (!tbody) throw new Error('Elemento saludTableBody no encontrado');
-    tbody.innerHTML = ''; // Limpia la tabla antes de rellenar
-    console.log('Intentando rellenar tabla con', salud.length, 'registros');
+    tbody.innerHTML = '';
     if (Array.isArray(salud) && salud.length > 0) {
       salud.forEach(s => {
         const tr = document.createElement('tr');
@@ -27,10 +28,8 @@ async function cargarSalud() {
         `;
         tbody.appendChild(tr);
       });
-      console.log('Tabla rellenada con éxito');
     } else {
       tbody.innerHTML = '<tr><td colspan="6">No hay eventos de salud registrados</td></tr>';
-      console.log('Tabla vacía, mostrando mensaje');
     }
   } catch (error) {
     console.error('Error al cargar salud:', error);
@@ -41,13 +40,15 @@ async function cargarSalud() {
 
 async function cargarLotesForSelect() {
   try {
+    const token = localStorage.getItem('token');
+    console.log('Token usado para cargar lotes:', token);
     const res = await fetch(`${window.API_URL}/lotes`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
-    const select = document.getElementById('loteId');
-    if (!select) throw new Error('Elemento loteId no encontrado');
+    const select = document.getElementById('loteSelect');
+    if (!select) throw new Error('Elemento loteSelect no encontrado');
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
     lotes.forEach(lote => {
       const option = document.createElement('option');
@@ -63,103 +64,71 @@ async function cargarLotesForSelect() {
 
 async function guardarSalud(e) {
   e.preventDefault();
-  const salud = {
-    loteId: parseInt(document.getElementById('loteId').value),
-    tipo: document.getElementById('tipo').value,
-    nombre: document.getElementById('nombre').value,
-    cantidad: parseInt(document.getElementById('cantidad').value),
-    fecha: document.getElementById('fecha').value
-  };
+  console.log('Intentando guardar evento de salud...');
+
+  const loteId = parseInt(document.getElementById('loteSelect').value);
+  const tipo = document.getElementById('tipo').value;
+  const nombre = document.getElementById('nombre').value;
+  const cantidad = parseFloat(document.getElementById('cantidad').value);
+  const fecha = document.getElementById('fecha').value;
+
+  console.log('Datos del formulario antes de enviar:', { loteId, tipo, nombre, cantidad, fecha });
+
+  if (!loteId || !tipo || !nombre || isNaN(cantidad) || !fecha) {
+    alert('Por favor, completa todos los campos correctamente.');
+    return;
+  }
+
+  const salud = { loteId, tipo, nombre, cantidad, fecha };
+
   try {
+    const token = localStorage.getItem('token');
+    console.log('Token usado para guardar:', token);
+    console.log('Datos enviados:', salud);
     const res = await fetch(`${window.API_URL}/salud`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`
+        Authorization: `Bearer ${token}`
       },
       body: JSON.stringify(salud)
     });
     console.log('Respuesta de guardarSalud - Status:', res.status, 'Status Text:', res.statusText);
     if (res.ok) {
       document.getElementById('saludForm').reset();
-      await cargarSalud(); // Asegúrate de esperar la recarga
+      await cargarSalud();
       console.log('Evento de salud guardado y tabla recargada');
     } else {
       const errorText = await res.text();
-      console.error('Error al guardar evento de salud:', errorText);
+      console.error('Error al guardar evento de salud - Detalle:', errorText);
       alert('Error al guardar evento de salud: ' + (errorText || 'Desconocido'));
     }
   } catch (error) {
-    console.error('Error de conexión:', error);
-    alert('Error de conexión');
+    console.error('Error de conexión o inesperado:', error);
+    alert('Error de conexión o inesperado');
   }
 }
 
 async function editarSalud(id) {
-  try {
-    const res = await fetch(`${API_URL}/salud/${id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
-    const s = await res.json();
-    document.getElementById('loteId').value = s.loteId;
-    document.getElementById('tipo').value = s.tipo;
-    document.getElementById('nombre').value = s.nombre;
-    document.getElementById('cantidad').value = s.cantidad;
-    document.getElementById('fecha').value = s.fecha.split('T')[0];
-    document.getElementById('saludForm').onsubmit = async (e) => {
-      e.preventDefault();
-      await fetch(`${API_URL}/salud/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(s)
-      });
-      document.getElementById('saludForm').reset();
-      document.getElementById('saludForm').onsubmit = guardarSalud;
-      cargarSalud();
-    };
-  } catch (error) {
-    console.error('Error al editar salud:', error);
-  }
+  console.log('Editar salud ID:', id);
+  alert('Edición no implementada. Necesita endpoint GET /salud/:id y PUT /salud/:id.');
 }
 
 async function eliminarSalud(id) {
-  if (confirm('¿Seguro que quieres eliminar este evento de salud?')) {
-    try {
-      await fetch(`${API_URL}/salud/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      cargarSalud();
-    } catch (error) {
-      alert('Error al eliminar evento de salud');
-    }
-  }
+  console.log('Eliminar salud ID:', id);
+  alert('Eliminación no implementada. Necesita endpoint DELETE /salud/:id.');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-  const saludForm = document.getElementById('saludForm');
-  const saludTable = document.getElementById('saludTable');
-  
-  console.log('Verificando elementos - saludForm:', saludForm, 'saludTable:', saludTable);
-
   if (currentUser && currentUser.role !== 'viewer') {
-    if (saludForm) {
-      saludForm.style.display = 'grid';
-    } else {
-      console.error('Elemento saludForm no encontrado en el DOM');
-    }
-    if (saludTable) {
-      saludTable.style.display = 'table';
-    } else {
-      console.error('Elemento saludTable no encontrado en el DOM');
-    }
-  } else {
-    console.log('Rol de usuario:', currentUser ? currentUser.role : 'No autenticado');
+    const saludForm = document.getElementById('saludForm');
+    const saludTable = document.getElementById('saludTable');
+    if (saludForm) saludForm.style.display = 'grid';
+    if (saludTable) saludTable.style.display = 'table';
   }
   cargarLotesForSelect();
   cargarSalud();
 });
+
+document.getElementById('saludForm').onsubmit = guardarSalud;
