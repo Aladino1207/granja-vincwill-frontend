@@ -63,7 +63,7 @@ function mostrarPrevisualizacion(data) {
   }
 
   const headers = Object.keys(data[0]);
-  thead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+  thead.innerHTML = `<tr>${headers.map(h => `<th>${h.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</th>`).join('')}</tr>`;
 
   data.forEach(row => {
     const tr = document.createElement('tr');
@@ -76,19 +76,35 @@ function generarPDF(data, tipoReporte) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
+  // Encabezado
   doc.setFontSize(18);
-  doc.text(`Reporte ${tipoReporte.charAt(0).toUpperCase() + tipoReporte.slice(1)}`, 10, 10);
+  doc.text(`Reporte de ${tipoReporte.charAt(0).toUpperCase() + tipoReporte.slice(1)}`, 10, 10);
+  doc.setFontSize(12);
+  doc.text(`Granja Avícola VincWill - Generado el: ${new Date().toLocaleString()}`, 10, 15);
+  if (data.length) {
+    doc.text(`Período: ${data[0].fecha} a ${data[data.length - 1].fecha}`, 10, 20);
+  }
 
+  // Tabla
   if (data && data.length) {
     doc.autoTable({
-      head: [Object.keys(data[0])],
+      head: [Object.keys(data[0]).map(h => h.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()))],
       body: data.map(row => Object.values(row)),
-      startY: 20,
-      styles: { overflow: 'linebreak' },
+      startY: 30,
+      styles: { overflow: 'linebreak', fontSize: 10, cellPadding: 2 },
+      headStyles: { fillColor: [22, 160, 133], textColor: [255, 255, 255], fontSize: 12 },
       columnStyles: { text: { cellWidth: 'auto' } }
     });
   } else {
-    doc.text('No hay datos disponibles para este reporte.', 10, 20);
+    doc.text('No hay datos disponibles para este reporte.', 10, 30);
+  }
+
+  // Pie de página
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.text(`Página ${i} de ${pageCount}`, 190, 290);
+    doc.text('© 2025 Granja Avícola VincWill', 10, 290);
   }
 
   doc.save(`reporte_${tipoReporte}_${new Date().toISOString().split('T')[0]}.pdf`);
