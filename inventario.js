@@ -96,21 +96,32 @@ async function editarInventario(id) {
       throw new Error(`HTTP error! status: ${res.status} - ${errorText}`);
     }
     const item = await res.json();
-    console.log('Datos recibidos para edición:', item);
-    document.getElementById('producto').value = item.producto;
-    document.getElementById('categoria').value = item.categoria;
-    document.getElementById('cantidad').value = item.cantidad;
-    document.getElementById('costo').value = item.costo;
-    document.getElementById('fecha').value = item.fecha.split('T')[0];
-    document.getElementById('inventarioForm').onsubmit = async (e) => {
+    console.log('Datos recibidos para edición (estructura completa):', item);
+    if (!item || typeof item !== 'object') throw new Error('Respuesta no contiene datos válidos');
+    document.getElementById('producto').value = item.producto || '';
+    document.getElementById('categoria').value = item.categoria || '';
+    document.getElementById('cantidad').value = item.cantidad !== undefined ? item.cantidad : '';
+    document.getElementById('costo').value = item.costo !== undefined ? item.costo : '';
+    document.getElementById('fecha').value = item.fecha ? item.fecha.split('T')[0] : '';
+    console.log('Campos del formulario actualizados:', {
+      producto: document.getElementById('producto').value,
+      categoria: document.getElementById('categoria').value,
+      cantidad: document.getElementById('cantidad').value,
+      costo: document.getElementById('costo').value,
+      fecha: document.getElementById('fecha').value
+    });
+    const form = document.getElementById('inventarioForm');
+    if (!form) throw new Error('Formulario inventarioForm no encontrado');
+    form.onsubmit = async (e) => {
       e.preventDefault();
       const updatedItem = {
         producto: document.getElementById('producto').value,
         categoria: document.getElementById('categoria').value,
-        cantidad: parseFloat(document.getElementById('cantidad').value),
-        costo: parseFloat(document.getElementById('costo').value),
+        cantidad: parseFloat(document.getElementById('cantidad').value) || 0,
+        costo: parseFloat(document.getElementById('costo').value) || 0,
         fecha: document.getElementById('fecha').value
       };
+      console.log('Datos a enviar en PUT:', updatedItem);
       const putRes = await fetch(`${window.API_URL}/inventario/${id}`, {
         method: 'PUT',
         headers: {
@@ -120,10 +131,12 @@ async function editarInventario(id) {
         body: JSON.stringify(updatedItem)
       });
       console.log('Respuesta de PUT - Status:', putRes.status, 'Status Text:', putRes.statusText);
-      if (!putRes.ok) throw new Error(`HTTP error! status: ${putRes.status}`);
-      document.getElementById('inventarioForm').reset();
-      document.getElementById('inventarioForm').onsubmit = guardarInventario;
-      cargarInventario();
+      const putText = await putRes.text();
+      console.log('Respuesta cruda de PUT:', putText);
+      if (!putRes.ok) throw new Error(`HTTP error! status: ${putRes.status} - ${putText}`);
+      form.reset();
+      form.onsubmit = guardarInventario;
+      await cargarInventario();
     };
   } catch (error) {
     console.error('Error al editar inventario:', error);
