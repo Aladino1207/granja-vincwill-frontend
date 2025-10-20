@@ -1,4 +1,4 @@
-window.API_URL = 'https://granja-vincwill-backend.up.railway.app';
+window.API_URL = 'https://granja-vincwill-backend.granja-vincwill.workers.dev';
 
 async function login(e) {
   e.preventDefault();
