@@ -1,4 +1,3 @@
-
 async function cargarLotes() {
   try {
     const token = localStorage.getItem('token');
@@ -20,14 +19,15 @@ async function cargarLotes() {
         <td>${new Date(lote.fechaIngreso).toLocaleDateString()}</td>
         <td>${lote.estado}</td>
         <td>
-          <button onclick="editarLote('${lote.loteId}')">Editar</button> <!-- Usar loteId como string -->
-          <button onclick="eliminarLote('${lote.loteId}')">Eliminar</button> <!-- Usar loteId como string -->
+          <button onclick="editarLote(${lote.id})">Editar</button> <!-- Usar id interno -->
+          <button onclick="eliminarLote(${lote.id})">Eliminar</button> <!-- Usar id interno -->
         </td>
       `;
       tbody.appendChild(tr);
     });
   } catch (error) {
     console.error('Error al cargar lotes:', error);
+    alert('Error al cargar lotes. Intenta recargar la página.');
   }
 }
 
@@ -71,6 +71,7 @@ async function guardarLote(e) {
       document.getElementById('loteForm').reset();
       cargarLotes();
       console.log('Lote guardado exitosamente');
+      alert('Lote guardado exitosamente');
     } else {
       const errorData = await res.json();
       console.error('Error del servidor:', errorData);
@@ -78,20 +79,19 @@ async function guardarLote(e) {
     }
   } catch (error) {
     console.error('Error de conexión:', error);
-    alert('Error de conexión');
+    alert('Error de conexión al servidor. Intenta de nuevo más tarde.');
   }
 }
 
-async function editarLote(loteId) {
+async function editarLote(id) {
   try {
     const token = localStorage.getItem('token');
     console.log('Token usado para editar:', token); // Depuración
-    const res = await fetch(`${API_URL}/lotes?loteId=${loteId}`, { // Ajuste para buscar por loteId
+    const res = await fetch(`${API_URL}/lotes/${id}`, { // Usar id interno
       headers: { Authorization: `Bearer ${token}` }
     });
-    const lotes = await res.json();
-    const lote = lotes.find(l => l.loteId === loteId); // Buscar el lote específico
-    if (!lote) throw new Error('Lote no encontrado');
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const lote = await res.json();
     document.getElementById('loteId').value = lote.loteId;
     document.getElementById('cantidad').value = lote.cantidad;
     document.getElementById('pesoInicial').value = lote.pesoInicial;
@@ -106,7 +106,7 @@ async function editarLote(loteId) {
         fechaIngreso: document.getElementById('fechaIngreso').value,
         estado: document.getElementById('estado').value === 'Activo' ? 'disponible' : 'vendido'
       };
-      await fetch(`${API_URL}/lotes/${lote.id}`, { // Usar el ID interno si existe, de lo contrario ajustar
+      const putRes = await fetch(`${API_URL}/lotes/${id}`, { // Usar id interno
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -114,27 +114,42 @@ async function editarLote(loteId) {
         },
         body: JSON.stringify(updatedLote)
       });
-      document.getElementById('loteForm').reset();
-      document.getElementById('loteForm').onsubmit = guardarLote;
-      cargarLotes();
+      if (putRes.ok) {
+        document.getElementById('loteForm').reset();
+        document.getElementById('loteForm').onsubmit = guardarLote;
+        cargarLotes();
+        alert('Lote actualizado exitosamente');
+      } else {
+        const errorData = await putRes.json();
+        console.error('Error al actualizar:', errorData);
+        alert('Error al actualizar lote: ' + (errorData.error || 'Desconocido'));
+      }
     };
   } catch (error) {
     console.error('Error al editar lote:', error);
+    alert('Error al cargar datos del lote. Intenta de nuevo.');
   }
 }
 
-async function eliminarLote(loteId) {
+async function eliminarLote(id) {
   if (confirm('¿Seguro que quieres eliminar este lote?')) {
     try {
       const token = localStorage.getItem('token');
       console.log('Token usado para eliminar:', token); // Depuración
-      await fetch(`${API_URL}/lotes?loteId=${loteId}`, { // Ajuste para buscar por loteId
+      const res = await fetch(`${API_URL}/lotes/${id}`, { // Usar id interno
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
-      cargarLotes();
+      if (res.ok) {
+        cargarLotes();
+        alert('Lote eliminado exitosamente');
+      } else {
+        const errorData = await res.json();
+        console.error('Error al eliminar:', errorData);
+        alert('Error al eliminar lote: ' + (errorData.error || 'Desconocido'));
+      }
     } catch (error) {
-      alert('Error al eliminar lote');
+      alert('Error de conexión al eliminar lote');
     }
   }
 }
