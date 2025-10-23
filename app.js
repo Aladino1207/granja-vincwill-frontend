@@ -1,6 +1,7 @@
 window.API_URL = 'https://granja-vincwill-backend.granja-vincwill.workers.dev';
 
 async function login(e) {
+  async function login(e) {
   e.preventDefault();
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
@@ -21,18 +22,19 @@ async function login(e) {
     const text = await res.text();
     console.log('Respuesta del servidor:', text, 'Status:', res.status);
     if (!res.ok) {
-      const errorData = text ? JSON.parse(text).error || text : 'Error desconocido';
+      const errorData = text ? (JSON.parse(text).error || text) : 'Error desconocido';
       errorMessage.textContent = `Error en login: ${errorData}`;
-      return;
+      return; // Detiene la ejecución aquí si falla
     }
     const data = JSON.parse(text);
     localStorage.setItem('token', data.token);
     localStorage.setItem('currentUser', JSON.stringify(data.user));
     errorMessage.textContent = '';
-    window.location.href = 'index.html';
+    window.location.href = 'index.html'; // Redirige solo si tiene éxito
   } catch (error) {
-    errorMessage.textContent = 'Error de conexión al servidor.';
     console.error('Login error:', error);
+    errorMessage.textContent = 'Error de conexión al servidor. Intenta de nuevo.';
+    // No redirige ni recarga, solo muestra el error
   }
 }
 
