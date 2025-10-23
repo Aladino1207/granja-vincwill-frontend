@@ -2,39 +2,40 @@ window.API_URL = 'https://granja-vincwill-backend.granja-vincwill.workers.dev';
 
 async function login(e) {
   async function login(e) {
-  e.preventDefault();
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  const errorMessage = document.getElementById('errorMessage');
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const errorMessage = document.getElementById('errorMessage');
 
-  if (!email || !password) {
-    errorMessage.textContent = 'Por favor, ingresa email y contraseña.';
-    return;
-  }
-
-  try {
-    console.log('Intentando login con email:', email, 'y contraseña:', password);
-    const res = await fetch(`${API_URL}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const text = await res.text();
-    console.log('Respuesta del servidor:', text, 'Status:', res.status);
-    if (!res.ok) {
-      const errorData = text ? (JSON.parse(text).error || text) : 'Error desconocido';
-      errorMessage.textContent = `Error en login: ${errorData}`;
-      return; // Detiene la ejecución aquí si falla
+    if (!email || !password) {
+      errorMessage.textContent = 'Por favor, ingresa email y contraseña.';
+      return;
     }
-    const data = JSON.parse(text);
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('currentUser', JSON.stringify(data.user));
-    errorMessage.textContent = '';
-    window.location.href = 'index.html'; // Redirige solo si tiene éxito
-  } catch (error) {
-    console.error('Login error:', error);
-    errorMessage.textContent = 'Error de conexión al servidor. Intenta de nuevo.';
-    // No redirige ni recarga, solo muestra el error
+
+    try {
+      console.log('Intentando login con email:', email, 'y contraseña:', password);
+      const res = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const text = await res.text();
+      console.log('Respuesta del servidor:', text, 'Status:', res.status);
+      if (!res.ok) {
+        const errorData = text ? (JSON.parse(text).error || text) : 'Error desconocido';
+        errorMessage.textContent = `Error en login: ${errorData}`;
+        return; // Detiene la ejecución aquí si falla
+      }
+      const data = JSON.parse(text);
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('currentUser', JSON.stringify(data.user));
+      errorMessage.textContent = '';
+      window.location.href = 'index.html'; // Redirige solo si tiene éxito
+    } catch (error) {
+      console.error('Login error:', error);
+      errorMessage.textContent = 'Error de conexión al servidor. Intenta de nuevo.';
+      // No redirige ni recarga, solo muestra el error
+    }
   }
 }
 
