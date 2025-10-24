@@ -291,23 +291,9 @@ function mostrarAlertasProduccion() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const path = window.location.pathname.split('/').pop();
-  if (path !== 'login.html') {
-    checkAccess();
-  }
-  if (path === 'index.html') {
-    actualizarDashboard();
-    mostrarGraficosDashboard();
-    mostrarCostosPieChart();
-    mostrarIngresosCostosBarChart();
-    mostrarAlertasProduccion();
-  }
-  // Vincular el evento onsubmit solo para login.html
-  if (path === 'login.html') {
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-      loginForm.onsubmit = login;
-    }
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) {
+    loginForm.addEventListener('submit', login);
   }
 });
 
