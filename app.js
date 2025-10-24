@@ -21,18 +21,22 @@ async function login(e) {
     const text = await res.text();
     console.log('Server response:', text, 'Status:', res.status);
     if (!res.ok) {
-      const errorData = text ? (JSON.parse(text).error || text) : 'Unknown error';
-      errorMessage.textContent = `Login error: ${errorData}`;
+      errorMessage.textContent = `Error en login: ${text || 'Error desconocido'}`;
       return;
     }
-    const data = JSON.parse(text);
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error('Respuesta no válida del servidor');
+    }
     localStorage.setItem('token', data.token);
     localStorage.setItem('currentUser', JSON.stringify(data.user));
     errorMessage.textContent = '';
     window.location.href = 'index.html';
   } catch (error) {
     console.error('Login error:', error);
-    errorMessage.textContent = 'Server connection error. Try again.';
+    errorMessage.textContent = 'Error de conexión al servidor.';
   }
 }
 
