@@ -1,30 +1,27 @@
+// lotes.js → función para cargar lotes
 async function cargarLotes() {
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado:', token); // Depuración
-    const res = await fetch(`${API_URL}/lotes`, {
-      headers: { Authorization: `Bearer ${token}` }
+    if (!token) {
+      alert('No estás autenticado');
+      window.location.href = 'login.html';
+      return;
+    }
+
+    const response = await fetch(`${API_URL}/lotes`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`  // ← ¡AQUÍ ESTÁ EL PROBLEMA!
+      }
     });
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    const lotes = await res.json();
-    const tbody = document.getElementById('loteTableBody');
-    if (!tbody) throw new Error('Elemento loteTableBody no encontrado');
-    tbody.innerHTML = '';
-    lotes.forEach(lote => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${lote.loteId}</td>
-        <td>${lote.cantidad}</td>
-        <td>${lote.pesoInicial}</td>
-        <td>${new Date(lote.fechaIngreso).toLocaleDateString()}</td>
-        <td>${lote.estado}</td>
-        <td>
-          <button onclick="editarLote(${lote.id})">Editar</button> <!-- Usar id interno -->
-          <button onclick="eliminarLote(${lote.id})">Eliminar</button> <!-- Usar id interno -->
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
+
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${await response.text()}`);
+    }
+
+    const lotes = await response.json();
+    mostrarLotes(lotes);
   } catch (error) {
     console.error('Error al cargar lotes:', error);
     alert('Error al cargar lotes. Intenta recargar la página.');
@@ -156,21 +153,35 @@ async function eliminarLote(id) {
 
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-  if (currentUser && ['admin', 'empleado'].includes(currentUser.role)) {
-    const loteForm = document.getElementById('loteForm');
-    if (loteForm) {
-      loteForm.style.display = 'grid';
-      loteForm.onsubmit = guardarLote; // Vincula el evento explícitamente
-    }
-    document.getElementById('loteTable').style.display = 'table';
-    cargarLotes(); // Carga los lotes al iniciar
-  } else if (currentUser) {
+  const token = localStorage.getItem('token');
+
+  // 1. Verifica rol
+  if (!currentUser || !['admin', 'empleado'].includes(currentUser.role)) {
     document.querySelector('main').innerHTML = `
       <section>
         <h2>Acceso Denegado</h2>
-        <p>Solo los usuarios con rol de Administrador o Empleado pueden gestionar lotes.</p>
+        <p>Solo Administradores y Empleados pueden gestionar lotes.</p>
         <a href="index.html">Volver al Dashboard</a>
       </section>
     `;
+    return;
   }
+
+  // 2. Mostrar UI
+  const loteForm = document.getElementById('loteForm');
+  if (loteForm) {
+    loteForm.style.display = 'grid';
+    loteForm.onsubmit = guardarLote;
+  }
+  document.getElementById('loteTable').style.display = 'table';
+
+  // 3. CARGAR LOTES CON RETRASO
+  setTimeout(() => {
+    if (token) {
+      cargarLotes();
+    } else {
+      console.warn('Token no disponible. Redirigiendo...');
+      window.location.href = 'login.html';
+    }
+  }, 100);
 });
