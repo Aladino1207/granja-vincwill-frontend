@@ -53,8 +53,33 @@
       </table>
     </section>
   </main>
+  <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
   <script>
     window.API_URL = 'https://granja-vincwill-backend.granja-vincwill.workers.dev';
+  </script>
+
+  <script>
+    // Verifica si hay token
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      // Si NO hay token → redirige a login
+      window.location.href = 'login.html';
+    }
+  
+    // Evita volver atrás con el botón del navegador
+    window.addEventListener('popstate', function() {
+      const currentToken = localStorage.getItem('token');
+      if (!currentToken) {
+        window.location.href = 'login.html';
+      }
+    });
+  
+    // Opcional: Bloquea el botón "Atrás" del navegador
+    history.pushState(null, null, location.href);
+    window.onpopstate = function () {
+      history.go(1);
+    };
   </script>
   <script src="app.js"></script>
   <script src="lotes.js"></script>
