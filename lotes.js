@@ -1,4 +1,30 @@
-// lotes.js → función para cargar lotes
+/// === MOSTRAR LOTES ===
+function mostrarLotes(lotes) {
+  const tbody = document.getElementById('loteTableBody');
+  if (!tbody) {
+    console.error('No se encontró loteTableBody');
+    return;
+  }
+
+  tbody.innerHTML = '';
+  lotes.forEach(lote => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${lote.loteId}</td>
+      <td>${lote.cantidad}</td>
+      <td>${lote.pesoInicial}</td>
+      <td>${new Date(lote.fechaIngreso).toLocaleDateString()}</td>
+      <td>${lote.estado}</td>
+      <td>
+        <button onclick="editarLote(${lote.id})">Editar</button>
+        <button onclick="eliminarLote(${lote.id})">Eliminar</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// === CARGAR LOTES ===
 async function cargarLotes() {
   try {
     const token = localStorage.getItem('token');
@@ -12,16 +38,17 @@ async function cargarLotes() {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`  // ← ¡AQUÍ ESTÁ EL PROBLEMA!
+        'Authorization': `Bearer ${token}`
       }
     });
 
     if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${await response.text()}`);
+      const errorText = await response.text();
+      throw new Error(`Error ${response.status}: ${errorText}`);
     }
 
     const lotes = await response.json();
-    mostrarLotes(lotes);
+    mostrarLotes(lotes); // ← AHORA SÍ EXISTE
   } catch (error) {
     console.error('Error al cargar lotes:', error);
     alert('Error al cargar lotes. Intenta recargar la página.');
