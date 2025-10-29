@@ -60,23 +60,7 @@
     </section>
   </main>
   <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
-
-  <script>
-      const token = localStorage.getItem('token');
-      if (!token) {
-        window.location.href = 'login.html';
-      }
   
-      window.addEventListener('popstate', () => {
-        if (!localStorage.getItem('token')) {
-          window.location.href = 'login.html';
-        }
-      });
-  
-      history.pushState(null, null, location.href);
-      window.onpopstate = () => history.go(1);
-    </script>
-
   <script src="app.js"></script>
   <script src="salud.js"></script>
 </body>

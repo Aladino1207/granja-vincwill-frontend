@@ -51,22 +51,6 @@
     </main>
     <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
     
-    <script>
-      const token = localStorage.getItem('token');
-      if (!token) {
-        window.location.href = 'login.html';
-      }
-  
-      window.addEventListener('popstate', () => {
-        if (!localStorage.getItem('token')) {
-          window.location.href = 'login.html';
-        }
-      });
-  
-      history.pushState(null, null, location.href);
-      window.onpopstate = () => history.go(1);
-    </script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.13/jspdf.plugin.autotable.min.js"></script>
     <script src="app.js"></script>

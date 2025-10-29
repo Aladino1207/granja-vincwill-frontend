@@ -41,9 +41,9 @@ async function login(e) {
 }
 
 function logout() {
-  localStorage.removeItem('isAuthenticated');
-  localStorage.removeItem('currentUser');
   localStorage.removeItem('token');
+  localStorage.removeItem('currentUser');
+  localStorage.removeItem('isAuthenticated');
   window.location.href = 'login.html';
 }
 
@@ -290,10 +290,72 @@ function mostrarAlertasProduccion() {
     .catch(error => console.error('Error en alertas:', error));
 }
 
+// === LOGIN (en login.html) ===
 document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('loginForm');
+  const errorMessage = document.getElementById('errorMessage');
+
   if (loginForm) {
-    loginForm.addEventListener('submit', login);
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMessage.textContent = '';
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        errorMessage.textContent = 'Completa todos los campos';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Guardar datos de sesión
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('currentUser', JSON.stringify(data.user));
+          localStorage.setItem('isAuthenticated', 'true');
+
+          // Redirección FORZADA
+          window.location.href = 'lotes.html'; // Cambia si tu dashboard es otro
+        } else {
+          errorMessage.textContent = data.error || 'Credenciales inválidas';
+        }
+      } catch (err) {
+        errorMessage.textContent = 'Error de conexión. Revisa tu internet.';
+        console.error('Error login:', err);
+      }
+    });
+  }
+  // === PROTECCIÓN DE RUTAS (para lotes.html, ventas.html, etc.) ===
+  const token = localStorage.getItem('token');
+  const isLoginPage = window.location.pathname.includes('login.html');
+
+  if (!isLoginPage && !token) {
+    // Si NO es login y NO hay token → redirige
+    window.location.href = 'login.html';
+  }
+
+  // Evitar volver atrás con el botón del navegador
+  if (!isLoginPage) {
+    window.addEventListener('popstate', () => {
+      if (!localStorage.getItem('token')) {
+        window.location.href = 'login.html';
+      }
+    });
+
+    // Bloquea el botón "Atrás"
+    history.pushState(null, null, location.href);
+    window.onpopstate = () => history.go(1);
   }
 });
 
