@@ -64,74 +64,64 @@ async function cargarLotes() {
   try {
     const token = localStorage.getItem('token');
     if (!token) {
+      alert('No estás autenticado');
       window.location.href = 'login.html';
       return;
     }
 
+    // === FUNCIÓN REUTILIZABLE: fetch con timeout ===
     const lotes = await window.fetchWithTimeout(`${API_URL}/lotes`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       }
-    }, 15000);
+    }, 15000); // 15 segundos
 
     mostrarLotes(lotes);
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error al cargar lotes:', error);
     alert('Error al cargar lotes: ' + error.message);
   }
 }
 
 async function guardarLote(e) {
   e.preventDefault();
-  console.log('Intentando guardar lote...'); // Depuración
+  console.log('Intentando guardar lote...');
 
   const loteId = document.getElementById('loteId').value;
   const cantidad = parseInt(document.getElementById('cantidad').value);
   const pesoInicial = parseFloat(document.getElementById('pesoInicial').value);
   const fechaIngreso = document.getElementById('fechaIngreso').value;
-  const estado = document.getElementById('estado').value === 'Activo' ? 'disponible' : 'vendido'; // Mapear estados
+  const estado = document.getElementById('estado').value === 'Activo' ? 'disponible' : 'vendido';
 
-  // Validación básica
   if (!loteId || isNaN(cantidad) || isNaN(pesoInicial) || !fechaIngreso) {
     alert('Por favor, completa todos los campos correctamente.');
     return;
   }
 
-  const lote = {
-    loteId,
-    cantidad,
-    pesoInicial,
-    fechaIngreso,
-    estado
-  };
+  const lote = { loteId, cantidad, pesoInicial, fechaIngreso, estado };
 
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado para guardar:', token); // Depuración
-    console.log('Datos enviados:', lote); // Depuración
-    const res = await fetch(`${API_URL}/lotes`, {
+
+    // Usa fetchWithTimeout
+    const nuevoLote = await window.fetchWithTimeout(`${API_URL}/lotes`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(lote)
-    });
-    if (res.ok) {
-      document.getElementById('loteForm').reset();
-      cargarLotes();
-      console.log('Lote guardado exitosamente');
-      alert('Lote guardado exitosamente');
-    } else {
-      const errorData = await res.json();
-      console.error('Error del servidor:', errorData);
-      alert('Error al guardar lote: ' + (errorData.error || 'Desconocido'));
-    }
+    }, 15000);
+
+    document.getElementById('loteForm').reset();
+    cargarLotes();
+    alert('Lote guardado exitosamente');
+    console.log('Lote creado:', nuevoLote);
   } catch (error) {
-    console.error('Error de conexión:', error);
-    alert('Error de conexión al servidor. Intenta de nuevo más tarde.');
+    console.error('Error:', error);
+    alert('Error al guardar lote: ' + error.message);
   }
 }
 
