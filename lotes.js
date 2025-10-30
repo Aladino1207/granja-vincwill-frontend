@@ -24,34 +24,62 @@ function mostrarLotes(lotes) {
   });
 }
 
+// === FUNCIÓN REUTILIZABLE: fetch con timeout ===
+async function fetchWithTimeout(url, options = {}, timeout = 15000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+
+    clearTimeout(id);
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Non-JSON response:', text);
+      throw new Error('Respuesta no es JSON');
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Error ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    clearTimeout(id);
+    if (error.name === 'AbortError') {
+      throw new Error('Tiempo agotado. El servidor no respondió a tiempo.');
+    }
+    throw error;
+  }
+}
+
 // === CARGAR LOTES ===
 async function cargarLotes() {
   try {
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('No estás autenticado');
       window.location.href = 'login.html';
       return;
     }
 
-    const response = await fetch(`${API_URL}/lotes`, {
+    const lotes = await window.fetchWithTimeout(`${API_URL}/lotes`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       }
-    });
+    }, 15000);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error ${response.status}: ${errorText}`);
-    }
-
-    const lotes = await response.json();
-    mostrarLotes(lotes); // ← AHORA SÍ EXISTE
+    mostrarLotes(lotes);
   } catch (error) {
-    console.error('Error al cargar lotes:', error);
-    alert('Error al cargar lotes. Intenta recargar la página.');
+    console.error('Error:', error);
+    alert('Error al cargar lotes: ' + error.message);
   }
 }
 

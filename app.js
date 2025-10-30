@@ -1,5 +1,40 @@
 window.API_URL = 'https://granja-vincwill-backend.granja-vincwill.workers.dev';
 
+// === FUNCIÓN GLOBAL: fetch con timeout + validación JSON ===
+window.fetchWithTimeout = async function(url, options = {}, timeout = 15000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+
+    clearTimeout(id);
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Non-JSON response:', text);
+      throw new Error('Respuesta no es JSON');
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Error ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    clearTimeout(id);
+    if (error.name === 'AbortError') {
+      throw new Error('Tiempo agotado. El servidor no respondió a tiempo.');
+    }
+    throw error;
+  }
+};
+
 async function login(e) {
   e.preventDefault();
   const email = document.getElementById('email').value.trim();
