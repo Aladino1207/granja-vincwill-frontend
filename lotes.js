@@ -1,4 +1,6 @@
-/// === MOSTRAR LOTES ===
+// lotes.js - GESTIÓN DE LOTES (FINAL)
+
+// === MOSTRAR LOTES ===
 function mostrarLotes(lotes) {
   const tbody = document.getElementById('loteTableBody');
   if (!tbody) {
@@ -24,67 +26,31 @@ function mostrarLotes(lotes) {
   });
 }
 
-// === FUNCIÓN REUTILIZABLE: fetch con timeout ===
-async function fetchWithTimeout(url, options = {}, timeout = 15000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-
-    clearTimeout(id);
-
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await response.text();
-      console.error('Non-JSON response:', text);
-      throw new Error('Respuesta no es JSON');
-    }
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `Error ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    clearTimeout(id);
-    if (error.name === 'AbortError') {
-      throw new Error('Tiempo agotado. El servidor no respondió a tiempo.');
-    }
-    throw error;
-  }
-}
-
 // === CARGAR LOTES ===
 async function cargarLotes() {
   try {
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('No estás autenticado');
       window.location.href = 'login.html';
       return;
     }
 
-    // === FUNCIÓN REUTILIZABLE: fetch con timeout ===
     const lotes = await window.fetchWithTimeout(`${API_URL}/lotes`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       }
-    }, 15000); // 15 segundos
+    }, 15000);
 
     mostrarLotes(lotes);
   } catch (error) {
-    console.error('Error al cargar lotes:', error);
+    console.error('Error:', error);
     alert('Error al cargar lotes: ' + error.message);
   }
 }
 
+// === GUARDAR LOTE ===
 async function guardarLote(e) {
   e.preventDefault();
   console.log('Intentando guardar lote...');
@@ -105,7 +71,6 @@ async function guardarLote(e) {
   try {
     const token = localStorage.getItem('token');
 
-    // Usa fetchWithTimeout
     const nuevoLote = await window.fetchWithTimeout(`${API_URL}/lotes`, {
       method: 'POST',
       headers: {
@@ -118,27 +83,26 @@ async function guardarLote(e) {
     document.getElementById('loteForm').reset();
     cargarLotes();
     alert('Lote guardado exitosamente');
-    console.log('Lote creado:', nuevoLote);
   } catch (error) {
     console.error('Error:', error);
     alert('Error al guardar lote: ' + error.message);
   }
 }
 
+// === EDITAR LOTE ===
 async function editarLote(id) {
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado para editar:', token); // Depuración
-    const res = await fetch(`${API_URL}/lotes/${id}`, { // Usar id interno
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    const lote = await res.json();
+    const lote = await window.fetchWithTimeout(`${API_URL}/lotes/${id}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }, 15000);
+
     document.getElementById('loteId').value = lote.loteId;
     document.getElementById('cantidad').value = lote.cantidad;
     document.getElementById('pesoInicial').value = lote.pesoInicial;
-    document.getElementById('fechaIngreso').value = lote.fechaIngreso.split('T')[0]; // Formato YYYY-MM-DD
+    document.getElementById('fechaIngreso').value = lote.fechaIngreso.split('T')[0];
     document.getElementById('estado').value = lote.estado === 'disponible' ? 'Activo' : 'Terminado';
+
     document.getElementById('loteForm').onsubmit = async (e) => {
       e.preventDefault();
       const updatedLote = {
@@ -148,59 +112,52 @@ async function editarLote(id) {
         fechaIngreso: document.getElementById('fechaIngreso').value,
         estado: document.getElementById('estado').value === 'Activo' ? 'disponible' : 'vendido'
       };
-      const putRes = await fetch(`${API_URL}/lotes/${id}`, { // Usar id interno
+
+      await window.fetchWithTimeout(`${API_URL}/lotes/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(updatedLote)
-      });
-      if (putRes.ok) {
-        document.getElementById('loteForm').reset();
-        document.getElementById('loteForm').onsubmit = guardarLote;
-        cargarLotes();
-        alert('Lote actualizado exitosamente');
-      } else {
-        const errorData = await putRes.json();
-        console.error('Error al actualizar:', errorData);
-        alert('Error al actualizar lote: ' + (errorData.error || 'Desconocido'));
-      }
+      }, 15000);
+
+      document.getElementById('loteForm').reset();
+      document.getElementById('loteForm').onsubmit = guardarLote;
+      cargarLotes();
+      alert('Lote actualizado exitosamente');
     };
   } catch (error) {
-    console.error('Error al editar lote:', error);
-    alert('Error al cargar datos del lote. Intenta de nuevo.');
+    console.error('Error:', error);
+    alert('Error al editar lote: ' + error.message);
   }
 }
 
+// === ELIMINAR LOTE ===
 async function eliminarLote(id) {
   if (confirm('¿Seguro que quieres eliminar este lote?')) {
     try {
       const token = localStorage.getItem('token');
-      console.log('Token usado para eliminar:', token); // Depuración
-      const res = await fetch(`${API_URL}/lotes/${id}`, { // Usar id interno
+
+      await window.fetchWithTimeout(`${API_URL}/lotes/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        cargarLotes();
-        alert('Lote eliminado exitosamente');
-      } else {
-        const errorData = await res.json();
-        console.error('Error al eliminar:', errorData);
-        alert('Error al eliminar lote: ' + (errorData.error || 'Desconocido'));
-      }
+        headers: { 'Authorization': `Bearer ${token}` }
+      }, 15000);
+
+      cargarLotes();
+      alert('Lote eliminado exitosamente');
     } catch (error) {
-      alert('Error de conexión al eliminar lote');
+      console.error('Error:', error);
+      alert('Error al eliminar lote: ' + error.message);
     }
   }
 }
 
+// === INICIALIZACIÓN ===
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const token = localStorage.getItem('token');
 
-  // 1. Verifica rol
   if (!currentUser || !['admin', 'empleado'].includes(currentUser.role)) {
     document.querySelector('main').innerHTML = `
       <section>
@@ -212,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // 2. Mostrar UI
   const loteForm = document.getElementById('loteForm');
   if (loteForm) {
     loteForm.style.display = 'grid';
@@ -220,12 +176,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   document.getElementById('loteTable').style.display = 'table';
 
-  // 3. CARGAR LOTES CON RETRASO
   setTimeout(() => {
     if (token) {
       cargarLotes();
     } else {
-      console.warn('Token no disponible. Redirigiendo...');
       window.location.href = 'login.html';
     }
   }, 100);
