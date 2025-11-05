@@ -14,11 +14,12 @@ window.fetchWithTimeout = async function(url, options = {}, timeout = 15000) {
     clearTimeout(id);
 
     const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await response.text();
-      console.error('Non-JSON response:', text);
-      throw new Error('Respuesta no es JSON');
-    }
+if (!contentType || !contentType.includes('application/json')) {
+  const text = await response.text();
+  console.warn('Non-JSON:', text.slice(0, 100)); // Muestra un preview del error
+  throw new Error('Servidor no respondió con JSON. Verifica el backend.');
+}
+
 
     if (!response.ok) {
       const errorData = await response.json();
@@ -34,6 +35,18 @@ window.fetchWithTimeout = async function(url, options = {}, timeout = 15000) {
     throw error;
   }
 };
+
+setInterval(() => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const exp = payload.exp * 1000;
+    const remaining = exp - Date.now();
+    if (remaining < 5 * 60 * 1000) { // menos de 5 min
+      logout(); // o refrescar token si hay endpoint
+    }
+  }
+}, 60000);
 
 async function login(e) {
   e.preventDefault();
