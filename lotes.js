@@ -102,7 +102,7 @@ async function editarLote(id) {
     document.getElementById('pesoInicial').value = lote.pesoInicial;
     document.getElementById('fechaIngreso').value = lote.fechaIngreso.split('T')[0];
     document.getElementById('estado').value = lote.estado === 'disponible' ? 'Activo' : 'Terminado';
-
+n
     document.getElementById('loteForm').onsubmit = async (e) => {
       e.preventDefault();
       const updatedLote = {
