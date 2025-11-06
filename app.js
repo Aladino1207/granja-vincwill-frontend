@@ -6,6 +6,8 @@ window.fetchWithTimeout = async function(url, options = {}, timeout = 15000) {
   const id = setTimeout(() => controller.abort(), timeout);
 
   try {
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
     const response = await fetch(url, {
       ...options,
       signal: controller.signal
