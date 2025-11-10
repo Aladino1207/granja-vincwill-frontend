@@ -1,57 +1,7 @@
-window.API_URL = 'https://granja-vincwill-backend.granja-vincwill.workers.dev';
-
-// === FUNCIÓN GLOBAL: fetch con timeout + validación JSON ===
-window.fetchWithTimeout = async function(url, options = {}, timeout = 15000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-
-    clearTimeout(id);
-
-    const contentType = response.headers.get('content-type');
-if (!contentType || !contentType.includes('application/json')) {
-  const text = await response.text();
-  console.warn('Non-JSON:', text.slice(0, 100)); // Muestra un preview del error
-  throw new Error('Servidor no respondió con JSON. Verifica el backend.');
-}
-
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `Error ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    clearTimeout(id);
-    if (error.name === 'AbortError') {
-      throw new Error('Tiempo agotado. El servidor no respondió a tiempo.');
-    }
-    throw error;
-  }
-};
-
-setInterval(() => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const exp = payload.exp * 1000;
-    const remaining = exp - Date.now();
-    if (remaining < 5 * 60 * 1000) { // menos de 5 min
-      logout(); // o refrescar token si hay endpoint
-    }
-  }
-}, 60000);
+window.API_URL = 'https://granja-vincwill-backend.onrender.com';
 
 async function login(e) {
   e.preventDefault();
-  localStorage.removeItem('token');
-  sessionStorage.removeItem('token');
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   const errorMessage = document.getElementById('errorMessage');
@@ -62,38 +12,34 @@ async function login(e) {
   }
 
   try {
-    console.log('Attempting login with email:', email);
+    console.log('Intentando login con email:', email, 'y contraseña:', password);
     const res = await fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
     const text = await res.text();
-    console.log('Server response:', text, 'Status:', res.status);
+    console.log('Respuesta del servidor:', text, 'Status:', res.status);
     if (!res.ok) {
-      errorMessage.textContent = `Error en login: ${text || 'Error desconocido'}`;
+      const errorData = text ? JSON.parse(text).error || text : 'Error desconocido';
+      errorMessage.textContent = `Error en login: ${errorData}`;
       return;
     }
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      throw new Error('Respuesta no válida del servidor');
-    }
+    const data = JSON.parse(text);
     localStorage.setItem('token', data.token);
     localStorage.setItem('currentUser', JSON.stringify(data.user));
     errorMessage.textContent = '';
     window.location.href = 'index.html';
   } catch (error) {
-    console.error('Login error:', error);
     errorMessage.textContent = 'Error de conexión al servidor.';
+    console.error('Login error:', error);
   }
 }
 
 function logout() {
-  localStorage.removeItem('token');
-  localStorage.removeItem('currentUser');
   localStorage.removeItem('isAuthenticated');
+  localStorage.removeItem('currentUser');
+  localStorage.removeItem('token');
   window.location.href = 'login.html';
 }
 
@@ -340,72 +286,24 @@ function mostrarAlertasProduccion() {
     .catch(error => console.error('Error en alertas:', error));
 }
 
-// === LOGIN (en login.html) ===
 document.addEventListener('DOMContentLoaded', () => {
-  const loginForm = document.getElementById('loginForm');
-  const errorMessage = document.getElementById('errorMessage');
-
-  if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      errorMessage.textContent = '';
-
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-
-      if (!email || !password) {
-        errorMessage.textContent = 'Completa todos los campos';
-        return;
-      }
-
-      try {
-        const response = await fetch(`${API_URL}/login`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ email, password })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          // Guardar datos de sesión
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('currentUser', JSON.stringify(data.user));
-          localStorage.setItem('isAuthenticated', 'true');
-
-          // Redirección FORZADA
-          window.location.href = 'lotes.html'; // Cambia si tu dashboard es otro
-        } else {
-          errorMessage.textContent = data.error || 'Credenciales inválidas';
-        }
-      } catch (err) {
-        errorMessage.textContent = 'Error de conexión. Revisa tu internet.';
-        console.error('Error login:', err);
-      }
-    });
+  const path = window.location.pathname.split('/').pop();
+  if (path !== 'login.html') {
+    checkAccess();
   }
-  // === PROTECCIÓN DE RUTAS (para lotes.html, ventas.html, etc.) ===
-  const token = localStorage.getItem('token');
-  const isLoginPage = window.location.pathname.includes('login.html');
-
-  if (!isLoginPage && !token) {
-    // Si NO es login y NO hay token → redirige
-    window.location.href = 'login.html';
+  if (path === 'index.html') {
+    actualizarDashboard();
+    mostrarGraficosDashboard();
+    mostrarCostosPieChart();
+    mostrarIngresosCostosBarChart();
+    mostrarAlertasProduccion();
   }
-
-  // Evitar volver atrás con el botón del navegador
-  if (!isLoginPage) {
-    window.addEventListener('popstate', () => {
-      if (!localStorage.getItem('token')) {
-        window.location.href = 'login.html';
-      }
-    });
-
-    // Bloquea el botón "Atrás"
-    history.pushState(null, null, location.href);
-    window.onpopstate = () => history.go(1);
+  // Vincular el evento onsubmit solo para login.html
+  if (path === 'login.html') {
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+      loginForm.onsubmit = login;
+    }
   }
 });
 
