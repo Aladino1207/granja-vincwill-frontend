@@ -8,15 +8,22 @@
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
-  <main>
-    <section>
+  <!-- El login no necesita la navegación, así que se queda simple -->
+  <main class="login-container">
+    <section class="card">
       <h2>Iniciar Sesión</h2>
-      <form id="loginForm">
-        <input type="email" id="email" placeholder="Email" required>
-        <input type="password" id="password" placeholder="Contraseña" required>
-        <button type="submit">Iniciar Sesión</button>
+      <form id="loginForm" class="form-grid">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" class="form-control" placeholder="Email" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" class="form-control" placeholder="Contraseña" required>
+        </div>
+        <button type="submit" class="btn btn-primario">Iniciar Sesión</button>
       </form>
-      <p id="errorMessage" style="color: red;"></p>
+      <p id="errorMessage" style="color: red; text-align: center; margin-top: 1rem;"></p>
     </section>
   </main>
   <script src="app.js"></script>
