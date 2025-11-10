@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Granja Avícola VincWill - Dashboard</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -23,27 +24,93 @@
             <a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
         </nav>
     </header>
+
+    <!-- 
+      Usamos el 'main' (que ya es un grid) para organizar todas nuestras tarjetas.
+      Cada <section class="card"> es un módulo independiente del dashboard.
+    -->
     <main>
-        <section>
+        
+        <!-- Card 1: Resumen General (KPIs) -->
+        <section class="card">
             <h2>Resumen General</h2>
-            <div>
-                <p>Total de Aves Vivas: <span id="totalVivos">0</span></p>
-                <p>Conversión Promedio: <span id="conversionPromedio">0</span></p>
-                <p>Ganancia Promedio (kg/semana): <span id="gananciaPromedio">0</span></p>
-                <p>Costos Totales: <span id="costosTotales">$0.00</span></p>
-                <p>Ingresos Totales: <span id="ingresosTotales">$0.00</span></p>
-                <p>Rentabilidad: <span id="rentabilidad">$0.00</span></p>
+            <!-- 
+              Usamos la nueva clase .stats-grid para organizar las métricas
+              en lugar de simples párrafos.
+            -->
+            <div class="stats-grid">
+                <div>
+                    <h4>Total de Aves Vivas</h4>
+                    <span id="totalVivos">0</span>
+                </div>
+                <div>
+                    <h4>Conversión Promedio</h4>
+                    <span id="conversionPromedio">0</span>
+                </div>
+                <div>
+                    <h4>Ganancia Promedio</h4>
+                    <span id="gananciaPromedio">0</span>
+                </div>
+                <div>
+                    <h4>Costos Totales</h4>
+                    <span id="costosTotales">$0.00</span>
+                </div>
+                <div>
+                    <h4>Ingresos Totales</h4>
+                    <span id="ingresosTotales">$0.00</span>
+                </div>
+                <div>
+                    <h4>Rentabilidad</h4>
+                    <span id="rentabilidad">$0.00</span>
+                </div>
             </div>
-            <canvas id="produccionChart" width="400" height="200"></canvas>
-            <canvas id="costosPieChart" width="400" height="200"></canvas>
-            <canvas id="ingresosCostosBarChart" width="400" height="200"></canvas>
-            <section id="alertasSection">
-                <h3>Alertas de Producción</h3>
-                <ul id="alertasList"></ul>
-            </section>
         </section>
+
+        <!-- Card 2: Alertas de Producción -->
+        <section class="card" id="alertasSection">
+            <h3>Alertas de Producción</h3>
+            <ul id="alertasList">
+                <li>No hay alertas activadas.</li>
+            </ul>
+        </section>
+
+        <!-- Card 3: Gráfico de Producción -->
+        <section class="card">
+            <h2>Curva de Producción</h2>
+            <canvas id="produccionChart" width="400" height="200"></canvas>
+        </section>
+
+        <!-- Card 4: Gráfico de Costos -->
+        <section class="card">
+            <h2>Distribución de Costos</h2>
+            <canvas id="costosPieChart" width="400" height="200"></canvas>
+        </section>
+
+        <!-- Card 5: Gráfico de Ingresos/Costos -->
+        <section class="card">
+            <h2>Ingresos vs. Costos por Lote</h2>
+            <canvas id="ingresosCostosBarChart" width="400" height="200"></canvas>
+        </section>
+
     </main>
-    <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
+
+    <!-- 
+      No incluí el <footer> en el 'main' para que no sea parte del grid.
+      Puedes añadirle un estilo simple si quieres.
+    -->
+    <footer>
+        <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
+        <style>
+          footer {
+            text-align: center;
+            padding: var(--espaciado-lg);
+            color: var(--color-texto-secundario);
+            font-size: 0.9rem;
+            margin-top: var(--espaciado-xl);
+          }
+        </style>
+    </footer>
+
     <script src="app.js"></script>
 </body>
 </html>
