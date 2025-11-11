@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // funcion para cargar y seleccionar alimentos 
 async function cargarAlimentosParaSelect() {
   try {
@@ -466,4 +465,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Vincula el evento submit al formulario
 document.getElementById('seguimientoForm').onsubmit = guardarSeguimiento;
->>>>>>> 6a293a69d89d332f0f3a41808e8d1dd8369ffb2e
