@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -113,4 +114,54 @@
 
     <script src="app.js"></script>
 </body>
+=======
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Granja Avícola VincWill - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Dashboard</h1>
+        <nav>
+            <a href="index.html">Dashboard</a>
+            <a href="lotes.html">Lotes</a>
+            <a href="ventas.html">Ventas</a>
+            <a href="salud.html">Salud</a>
+            <a href="costos.html">Costos</a>
+            <a href="inventarios.html">Inventario</a>
+            <a href="seguimiento.html">Seguimiento</a>
+            <a href="reportes.html">Reportes</a>
+            <a href="usuarios.html">Usuarios</a>
+            <a href="configuracion.html">Configuración</a>
+            <a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
+        </nav>
+    </header>
+    <main>
+        <section>
+            <h2>Resumen General</h2>
+            <div>
+                <p>Total de Aves Vivas: <span id="totalVivos">0</span></p>
+                <p>Conversión Promedio: <span id="conversionPromedio">0</span></p>
+                <p>Ganancia Promedio (kg/semana): <span id="gananciaPromedio">0</span></p>
+                <p>Costos Totales: <span id="costosTotales">$0.00</span></p>
+                <p>Ingresos Totales: <span id="ingresosTotales">$0.00</span></p>
+                <p>Rentabilidad: <span id="rentabilidad">$0.00</span></p>
+            </div>
+            <canvas id="produccionChart" width="400" height="200"></canvas>
+            <canvas id="costosPieChart" width="400" height="200"></canvas>
+            <canvas id="ingresosCostosBarChart" width="400" height="200"></canvas>
+            <section id="alertasSection">
+                <h3>Alertas de Producción</h3>
+                <ul id="alertasList"></ul>
+            </section>
+        </section>
+    </main>
+    <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
+    <script src="app.js"></script>
+</body>
+>>>>>>> 6a293a69d89d332f0f3a41808e8d1dd8369ffb2e
 </html>
