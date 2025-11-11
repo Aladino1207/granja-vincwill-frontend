@@ -1,304 +1,53 @@
-/* --- 1. Importación de Fuentes --- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 
-/* --- 2. Variables CSS (El Núcleo de la Estandarización) --- */
-:root {
-  /* Paleta de Colores */
-  --color-primario: #2c3e50;         /* Azul Oscuro (Header) */
-  --color-secundario: #3498db;      /* Azul Brillante (Botones) */
-  --color-secundario-hover: #2980b9; /* Azul más oscuro (Hover) */
-  --color-peligro: #e74c3c;         /* Rojo (Botones Eliminar) */
-  --color-peligro-hover: #c0392b;   /* Rojo oscuro (Hover) */
-  --color-fondo-pagina: #f4f7f6;     /* Gris muy claro */
-  --color-fondo-componente: #ffffff; /* Blanco */
-  --color-texto-principal: #333333;
-  --color-texto-secundario: #555555;
-  --color-texto-claro: #ffffff;
-  --color-borde: #dfe4ea;
-  --color-borde-foco: var(--color-secundario);
-
-  /* Tipografía */
-  --fuente-principal: 'Inter', Arial, sans-serif;
-
-  /* Espaciado */
-  --espaciado-xs: 0.25rem; /* 4px */
-  --espaciado-sm: 0.5rem;  /* 8px */
-  --espaciado-md: 1rem;    /* 16px */
-  --espaciado-lg: 1.5rem;  /* 24px */
-  --espaciado-xl: 2rem;    /* 32px */
-
-  /* Otros */
-  --borde-radio: 8px;
-  --sombra-caja: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --transicion-rapida: all 0.2s ease-in-out;
-}
-
-/* --- 3. Reseteo Global y Estilos Base --- */
-* {
-  box-sizing: border-box;
+body {
+  font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
 }
-
-body {
-  font-family: var(--fuente-principal);
-  background-color: var(--color-fondo-pagina);
-  color: var(--color-texto-principal);
-  line-height: 1.6;
-}
-
-a {
-  color: var(--color-secundario);
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-img, canvas {
-  max-width: 100%;
-  display: block;
-}
-
-h1, h2, h3 {
-  margin-bottom: var(--espaciado-md);
-  color: var(--color-primario);
-  line-height: 1.3;
-}
-h1 { font-size: 2.25rem; }
-h2 { font-size: 1.75rem; }
-h3 { font-size: 1.25rem; }
-
-/* --- 4. Diseño de la Página (Layout) --- */
 header {
-  background-color: var(--color-primario);
-  color: var(--color-texto-claro);
-  padding: var(--espaciado-md) var(--espaciado-xl);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  background-color: #2c3e50;
+  color: white;
+  padding: 1em;
+  text-align: center;
 }
-
-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  color: var(--color-texto-claro);
-}
-
 nav a, nav button {
-  color: var(--color-texto-claro);
-  margin-left: var(--espaciado-lg);
-  text-decoration: none;
-  font-weight: 500;
-  padding: var(--espaciado-sm) 0;
-  border-bottom: 2px solid transparent;
-  transition: var(--transicion-rapida);
-}
-
-nav a:hover, nav button:hover {
-  border-bottom-color: var(--color-secundario);
+  color: white;
+  margin: 0 1em;
   text-decoration: none;
 }
-
 nav button {
   background: none;
   border: none;
   cursor: pointer;
-  font-family: inherit;
-  font-size: 1rem;
 }
-
 main {
-  max-width: 1200px;
-  margin: var(--espaciado-xl) auto;
-  padding: 0 var(--espaciado-xl);
+  padding: 2em;
+}
+section {
+  max-width: 800px;
+  margin: 0 auto;
+}
+form {
   display: grid;
-  gap: var(--espaciado-xl);
+  gap: 1em;
+  margin-bottom: 2em;
 }
-
-/* --- 5. Componentes Estandarizados --- */
-
-/* Contenedor principal para secciones */
-.card {
-  background-color: var(--color-fondo-componente);
-  border-radius: var(--borde-radio);
-  box-shadow: var(--sombra-caja);
-  padding: var(--espaciado-lg);
-  overflow: hidden; /* Para que la tabla no se salga */
-}
-
-/* Formularios */
-.form-grid {
-  display: grid;
-  gap: var(--espaciado-md);
-  margin-bottom: var(--espaciado-lg);
-}
-
-/* Ajusta los formularios con grid-template-columns si es necesario */
-@media (min-width: 768px) {
-  .form-grid-2-col {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .form-grid-3-col {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.form-group label {
-  margin-bottom: var(--espaciado-sm);
-  font-weight: 500;
-  color: var(--color-texto-secundario);
-}
-
-.form-control {
-  font-family: var(--fuente-principal);
-  font-size: 1rem;
-  padding: 0.75rem var(--espaciado-md);
-  border: 1px solid var(--color-borde);
-  border-radius: var(--borde-radio);
-  transition: var(--transicion-rapida);
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: var(--color-borde-foco);
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
-}
-
-/* Botones */
-.btn {
-  font-family: var(--fuente-principal);
-  font-size: 1rem;
-  font-weight: 500;
-  padding: 0.75rem var(--espaciado-lg);
-  border: none;
-  border-radius: var(--borde-radio);
-  cursor: pointer;
-  transition: var(--transicion-rapida);
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-}
-
-.btn-primario {
-  background-color: var(--color-secundario);
-  color: var(--color-texto-claro);
-}
-.btn-primario:hover {
-  background-color: var(--color-secundario-hover);
-  text-decoration: none;
-}
-
-.btn-peligro {
-  background-color: var(--color-peligro);
-  color: var(--color-texto-claro);
-}
-.btn-peligro:hover {
-  background-color: var(--color-peligro-hover);
-  text-decoration: none;
-}
-
-/* Botón pequeño para acciones de tabla */
-.btn-sm {
-  font-size: 0.875rem;
-  padding: var(--espaciado-xs) var(--espaciado-sm);
-}
-
-
-/* Tablas */
-.tabla-responsive-wrapper {
-  width: 100%;
-  overflow-x: auto; /* Permite scroll horizontal en tablas grandes */
-}
-
-.tabla-moderna {
+table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: var(--espaciado-lg);
 }
-
-.tabla-moderna th,
-.tabla-moderna td {
-  padding: var(--espaciado-md);
+th, td {
+  border: 1px solid #ddd;
+  padding: 0.5em;
   text-align: left;
-  border-bottom: 1px solid var(--color-borde);
-  vertical-align: middle;
 }
-
-.tabla-moderna thead th {
-  background-color: var(--color-fondo-pagina);
-  font-weight: 700;
-  color: var(--color-primario);
+button {
+  padding: 0.5em 1em;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  cursor: pointer;
 }
-
-.tabla-moderna tbody tr:hover {
-  background-color: #ecf0f1;
-}
-
-/* Estilos para celdas de acciones */
-.tabla-moderna td:last-child {
-  text-align: right;
-  white-space: nowrap;
-}
-.tabla-moderna td:last-child .btn {
-  margin-left: var(--espaciado-sm);
-}
-
-/* Estilos para la página de Login */
-.login-container {
-  max-width: 450px;
-  margin: var(--espaciado-xl) auto;
-}
-.login-container .card {
-  padding: var(--espaciado-xl);
-}
-.login-container h2 {
-  text-align: center;
-  font-size: 1.75rem;
-}
-.login-container .form-grid {
-  grid-template-columns: 1fr; /* Asegura una sola columna */
-}
-.login-container .btn-primario {
-  width: 100%; /* Botón de login a ancho completo */
-  margin-top: var(--espaciado-md);
-}
-
-/* --- 6. Media Queries (Responsividad) --- */
-@media (max-width: 768px) {
-  header {
-    flex-direction: column;
-    padding: var(--espaciado-md);
-  }
-
-  header h1 {
-    margin-bottom: var(--espaciado-md);
-  }
-
-  nav {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: var(--espaciado-sm) var(--espaciado-md);
-  }
-
-  nav a, nav button {
-    margin-left: 0;
-  }
-  
-  main {
-    padding: 0 var(--espaciado-md);
-    margin-top: var(--espaciado-lg);
-  }
-
-  .card {
-    padding: var(--espaciado-md);
-  }
+button:hover {
+  background-color: #2980b9;
 }
