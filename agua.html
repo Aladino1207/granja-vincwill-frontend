@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Consumo de Agua por Lote</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <header>
+    <h1>Consumo de Agua</h1>
+    <nav>
+      <a href="index.html">Dashboard</a>
+      <a href="lotes.html">Lotes</a>
+      <a href="ventas.html">Ventas</a>
+      <a href="salud.html">Salud</a>
+      <a href="agua.html">Agua</a> <a href="costos.html">Costos</a>
+      <a href="inventarios.html">Inventario</a>
+      <a href="seguimiento.html">Seguimiento</a>
+      <a href="reportes.html">Reportes</a>
+      <a href="usuarios.html">Usuarios</a>
+      <a href="configuracion.html">Configuración</a>
+      <a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
+    </nav>
+  </header>
+    <main>
+        <section id="formSection" style="display: none;">
+            <h2>Registrar Consumo de Agua</h2>
+            <form id="aguaForm">
+                <label>Lote: <select id="loteSelect" required></select></label>
+                <label>Cantidad (Litros): <input type="number" id="cantidad" min="0" step="0.01" required></label>
+                <label>Fecha: <input type="date" id="fecha" required></label>
+                <button type="submit">Registrar Consumo</button>
+            </form>
+        </section>
+        <section>
+            <h2>Historial de Consumo de Agua</h2>
+            <table id="aguaTable">
+                <thead>
+                    <tr><th>Lote</th><th>Cantidad (Litros)</th><th>Fecha</th><th>Acciones</th></tr>
+                </thead>
+                <tbody id="aguaTableBody"></tbody>
+            </table>
+        </section>
+    </main>
+    <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
+    <script src="app.js"></script>
+    <script src="agua.js"></script>
+</body>
+</html>
