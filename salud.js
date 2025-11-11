@@ -63,12 +63,21 @@ async function cargarLotesForSelect() {
 
 async function guardarSalud(e) {
   e.preventDefault();
+  const diasRetiro = parseInt(document.getElementById('diasRetiro').value) || 0;
+  const fechaEvento = new Date(document.getElementById('fecha').value);
+  let fechaRetiroCalculada = null;
+
+  if (diasRetiro > 0) {
+    fechaEvento.setDate(fechaEvento.getDate() + diasRetiro);
+    fechaRetiroCalculada = fechaEvento;
+  }
   const salud = {
     loteId: parseInt(document.getElementById('loteId').value),
     tipo: document.getElementById('tipo').value,
     nombre: document.getElementById('nombre').value,
-    cantidad: parseFloat(document.getElementById('cantidad').value), // Cambiado a parseFloat para consistencia
-    fecha: document.getElementById('fecha').value
+    cantidad: parseFloat(document.getElementById('cantidad').value),
+    fecha: document.getElementById('fecha').value,
+    fechaRetiro: fechaRetiroCalculada
   };
   try {
     const res = await fetch(`${window.API_URL}/salud`, {
