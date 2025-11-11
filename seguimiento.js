@@ -1,3 +1,33 @@
+// funcion para cargar y seleccionar alimentos 
+async function cargarAlimentosParaSelect() {
+  try {
+    const res = await fetch(`${window.API_URL}/inventario`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    
+    const inventario = await res.json();
+    const select = document.getElementById('alimentoSelect');
+    if (!select) throw new Error('Elemento alimentoSelect no encontrado');
+    
+    // Filtramos solo por categoría "Alimento"
+    const alimentos = inventario.filter(item => item.categoria === 'Alimento');
+    
+    select.innerHTML = '<option value="">Selecciona un Alimento</option>'; // Reset
+    
+    alimentos.forEach(alimento => {
+      const option = document.createElement('option');
+      option.value = alimento.id; // Usamos el ID del inventario
+      option.textContent = `${alimento.producto} (Stock: ${alimento.cantidad} kg)`;
+      select.appendChild(option);
+    });
+    console.log('Alimentos cargados en select con éxito');
+  } catch (error) {
+    console.error('Error al cargar alimentos para select:', error);
+    alert('Error al cargar alimentos: ' + error.message);
+  }
+}
+
 // Función para cargar lotes en el <select>
 async function cargarLotesForSelect() {
   try {
@@ -69,17 +99,24 @@ async function cargarSeguimiento() {
 // Función para guardar un seguimiento
 async function guardarSeguimiento(e) {
   e.preventDefault();
+
+  const alimentoId = parseInt(document.getElementById('alimentoSelect').value);
+  if (isNaN(alimentoId) || !alimentoId) {
+      alert('Por favor, selecciona un tipo de alimento.');
+      return;
+  }
   const seguimiento = {
-    loteId: parseInt(document.getElementById('loteSelect').value), // Corregido a loteSelect
+    loteId: parseInt(document.getElementById('loteSelect').value),
+    alimentoId: alimentoId, // <--- VALOR NUEVO
     semana: parseInt(document.getElementById('semana').value),
     peso: parseFloat(document.getElementById('peso').value),
     consumo: parseFloat(document.getElementById('consumo').value),
     observaciones: document.getElementById('observaciones').value,
-    fecha: new Date().toISOString().split('T')[0] // Usa fecha actual si no hay input
+    fecha: new Date().toISOString().split('T')[0]
   };
   console.log('Datos enviados a /seguimiento:', seguimiento);
   try {
-    const res = await fetch(`${window.API_URL}/seguimiento`, {
+    const res = await fetch(`${window.API_URL}/seguimiento`, { //
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -87,15 +124,16 @@ async function guardarSeguimiento(e) {
       },
       body: JSON.stringify(seguimiento)
     });
-    console.log('Respuesta de guardarSeguimiento - Status:', res.status, 'Status Text:', res.statusText);
+    
     if (res.ok) {
       document.getElementById('seguimientoForm').reset();
       await cargarSeguimiento();
+      await cargarAlimentosParaSelect(); // Recargamos el stock en el dropdown
       console.log('Seguimiento guardado y tabla recargada');
     } else {
       const errorText = await res.text();
       console.error('Error al guardar seguimiento - Detalle:', errorText);
-      alert('Error al guardar seguimiento: ' + (errorText || 'Desconocido'));
+      alert('Error al guardar seguimiento: ' + (JSON.parse(errorText).error || errorText));
     }
   } catch (error) {
     console.error('Error de conexión o inesperado:', error);
@@ -114,7 +152,9 @@ async function editarSeguimiento(id) {
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const s = await res.json();
     console.log('Datos recibidos para edición:', s);
-    document.getElementById('loteSelect').value = s.loteId; // Corregido a loteSelect
+    
+    document.getElementById('loteSelect').value = s.loteId;
+    document.getElementById('alimentoSelect').value = s.alimentoId;
     document.getElementById('semana').value = s.semana;
     document.getElementById('peso').value = s.peso;
     document.getElementById('consumo').value = s.consumo;
@@ -124,6 +164,7 @@ async function editarSeguimiento(id) {
       e.preventDefault();
       const updatedReg = {
         loteId: parseInt(document.getElementById('loteSelect').value),
+        alimentoId: parseInt(document.getElementById('alimentoSelect').value),
         semana: parseInt(document.getElementById('semana').value),
         peso: parseFloat(document.getElementById('peso').value),
         consumo: parseFloat(document.getElementById('consumo').value),
@@ -183,8 +224,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (seguimientoForm) seguimientoForm.style.display = 'grid';
     if (seguimientoTable) seguimientoTable.style.display = 'table';
   }
-  cargarLotesForSelect(); // Carga los lotes al iniciar
-  cargarSeguimiento();   // Carga los seguimientos al iniciar
+  cargarLotesForSelect();   // Carga los lotes
+  cargarAlimentosParaSelect(); // <--- LLAMADA NUEVA
+  cargarSeguimiento();      // Carga los seguimientos
 });
 
 // Vincula el evento submit al formulario
