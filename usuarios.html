@@ -10,8 +10,8 @@
 
 <body>
   <header>
-    <h1>Gestión de Usuarios</h1><button onclick="logout(); return false;" class="header-logout-btn">Cerrar
-      Sesión</button>
+    <h1>Gestión de Usuarios</h1>
+    <button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
   </header>
   <aside class="sidebar">
     <nav>
@@ -28,44 +28,71 @@
       <a href="configuracion.html">Configuración</a>
     </nav>
   </aside>
+  <main class="main-content">
 
-  <main>
-    <section id="accessDenied" style="display: none;" class="card">
+    <section id="accessDenied" class="card" style="display: none;">
       <h2>Acceso Denegado</h2>
       <p>Solo los administradores pueden gestionar usuarios.</p>
       <a href="index.html">Volver al Dashboard</a>
     </section>
-    <section id="userSection" class="card">
-      <h2>Gestion De Ususarios</h2>
 
-      <form id="userForm" class="form-grid">
-        <input type="text" id="name" placeholder="Nombre" required>
-        <input type="email" id="email" placeholder="Email" required>
-        <input type="password" id="password" placeholder="Contraseña" required>
-        <select id="role" required>
-          <option value="admin">Administrador</option>
-          <option value="empleado">Empleado</option>
-          <option value="viewer">Viewer</option>
-        </select>
-        <button type="submit" class="btn btn-primario">Guardar</button>
-      </form>
-
+    <div id="formContainer" class="form-desplegable-container">
       <section class="card">
-        <div class="tabla-responsive-wrapper">
-          <table id="userTable" class="tabla-moderna">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Email</th>
-                <th>Rol</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="userTableBody"></tbody>
-          </table>
-        </div>
+        <h2 id="formTitle">Crear Nuevo Usuario</h2>
+        <form id="userForm" class="form-grid form-grid-2-col">
+          <input type="hidden" id="usuarioId" value="">
+
+          <div class="form-group">
+            <label for="name">Nombre</label>
+            <input type="text" id="name" class="form-control" placeholder="Nombre" required>
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" class="form-control" placeholder="Email" required>
+          </div>
+          <div class="form-group">
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" class="form-control" placeholder="Dejar en blanco para no cambiar">
+          </div>
+          <div class="form-group">
+            <label for="role">Rol</label>
+            <select id="role" class="form-control" required>
+              <option value="viewer">Viewer</option>
+              <option value="empleado">Empleado</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
+            <button type="submit" class="btn btn-primario">Guardar</button>
+            <button type="button" id="cancelBtn" class="btn btn-peligro"
+              style="background-color: #7f8c8d;">Cancelar</button>
+          </div>
+        </form>
       </section>
+    </div>
+
+    <section class="card" id="userSection">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Lista de Usuarios</h2>
+        <button id="toggleFormBtn" class="btn btn-primario">Crear Nuevo Usuario</button>
+      </div>
+
+      <div class="tabla-responsive-wrapper">
+        <table id="userTable" class="tabla-moderna">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Rol</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody"></tbody>
+        </table>
+      </div>
     </section>
+
     <footer>
       <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
     </footer>

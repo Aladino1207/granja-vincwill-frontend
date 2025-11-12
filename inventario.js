@@ -1,21 +1,12 @@
-
+// --- Lógica de Carga ---
 async function cargarInventario() {
   try {
-    console.log('Intentando cargar inventario desde:', `${window.API_URL}/inventario`);
-    console.log('Token enviado:', localStorage.getItem('token'));
     const res = await fetch(`${window.API_URL}/inventario`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
-    console.log('Respuesta de /inventario - Status:', res.status, 'Status Text:', res.statusText);
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error('Detalles del error:', errorText);
-      throw new Error(`HTTP error! status: ${res.status} - ${errorText}`);
-    }
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const inventario = await res.json();
-    console.log('Datos recibidos de /inventario:', inventario);
     const tbody = document.getElementById('tablaInventario');
-    if (!tbody) throw new Error('Elemento tablaInventario no encontrado');
     tbody.innerHTML = '';
     if (Array.isArray(inventario) && inventario.length > 0) {
       inventario.forEach(item => {
@@ -24,29 +15,47 @@ async function cargarInventario() {
           <td>${item.producto || 'N/A'}</td>
           <td>${item.categoria || 'N/A'}</td>
           <td>${item.cantidad || 0}</td>
-          <td>${item.costo || 0}</td>
+          <td>${item.costo ? item.costo.toFixed(2) : 0}</td>
           <td>${item.fecha ? new Date(item.fecha).toLocaleDateString() : 'N/A'}</td>
           <td>
-            <button onclick="editarInventario(${item.id || 0})">Editar</button>
-            <button onclick="eliminarInventario(${item.id || 0})">Eliminar</button>
+            <button onclick="editarInventario(${item.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
+            <button onclick="eliminarInventario(${item.id})" class="btn btn-sm btn-peligro">Eliminar</button>
           </td>
         `;
         tbody.appendChild(tr);
       });
-      console.log('Tabla de inventario rellenada con éxito');
     } else {
       tbody.innerHTML = '<tr><td colspan="6">No hay inventario registrado</td></tr>';
-      console.log('Tabla de inventario vacía, mostrando mensaje');
     }
   } catch (error) {
     console.error('Error al cargar inventario:', error);
-    const tbody = document.getElementById('tablaInventario');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="6">Error al cargar inventario: ${error.message}</td></tr>`;
   }
 }
 
+// --- LÓGICA DEL FORMULARIO DESPLEGABLE ---
+
+function abrirFormulario() {
+  document.getElementById('formContainer').classList.add('is-open');
+  document.getElementById('toggleFormBtn').textContent = 'Cancelar';
+}
+
+function cerrarFormulario() {
+  document.getElementById('formContainer').classList.remove('is-open');
+  document.getElementById('toggleFormBtn').textContent = 'Registrar Nuevo Insumo';
+
+  document.getElementById('inventarioForm').reset();
+  document.getElementById('inventarioId').value = '';
+  document.getElementById('formTitle').textContent = 'Registrar Insumo';
+}
+
+// --- Funciones CRUD (Modificadas) ---
+
 async function guardarInventario(e) {
   e.preventDefault();
+
+  const inventarioId = document.getElementById('inventarioId').value;
+  const esEdicion = !!inventarioId;
+
   const inventario = {
     producto: document.getElementById('producto').value,
     categoria: document.getElementById('categoria').value,
@@ -54,124 +63,102 @@ async function guardarInventario(e) {
     costo: parseFloat(document.getElementById('costo').value),
     fecha: document.getElementById('fecha').value
   };
-  console.log('Datos enviados a /inventario:', inventario);
+
+  const url = esEdicion
+    ? `${window.API_URL}/inventario/${inventarioId}`
+    : `${window.API_URL}/inventario`;
+  const method = esEdicion ? 'PUT' : 'POST';
+
   try {
-    const res = await fetch(`${window.API_URL}/inventario`, { // Cambia a window.API_URL
-      method: 'POST',
+    const res = await fetch(url, {
+      method: method,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${localStorage.getItem('token')}`
       },
       body: JSON.stringify(inventario)
     });
-    console.log('Respuesta de guardarInventario - Status:', res.status, 'Status Text:', res.statusText);
-    const responseText = await res.text();
-    console.log('Respuesta cruda de guardarInventario:', responseText);
+
     if (res.ok) {
-      document.getElementById('inventarioForm').reset();
+      cerrarFormulario();
       await cargarInventario();
-      console.log('Inventario guardado y tabla recargada');
     } else {
-      console.error('Error al guardar inventario - Detalle:', responseText);
-      alert('Error al guardar inventario: ' + (responseText || 'Desconocido'));
+      const errorText = await res.text();
+      alert('Error al guardar: ' + (errorText || 'Desconocido'));
     }
   } catch (error) {
-    console.error('Error de conexión o inesperado:', error);
-    alert('Error de conexión o inesperado');
+    alert('Error de conexión');
   }
 }
 
 async function editarInventario(id) {
   try {
-    console.log('Intentando editar inventario con id:', id);
-    console.log('URL de la solicitud:', `${window.API_URL}/inventario/${id}`);
-    console.log('Token enviado:', localStorage.getItem('token'));
     const res = await fetch(`${window.API_URL}/inventario/${id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
-    console.log('Respuesta de editarInventario - Status:', res.status, 'Status Text:', res.statusText);
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error('Detalles del error:', errorText);
-      throw new Error(`HTTP error! status: ${res.status} - ${errorText}`);
-    }
+    if (!res.ok) throw new Error('No se pudo cargar el item');
     const item = await res.json();
-    console.log('Datos recibidos para edición (estructura completa):', item);
-    if (!item || typeof item !== 'object') throw new Error('Respuesta no contiene datos válidos');
+
+    document.getElementById('formTitle').textContent = 'Editar Insumo';
+    document.getElementById('inventarioId').value = item.id;
     document.getElementById('producto').value = item.producto || '';
     document.getElementById('categoria').value = item.categoria || '';
-    document.getElementById('cantidad').value = item.cantidad !== undefined ? item.cantidad : '';
-    document.getElementById('costo').value = item.costo !== undefined ? item.costo : '';
+    document.getElementById('cantidad').value = item.cantidad || '';
+    document.getElementById('costo').value = item.costo || '';
     document.getElementById('fecha').value = item.fecha ? item.fecha.split('T')[0] : '';
-    console.log('Campos del formulario actualizados:', {
-      producto: document.getElementById('producto').value,
-      categoria: document.getElementById('categoria').value,
-      cantidad: document.getElementById('cantidad').value,
-      costo: document.getElementById('costo').value,
-      fecha: document.getElementById('fecha').value
-    });
-    const form = document.getElementById('inventarioForm');
-    if (!form) throw new Error('Formulario inventarioForm no encontrado');
-    form.onsubmit = async (e) => {
-      e.preventDefault();
-      const updatedItem = {
-        producto: document.getElementById('producto').value,
-        categoria: document.getElementById('categoria').value,
-        cantidad: parseFloat(document.getElementById('cantidad').value) || 0,
-        costo: parseFloat(document.getElementById('costo').value) || 0,
-        fecha: document.getElementById('fecha').value
-      };
-      console.log('Datos a enviar en PUT:', updatedItem);
-      const putRes = await fetch(`${window.API_URL}/inventario/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(updatedItem)
-      });
-      console.log('Respuesta de PUT - Status:', putRes.status, 'Status Text:', putRes.statusText);
-      const putText = await putRes.text();
-      console.log('Respuesta cruda de PUT:', putText);
-      if (!putRes.ok) throw new Error(`HTTP error! status: ${putRes.status} - ${putText}`);
-      form.reset();
-      form.onsubmit = guardarInventario;
-      await cargarInventario();
-    };
+
+    abrirFormulario();
+    window.scrollTo(0, 0);
+
   } catch (error) {
-    console.error('Error al editar inventario:', error);
-    alert('Error al editar inventario: ' + error.message);
+    console.error('Error al cargar datos para editar:', error);
   }
 }
 
 async function eliminarInventario(id) {
-  if (confirm('¿Seguro que quieres eliminar este inventario?')) {
+  if (confirm('¿Seguro que quieres eliminar este insumo?')) {
     try {
-      console.log('Intentando eliminar inventario con id:', id);
-      const res = await fetch(`${window.API_URL}/inventario/${id}`, {
+      await fetch(`${window.API_URL}/inventario/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      console.log('Respuesta de eliminarInventario - Status:', res.status, 'Status Text:', res.statusText);
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       cargarInventario();
     } catch (error) {
-      console.error('Error al eliminar inventario:', error);
-      alert('Error al eliminar inventario: ' + error.message);
+      alert('Error al eliminar insumo');
     }
   }
 }
 
+// --- Event Listener Principal ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+
+  const toggleBtn = document.getElementById('toggleFormBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const form = document.getElementById('inventarioForm');
+  const formContainer = document.getElementById('formContainer');
+
   if (currentUser && currentUser.role !== 'viewer') {
-    const inventarioForm = document.getElementById('inventarioForm');
-    const inventarioTable = document.getElementById('inventarioTable');
-    if (inventarioForm) {
-      inventarioForm.style.display = 'grid';
-      inventarioForm.onsubmit = guardarInventario; // Vincula el evento
-    }
-    if (inventarioTable) inventarioTable.style.display = 'table';
+    toggleBtn.style.display = 'block';
+
+    toggleBtn.addEventListener('click', () => {
+      const isOpen = formContainer.classList.contains('is-open');
+      if (isOpen) {
+        cerrarFormulario();
+      } else {
+        document.getElementById('formTitle').textContent = 'Registrar Insumo';
+        form.reset();
+        document.getElementById('inventarioId').value = '';
+        abrirFormulario();
+      }
+    });
+
+    cancelBtn.addEventListener('click', cerrarFormulario);
+    form.onsubmit = guardarInventario;
+
+  } else {
+    toggleBtn.style.display = 'none';
   }
+
   cargarInventario();
 });

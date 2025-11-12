@@ -1,15 +1,13 @@
-
+// --- Lógica de Carga ---
 async function cargarLotes() {
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado:', token); // Depuración
     const res = await fetch(`${API_URL}/lotes`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
     const tbody = document.getElementById('loteTableBody');
-    if (!tbody) throw new Error('Elemento loteTableBody no encontrado');
     tbody.innerHTML = '';
     lotes.forEach(lote => {
       const tr = document.createElement('tr');
@@ -20,8 +18,8 @@ async function cargarLotes() {
         <td>${new Date(lote.fechaIngreso).toLocaleDateString()}</td>
         <td>${lote.estado}</td>
         <td>
-          <button onclick="editarLote('${lote.loteId}')">Editar</button> <!-- Usar loteId como string -->
-          <button onclick="eliminarLote('${lote.loteId}')">Eliminar</button> <!-- Usar loteId como string -->
+          <button onclick="editarLote(${lote.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
+          <button onclick="eliminarLote(${lote.id})" class="btn btn-sm btn-peligro">Eliminar</button>
         </td>
       `;
       tbody.appendChild(tr);
@@ -31,36 +29,47 @@ async function cargarLotes() {
   }
 }
 
+// --- LÓGICA DEL FORMULARIO DESPLEGABLE ---
+
+function abrirFormulario() {
+  document.getElementById('formContainer').classList.add('is-open');
+  document.getElementById('toggleFormBtn').textContent = 'Cancelar';
+}
+
+function cerrarFormulario() {
+  document.getElementById('formContainer').classList.remove('is-open');
+  document.getElementById('toggleFormBtn').textContent = 'Agregar Nuevo Lote';
+
+  document.getElementById('loteForm').reset();
+  document.getElementById('loteDbId').value = '';
+  document.getElementById('formTitle').textContent = 'Agregar Nuevo Lote';
+}
+
+// --- Funciones CRUD (Modificadas) ---
+
 async function guardarLote(e) {
   e.preventDefault();
-  console.log('Intentando guardar lote...'); // Depuración
 
-  const loteId = document.getElementById('loteId').value;
-  const cantidad = parseInt(document.getElementById('cantidad').value);
-  const pesoInicial = parseFloat(document.getElementById('pesoInicial').value);
-  const fechaIngreso = document.getElementById('fechaIngreso').value;
-  const estado = document.getElementById('estado').value === 'Activo' ? 'disponible' : 'vendido'; // Mapear estados
-
-  // Validación básica
-  if (!loteId || isNaN(cantidad) || isNaN(pesoInicial) || !fechaIngreso) {
-    alert('Por favor, completa todos los campos correctamente.');
-    return;
-  }
+  const loteDbId = document.getElementById('loteDbId').value;
+  const esEdicion = !!loteDbId;
 
   const lote = {
-    loteId,
-    cantidad,
-    pesoInicial,
-    fechaIngreso,
-    estado
+    loteId: document.getElementById('loteId').value,
+    cantidad: parseInt(document.getElementById('cantidad').value),
+    pesoInicial: parseFloat(document.getElementById('pesoInicial').value),
+    fechaIngreso: document.getElementById('fechaIngreso').value,
+    estado: document.getElementById('estado').value
   };
+
+  const url = esEdicion
+    ? `${API_URL}/lotes/${loteDbId}`
+    : `${API_URL}/lotes`;
+  const method = esEdicion ? 'PUT' : 'POST';
 
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado para guardar:', token); // Depuración
-    console.log('Datos enviados:', lote); // Depuración
-    const res = await fetch(`${API_URL}/lotes`, {
-      method: 'POST',
+    const res = await fetch(url, {
+      method: method,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
@@ -68,67 +77,49 @@ async function guardarLote(e) {
       body: JSON.stringify(lote)
     });
     if (res.ok) {
-      document.getElementById('loteForm').reset();
-      cargarLotes();
-      console.log('Lote guardado exitosamente');
+      cerrarFormulario();
+      await cargarLotes();
     } else {
       const errorData = await res.json();
-      console.error('Error del servidor:', errorData);
       alert('Error al guardar lote: ' + (errorData.error || 'Desconocido'));
     }
   } catch (error) {
-    console.error('Error de conexión:', error);
     alert('Error de conexión');
   }
 }
 
-async function editarLote(loteId) {
+async function editarLote(id) {
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado para editar:', token); // Depuración
-    const res = await fetch(`${API_URL}/lotes?loteId=${loteId}`, { // Ajuste para buscar por loteId
+    // Asumimos que el backend tiene un endpoint GET /lotes/:id (lo cual es estándar)
+    const res = await fetch(`${API_URL}/lotes/${id}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    const lotes = await res.json();
-    const lote = lotes.find(l => l.loteId === loteId); // Buscar el lote específico
-    if (!lote) throw new Error('Lote no encontrado');
+    if (!res.ok) throw new Error('No se pudo cargar el lote');
+    const lote = await res.json();
+
+    document.getElementById('formTitle').textContent = 'Editar Lote';
+    document.getElementById('loteDbId').value = lote.id; // Guardamos el ID de la BD
     document.getElementById('loteId').value = lote.loteId;
     document.getElementById('cantidad').value = lote.cantidad;
     document.getElementById('pesoInicial').value = lote.pesoInicial;
-    document.getElementById('fechaIngreso').value = lote.fechaIngreso.split('T')[0]; // Formato YYYY-MM-DD
-    document.getElementById('estado').value = lote.estado === 'disponible' ? 'Activo' : 'Terminado';
-    document.getElementById('loteForm').onsubmit = async (e) => {
-      e.preventDefault();
-      const updatedLote = {
-        loteId: document.getElementById('loteId').value,
-        cantidad: parseInt(document.getElementById('cantidad').value),
-        pesoInicial: parseFloat(document.getElementById('pesoInicial').value),
-        fechaIngreso: document.getElementById('fechaIngreso').value,
-        estado: document.getElementById('estado').value === 'Activo' ? 'disponible' : 'vendido'
-      };
-      await fetch(`${API_URL}/lotes/${lote.id}`, { // Usar el ID interno si existe, de lo contrario ajustar
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(updatedLote)
-      });
-      document.getElementById('loteForm').reset();
-      document.getElementById('loteForm').onsubmit = guardarLote;
-      cargarLotes();
-    };
+    document.getElementById('fechaIngreso').value = lote.fechaIngreso.split('T')[0];
+    document.getElementById('estado').value = lote.estado;
+
+    abrirFormulario();
+    window.scrollTo(0, 0);
+
   } catch (error) {
-    console.error('Error al editar lote:', error);
+    console.error('Error al cargar datos para editar:', error);
+    alert('Error al cargar datos. Asegúrate que el backend tenga GET /lotes/:id');
   }
 }
 
-async function eliminarLote(loteId) {
+async function eliminarLote(id) {
   if (confirm('¿Seguro que quieres eliminar este lote?')) {
     try {
       const token = localStorage.getItem('token');
-      console.log('Token usado para eliminar:', token); // Depuración
-      await fetch(`${API_URL}/lotes?loteId=${loteId}`, { // Ajuste para buscar por loteId
+      await fetch(`${API_URL}/lotes/${id}`, { // Usamos el ID numérico
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -139,23 +130,36 @@ async function eliminarLote(loteId) {
   }
 }
 
+// --- Event Listener Principal ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-  if (currentUser && ['admin', 'empleado'].includes(currentUser.role)) {
-    const loteForm = document.getElementById('loteForm');
-    if (loteForm) {
-      loteForm.style.display = 'grid';
-      loteForm.onsubmit = guardarLote; // Vincula el evento explícitamente
-    }
-    document.getElementById('loteTable').style.display = 'table';
-    cargarLotes(); // Carga los lotes al iniciar
-  } else if (currentUser) {
-    document.querySelector('main').innerHTML = `
-      <section>
-        <h2>Acceso Denegado</h2>
-        <p>Solo los usuarios con rol de Administrador o Empleado pueden gestionar lotes.</p>
-        <a href="index.html">Volver al Dashboard</a>
-      </section>
-    `;
+
+  const toggleBtn = document.getElementById('toggleFormBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const form = document.getElementById('loteForm');
+  const formContainer = document.getElementById('formContainer');
+
+  if (currentUser && currentUser.role !== 'viewer') {
+    toggleBtn.style.display = 'block';
+
+    toggleBtn.addEventListener('click', () => {
+      const isOpen = formContainer.classList.contains('is-open');
+      if (isOpen) {
+        cerrarFormulario();
+      } else {
+        document.getElementById('formTitle').textContent = 'Agregar Nuevo Lote';
+        form.reset();
+        document.getElementById('loteDbId').value = '';
+        abrirFormulario();
+      }
+    });
+
+    cancelBtn.addEventListener('click', cerrarFormulario);
+    form.onsubmit = guardarLote;
+
+  } else {
+    toggleBtn.style.display = 'none';
   }
+
+  cargarLotes();
 });

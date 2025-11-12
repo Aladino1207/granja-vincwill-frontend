@@ -32,50 +32,53 @@
 
   <main class="main-content">
 
+    <div id="formContainer" class="form-desplegable-container">
+      <section class="card">
+        <h2 id="formTitle">Registrar Evento de Salud</h2>
+        <form id="saludForm" class="form-grid form-grid-3-col">
+          <input type="hidden" id="saludId" value="">
+
+          <div class="form-group">
+            <label for="loteId">Lote</label>
+            <select id="loteId" class="form-control" required>
+              <option value="">Selecciona un Lote</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="tipo">Tipo</label>
+            <input type="text" id="tipo" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="nombre">Nombre (Tratamiento/Vacuna)</label>
+            <input type="text" id="nombre" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="diasRetiro">Días de Retiro (si aplica)</label>
+            <input type="number" id="diasRetiro" class="form-control" min="0" value="0">
+          </div>
+          <div class="form-group">
+            <label for="cantidad">Cantidad (Aves/Dosis)</label>
+            <input type="number" id="cantidad" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="fecha">Fecha</label>
+            <input type="date" id="fecha" class="form-control" required>
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
+            <button type="submit" class="btn btn-primario">Guardar</button>
+            <button type="button" id="cancelBtn" class="btn btn-peligro"
+              style="background-color: #7f8c8d;">Cancelar</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
     <section class="card">
-      <h2>Registrar Evento de Salud</h2>
-      <form id="saludForm" class="form-grid form-grid-3-col" onsubmit="guardarSalud(event); return false;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Lista de Eventos de Salud</h2>
+        <button id="toggleFormBtn" class="btn btn-primario">Registrar Nuevo Evento</button>
+      </div>
 
-        <div class="form-group">
-          <label for="loteId">Lote</label>
-          <select id="loteId" class="form-control" required>
-            <option value="">Selecciona un Lote</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="tipo">Tipo</label>
-          <input type="text" id="tipo" class="form-control" required>
-        </div>
-
-        <div class="form-group">
-          <label for="nombre">Nombre (Tratamiento/Vacuna)</label>
-          <input type="text" id="nombre" class="form-control" required>
-        </div>
-
-        <div class="form-group">
-          <label for="diasRetiro">Días de Retiro (si aplica)</label>
-          <input type="number" id="diasRetiro" class="form-control" min="0" value="0">
-        </div>
-
-        <div class="form-group">
-          <label for="cantidad">Cantidad (Aves/Dosis)</label>
-          <input type="number" id="cantidad" class="form-control" required>
-        </div>
-
-        <div class="form-group">
-          <label for="fecha">Fecha</label>
-          <input type="date" id="fecha" class="form-control" required>
-        </div>
-
-        <div class="form-group" style="grid-column: 1 / -1;"> <button type="submit" class="btn btn-primario">Guardar
-            Evento</button>
-        </div>
-      </form>
-    </section>
-
-    <section class="card">
-      <h2>Lista de Eventos de Salud</h2>
       <div class="tabla-responsive-wrapper">
         <table id="saludTable" class="tabla-moderna">
           <thead>

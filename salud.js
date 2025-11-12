@@ -1,16 +1,34 @@
+// --- Lógica de Carga (sin cambios) ---
+async function cargarLotesForSelect() {
+  try {
+    const res = await fetch(`${window.API_URL}/lotes`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const lotes = await res.json();
+    const select = document.getElementById('loteId');
+    if (!select) throw new Error('Elemento loteId no encontrado');
+    select.innerHTML = '<option value="">Selecciona un Lote</option>';
+    lotes.forEach(lote => {
+      const option = document.createElement('option');
+      option.value = lote.id;
+      option.textContent = `${lote.loteId}`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error al cargar lotes para select:', error);
+  }
+}
+
 async function cargarSalud() {
   try {
     const res = await fetch(`${window.API_URL}/salud`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
-    console.log('Respuesta de /salud - Status:', res.status, 'Status Text:', res.statusText);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const salud = await res.json();
-    console.log('Datos recibidos de /salud:', salud);
     const tbody = document.getElementById('saludTableBody');
-    if (!tbody) throw new Error('Elemento saludTableBody no encontrado');
-    tbody.innerHTML = ''; // Limpia la tabla antes de rellenar
-    console.log('Intentando rellenar tabla con', salud.length, 'registros');
+    tbody.innerHTML = '';
     if (Array.isArray(salud) && salud.length > 0) {
       salud.forEach(s => {
         const tr = document.createElement('tr');
@@ -21,56 +39,54 @@ async function cargarSalud() {
           <td>${s.cantidad || 0}</td>
           <td>${s.fecha ? new Date(s.fecha).toLocaleDateString() : 'N/A'}</td>
           <td>
-            <button onclick="editarSalud(${s.id || 0})">Editar</button>
-            <button onclick="eliminarSalud(${s.id || 0})">Eliminar</button>
+            <button onclick="editarSalud(${s.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
+            <button onclick="eliminarSalud(${s.id})" class="btn btn-sm btn-peligro">Eliminar</button>
           </td>
         `;
         tbody.appendChild(tr);
       });
-      console.log('Tabla rellenada con éxito');
     } else {
       tbody.innerHTML = '<tr><td colspan="6">No hay eventos de salud registrados</td></tr>';
-      console.log('Tabla vacía, mostrando mensaje');
     }
   } catch (error) {
     console.error('Error al cargar salud:', error);
-    const tbody = document.getElementById('saludTableBody');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="6">Error al cargar salud: ${error.message}</td></tr>`;
   }
 }
 
-async function cargarLotesForSelect() {
-  try {
-    const res = await fetch(`${window.API_URL}/lotes`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    const lotes = await res.json();
-    const select = document.getElementById('loteId'); // Cambiado a 'loteId' para coincidir con salud.html
-    if (!select) throw new Error('Elemento loteId no encontrado');
-    select.innerHTML = '<option value="">Selecciona un Lote</option>';
-    lotes.forEach(lote => {
-      const option = document.createElement('option');
-      option.value = lote.id;
-      option.textContent = `${lote.loteId} (Cantidad: ${lote.cantidad})`;
-      select.appendChild(option);
-    });
-  } catch (error) {
-    console.error('Error al cargar lotes para select:', error);
-    alert('Error al cargar lotes: ' + error.message);
-  }
+// --- LÓGICA DEL FORMULARIO DESPLEGABLE ---
+
+function abrirFormulario() {
+  document.getElementById('formContainer').classList.add('is-open');
+  document.getElementById('toggleFormBtn').textContent = 'Cancelar';
 }
+
+function cerrarFormulario() {
+  const formContainer = document.getElementById('formContainer');
+  formContainer.classList.remove('is-open');
+  document.getElementById('toggleFormBtn').textContent = 'Registrar Nuevo Evento';
+
+  document.getElementById('saludForm').reset();
+  document.getElementById('saludId').value = '';
+  document.getElementById('formTitle').textContent = 'Registrar Evento de Salud';
+}
+
+// --- Funciones CRUD (Modificadas) ---
 
 async function guardarSalud(e) {
   e.preventDefault();
+
+  const saludId = document.getElementById('saludId').value;
+  const esEdicion = !!saludId;
+
+  // Lógica de cálculo de fecha de retiro
   const diasRetiro = parseInt(document.getElementById('diasRetiro').value) || 0;
   const fechaEvento = new Date(document.getElementById('fecha').value);
   let fechaRetiroCalculada = null;
-
   if (diasRetiro > 0) {
     fechaEvento.setDate(fechaEvento.getDate() + diasRetiro);
     fechaRetiroCalculada = fechaEvento;
   }
+
   const salud = {
     loteId: parseInt(document.getElementById('loteId').value),
     tipo: document.getElementById('tipo').value,
@@ -79,27 +95,30 @@ async function guardarSalud(e) {
     fecha: document.getElementById('fecha').value,
     fechaRetiro: fechaRetiroCalculada
   };
+
+  const url = esEdicion
+    ? `${window.API_URL}/salud/${saludId}`
+    : `${window.API_URL}/salud`;
+  const method = esEdicion ? 'PUT' : 'POST';
+
   try {
-    const res = await fetch(`${window.API_URL}/salud`, {
-      method: 'POST',
+    const res = await fetch(url, {
+      method: method,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${localStorage.getItem('token')}`
       },
       body: JSON.stringify(salud)
     });
-    console.log('Respuesta de guardarSalud - Status:', res.status, 'Status Text:', res.statusText);
+
     if (res.ok) {
-      document.getElementById('saludForm').reset();
-      await cargarSalud(); // Asegúrate de esperar la recarga
-      console.log('Evento de salud guardado y tabla recargada');
+      cerrarFormulario();
+      await cargarSalud();
     } else {
       const errorText = await res.text();
-      console.error('Error al guardar evento de salud:', errorText);
-      alert('Error al guardar evento de salud: ' + (errorText || 'Desconocido'));
+      alert('Error al guardar: ' + (errorText || 'Desconocido'));
     }
   } catch (error) {
-    console.error('Error de conexión:', error);
     alert('Error de conexión');
   }
 }
@@ -109,94 +128,81 @@ async function editarSalud(id) {
     const res = await fetch(`${window.API_URL}/salud/${id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
-    console.log('Respuesta de GET /salud/:id - Status:', res.status, 'Status Text:', res.statusText);
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    if (!res.ok) throw new Error('No se pudo cargar el evento');
     const s = await res.json();
-    console.log('Datos recibidos para edición:', s);
+
+    document.getElementById('formTitle').textContent = 'Editar Evento de Salud';
+    document.getElementById('saludId').value = s.id;
     document.getElementById('loteId').value = s.loteId;
     document.getElementById('tipo').value = s.tipo;
     document.getElementById('nombre').value = s.nombre;
     document.getElementById('cantidad').value = s.cantidad;
     document.getElementById('fecha').value = s.fecha.split('T')[0];
-    document.getElementById('saludForm').onsubmit = async (e) => {
-      e.preventDefault();
-      const updatedSalud = {
-        loteId: parseInt(document.getElementById('loteId').value),
-        tipo: document.getElementById('tipo').value,
-        nombre: document.getElementById('nombre').value,
-        cantidad: parseFloat(document.getElementById('cantidad').value),
-        fecha: document.getElementById('fecha').value
-      };
-      const putRes = await fetch(`${window.API_URL}/salud/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(updatedSalud)
-      });
-      console.log('Respuesta de PUT /salud/:id - Status:', putRes.status, 'Status Text:', putRes.statusText);
-      if (putRes.ok) {
-        document.getElementById('saludForm').reset();
-        document.getElementById('saludForm').onsubmit = guardarSalud;
-        await cargarSalud();
-        console.log('Evento de salud actualizado y tabla recargada');
-      } else {
-        const errorText = await putRes.text();
-        console.error('Error al actualizar evento de salud:', errorText);
-        alert('Error al actualizar evento de salud: ' + (errorText || 'Desconocido'));
-      }
-    };
+
+    // Calcular días de retiro (si existen)
+    if (s.fechaRetiro) {
+      const fechaEvento = new Date(s.fecha);
+      const fechaRetiro = new Date(s.fechaRetiro);
+      const diffTime = Math.abs(fechaRetiro - fechaEvento);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      document.getElementById('diasRetiro').value = diffDays;
+    } else {
+      document.getElementById('diasRetiro').value = 0;
+    }
+
+    abrirFormulario();
+    window.scrollTo(0, 0);
+
   } catch (error) {
-    console.error('Error al editar salud:', error);
-    alert('Error al editar evento de salud: ' + error.message);
+    console.error('Error al cargar datos para editar:', error);
   }
 }
 
 async function eliminarSalud(id) {
-  if (confirm('¿Seguro que quieres eliminar este evento de salud?')) {
+  if (confirm('¿Seguro que quieres eliminar este evento?')) {
     try {
-      const res = await fetch(`${window.API_URL}/salud/${id}`, {
+      await fetch(`${window.API_URL}/salud/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      console.log('Respuesta de DELETE /salud/:id - Status:', res.status, 'Status Text:', res.statusText);
-      if (res.ok) {
-        await cargarSalud();
-        console.log('Evento de salud eliminado y tabla recargada');
-      } else {
-        const errorText = await res.text();
-        console.error('Error al eliminar evento de salud:', errorText);
-        alert('Error al eliminar evento de salud: ' + (errorText || 'Desconocido'));
-      }
+      cargarSalud();
     } catch (error) {
-      console.error('Error al eliminar salud:', error);
-      alert('Error al eliminar evento de salud');
+      alert('Error al eliminar evento');
     }
   }
 }
 
+// --- Event Listener Principal ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-  const saludForm = document.getElementById('saludForm');
-  const saludTable = document.getElementById('saludTable');
-  
-  console.log('Verificando elementos - saludForm:', saludForm, 'saludTable:', saludTable);
+
+  const toggleBtn = document.getElementById('toggleFormBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const form = document.getElementById('saludForm');
+  const formContainer = document.getElementById('formContainer');
 
   if (currentUser && currentUser.role !== 'viewer') {
-    if (saludForm) {
-      saludForm.style.display = 'grid';
-    } else {
-      console.error('Elemento saludForm no encontrado en el DOM');
-    }
-    if (saludTable) {
-      saludTable.style.display = 'table';
-    } else {
-      console.error('Elemento saludTable no encontrado en el DOM');
-    }
+    toggleBtn.style.display = 'block';
+
+    toggleBtn.addEventListener('click', () => {
+      const isOpen = formContainer.classList.contains('is-open');
+      if (isOpen) {
+        cerrarFormulario();
+      } else {
+        document.getElementById('formTitle').textContent = 'Registrar Evento de Salud';
+        form.reset();
+        document.getElementById('saludId').value = '';
+        abrirFormulario();
+      }
+    });
+
+    cancelBtn.addEventListener('click', cerrarFormulario);
+    form.onsubmit = guardarSalud;
+
   } else {
-    console.log('Rol de usuario:', currentUser ? currentUser.role : 'No autenticado');
+    toggleBtn.style.display = 'none';
   }
+
   cargarLotesForSelect();
   cargarSalud();
 });

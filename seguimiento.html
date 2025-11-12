@@ -28,50 +28,65 @@
         </nav>
     </aside>
     <main class="main-content">
+
+        <div id="formContainer" class="form-desplegable-container">
+            <section class="card">
+                <h2 id="formTitle">Registrar Seguimiento</h2>
+                <form id="seguimientoForm" class="form-grid form-grid-3-col">
+                    <input type="hidden" id="seguimientoId" value="">
+
+                    <div class="form-group">
+                        <label for="loteSelect">Lote</label>
+                        <select id="loteSelect" class="form-control" required></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="alimentoSelect">Alimento Consumido</label>
+                        <select id="alimentoSelect" class="form-control" required>
+                            <option value="">Selecciona un Alimento</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="semana">Semana #</label>
+                        <input type="number" id="semana" class="form-control" min="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="peso">Peso Promedio (kg)</label>
+                        <input type="number" id="peso" class="form-control" min="0" step="0.01" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="consumo">Consumo de Alimento (kg)</label>
+                        <input type="number" id="consumo" class="form-control" min="0" step="0.01" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fecha">Fecha</label>
+                        <input type="date" id="fecha" class="form-control" required>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="observaciones">Observaciones</label>
+                        <input type="text" id="observaciones" class="form-control">
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
+                        <button type="submit" class="btn btn-primario">Guardar</button>
+                        <button type="button" id="cancelBtn" class="btn btn-peligro"
+                            style="background-color: #7f8c8d;">Cancelar</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+
         <section class="card">
-            <h2>Registrar Seguimiento</h2>
-            <form id="seguimientoForm" class="form-grid form-grid-3-col">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Historial de Seguimiento</h2>
+                <button id="toggleFormBtn" class="btn btn-primario">Registrar Seguimiento</button>
+            </div>
 
-                <div class="form-group">
-                    <label for="loteSelect">Lote</label>
-                    <select id="loteSelect" class="form-control" required></select>
-                </div>
-
-                <div class="form-group">
-                    <label for="alimentoSelect">Alimento Consumido</label>
-                    <select id="alimentoSelect" class="form-control" required>
-                        <option value="">Selecciona un Alimento</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="semana">Semana #</label>
-                    <input type="number" id="semana" class="form-control" min="1" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="peso">Peso Promedio (kg)</label>
-                    <input type="number" id="peso" class="form-control" min="0" step="0.01" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="consumo">Consumo de Alimento (kg)</label>
-                    <input type="number" id="consumo" class="form-control" min="0" step="0.01" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="observaciones">Observaciones</label>
-                    <input type="text" id="observaciones" class="form-control">
-                </div>
-
-                <div class="form-group" style="grid-column: 1 / -1;">
-                    <button type="submit" class="btn btn-primario">Guardar Seguimiento</button>
-                </div>
-            </form>
-        </section>
-
-        <section class="card">
-            <h2>Historial de Seguimiento</h2>
             <div class="tabla-responsive-wrapper">
                 <table id="seguimientoTable" class="tabla-moderna">
                     <thead>

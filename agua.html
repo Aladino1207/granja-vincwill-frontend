@@ -29,34 +29,44 @@
         </nav>
     </aside>
     <main class="main-content">
+
+        <div id="formContainer" class="form-desplegable-container">
+            <section class="card">
+                <h2 id="formTitle">Registrar Consumo de Agua</h2>
+                <form id="aguaForm" class="form-grid form-grid-3-col">
+                    <input type="hidden" id="aguaId" value="">
+
+                    <div class="form-group">
+                        <label for="loteSelect">Lote</label>
+                        <select id="loteSelect" class="form-control" required></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cantidad">Cantidad (Litros)</label>
+                        <input type="number" id="cantidad" class="form-control" step="0.01" min="0"
+                            placeholder="Ej: 50.5" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fecha">Fecha</label>
+                        <input type="date" id="fecha" class="form-control" required>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
+                        <button type="submit" class="btn btn-primario">Guardar</button>
+                        <button type="button" id="cancelBtn" class="btn btn-peligro"
+                            style="background-color: #7f8c8d;">Cancelar</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+
         <section class="card">
-            <h2>Registrar Consumo de Agua</h2>
-            <form id="aguaForm" class="form-grid form-grid-3-col">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Historial de Consumo de Agua</h2>
+                <button id="toggleFormBtn" class="btn btn-primario">Registrar Consumo</button>
+            </div>
 
-                <div class="form-group">
-                    <label for="loteSelect">Lote</label>
-                    <select id="loteSelect" class="form-control" required></select>
-                </div>
-
-                <div class="form-group">
-                    <label for="cantidad">Cantidad (Litros)</label>
-                    <input type="number" id="cantidad" class="form-control" step="0.01" min="0" placeholder="Ej: 50.5"
-                        required>
-                </div>
-
-                <div class="form-group">
-                    <label for="fecha">Fecha</label>
-                    <input type="date" id="fecha" class="form-control" required>
-                </div>
-
-                <div class="form-group" style="grid-column: 1 / -1;">
-                    <button type="submit" class="btn btn-primario">Registrar Consumo</button>
-                </div>
-            </form>
-        </section>
-
-        <section class="card">
-            <h2>Historial de Consumo de Agua</h2>
             <div class="tabla-responsive-wrapper">
                 <table id="aguaTable" class="tabla-moderna">
                     <thead>

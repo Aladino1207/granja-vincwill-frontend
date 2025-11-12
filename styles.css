@@ -277,6 +277,8 @@ select:focus {
 .tabla-responsive-wrapper {
   width: 100%;
   overflow-x: auto;
+  max-height: 600px; /* Altura máxima */
+  overflow-y: auto; /* Scroll vertical */
 }
 .tabla-moderna {
   width: 100%;
