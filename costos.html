@@ -7,24 +7,27 @@
 </head>
 <body>
     <header>
-    <h1>Costos</h1>
-    <nav>
-      <a href="index.html">Dashboard</a>
-      <a href="lotes.html">Lotes</a>
-      <a href="ventas.html">Ventas</a>
-      <a href="salud.html">Salud</a>
-      <a href="agua.html">Agua</a>
-      <a href="costos.html">Costos</a>
-      <a href="inventarios.html">Inventario</a>
-      <a href="seguimiento.html">Seguimiento</a>
-      <a href="reportes.html">Reportes</a>
-      <a href="usuarios.html">Usuarios</a>
-      <a href="configuracion.html">Configuración</a>
-      <a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
-    </nav>
-  </header>
+        <h1>Costos</h1><a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
+    </header>
+    <aside class="sidebar">
+        <nav>
+          <a href="index.html">Dashboard</a>
+          <a href="lotes.html">Lotes</a>
+          <a href="ventas.html">Ventas</a>
+          <a href="salud.html">Salud</a>
+          <a href="agua.html">Agua</a>
+          <a href="costos.html">Costos</a>
+          <a href="inventarios.html">Inventario</a>
+          <a href="seguimiento.html">Seguimiento</a>
+          <a href="reportes.html">Reportes</a>
+          <a href="usuarios.html">Usuarios</a>
+          <a href="configuracion.html">Configuración</a>
+        
+        </nav>
+    </aside>
+  
     <main>
-        <section>
+        <section class="card">
             <h2>Registrar Costo</h2>
             <form id="costoForm">
                 <label>Lote: <select id="loteSelect"></select></label>
@@ -43,17 +46,20 @@
                 <button type="submit">Registrar Costo</button>
             </form>
         </section>
-        <section>
+        <section class="card">
             <h2>Historial de Costos</h2>
-            <table id="costoTable"> <!-- Añade el ID costoTable -->
+            <table id="costoTable"> 
                 <thead>
                     <tr><th>Lote</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Fecha</th><th>Acciones</th></tr>
                 </thead>
                 <tbody id="tablaCostos"></tbody>
             </table>
         </section>
+        <footer>
+            <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
+        </footer>
     </main>
-    <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
+    
     <script src="app.js"></script>
     <script src="costos.js"></script>
 </body>

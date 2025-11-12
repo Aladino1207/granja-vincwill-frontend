@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestión de Usuarios - Granja VincWill</title>
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
   <header>
-    <h1>Gestión de Usuarios</h1>
+    <h1>Gestión de Usuarios</h1><a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
+  </header>
+  <aside class="sidebar">
     <nav>
       <a href="index.html">Dashboard</a>
       <a href="lotes.html">Lotes</a>
@@ -21,27 +25,27 @@
       <a href="reportes.html">Reportes</a>
       <a href="usuarios.html">Usuarios</a>
       <a href="configuracion.html">Configuración</a>
-      <a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
     </nav>
-  </header>
+  </aside>
+
   <main>
-    <section id="accessDenied" style="display: none;">
+    <section id="accessDenied" style="display: none;" class="card">
       <h2>Acceso Denegado</h2>
       <p>Solo los administradores pueden gestionar usuarios.</p>
       <a href="index.html">Volver al Dashboard</a>
     </section>
-    <section id="userSection">
-            <form id="userForm" style="display: none;">
-            <input type="text" id="name" placeholder="Nombre" required>
-            <input type="email" id="email" placeholder="Email" required>
-            <input type="password" id="password" placeholder="Contraseña" required>
-            <select id="role" required>
-                <option value="admin">Administrador</option>
-                <option value="empleado">Empleado</option>
-                <option value="viewer">Viewer</option>
-            </select>
-            <button type="submit">Guardar</button>
-        </form>
+    <section id="userSection" class="card">
+      <form id="userForm" style="display: none;">
+        <input type="text" id="name" placeholder="Nombre" required>
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Contraseña" required>
+        <select id="role" required>
+          <option value="admin">Administrador</option>
+          <option value="empleado">Empleado</option>
+          <option value="viewer">Viewer</option>
+        </select>
+        <button type="submit">Guardar</button>
+      </form>
       <table id="userTable" style="display: none;">
         <thead>
           <tr>
@@ -54,8 +58,12 @@
         <tbody id="userTableBody"></tbody>
       </table>
     </section>
+    <footer>
+      <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
+    </footer>
   </main>
   <script src="app.js"></script>
   <script src="usuarios.js"></script>
 </body>
+
 </html>

@@ -9,7 +9,9 @@
 </head>
 <body>
   <header>
-    <h1>Gestión de Salud</h1>
+    <h1>Gestión de Salud</h1><a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
+  </header>
+  <aside class="sidebar">
     <nav>
       <a href="index.html">Dashboard</a>
       <a href="lotes.html">Lotes</a>
@@ -22,11 +24,11 @@
       <a href="reportes.html">Reportes</a>
       <a href="usuarios.html">Usuarios</a>
       <a href="configuracion.html">Configuración</a>
-      <a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
+      
     </nav>
-  </header>
+  </aside>
   <main>
-    <section>
+    <section class="card">
       <h2>Lista de Eventos de Salud</h2>
       <table id="saludTable">
         <thead>
@@ -49,24 +51,31 @@
         </thead>
         <tbody id="saludTableBody"></tbody>
       </table>
-      <h2>Registrar Evento de Salud</h2>
-      <form id="saludForm" onsubmit="guardarSalud(event); return false;">
-        <label for="loteId">Lote:</label>
-        <select id="loteId" required>
-          <option value="">Selecciona un Lote</option>
-          <!-- Se llenará dinámicamente -->
-        </select>
-        <label for="tipo">Tipo:</label>
-        <input type="text" id="tipo" required>
-        <label for="nombre">Nombre:</label>
-        <input type="text" id="nombre" required>
-        <label for="cantidad">Cantidad:</label>
-        <input type="number" id="cantidad" required>
-        <label for="fecha">Fecha:</label>
-        <input type="date" id="fecha" required>
-        <button type="submit">Guardar Evento de Salud</button>
-      </form>
+
+      <section class="card">
+        <h2>Registrar Evento de Salud</h2>
+
+        <form id="saludForm" onsubmit="guardarSalud(event); return false;">
+          <label for="loteId">Lote:</label>
+          <select id="loteId" required>
+            <option value="">Selecciona un Lote</option>
+            <!-- Se llenará dinámicamente -->
+          </select>
+          <label for="tipo">Tipo:</label>
+          <input type="text" id="tipo" required>
+          <label for="nombre">Nombre:</label>
+          <input type="text" id="nombre" required>
+          <label for="cantidad">Cantidad:</label>
+          <input type="number" id="cantidad" required>
+          <label for="fecha">Fecha:</label>
+          <input type="date" id="fecha" required>
+          <button type="submit">Guardar Evento de Salud</button>
+        </form>
+      </section>  
     </section>
+    <footer>
+      <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
+    </footer>
   </main>
   <script src="app.js"></script>
   <script src="salud.js"></script>

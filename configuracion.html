@@ -7,23 +7,25 @@
 </head>
 <body>
     <header>
-        <h1>Configuración</h1>
-        <nav>
-            <a href="index.html">Dashboard</a>
-      <a href="lotes.html">Lotes</a>
-      <a href="ventas.html">Ventas</a>
-      <a href="salud.html">Salud</a>
-      <a href="agua.html">Agua</a> <a href="costos.html">Costos</a>
-      <a href="inventarios.html">Inventario</a>
-      <a href="seguimiento.html">Seguimiento</a>
-      <a href="reportes.html">Reportes</a>
-      <a href="usuarios.html">Usuarios</a>
-      <a href="configuracion.html">Configuración</a>
-      <a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
-        </nav>
+        <h1>Configuración</h1><a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
     </header>
+        <aside class="sidebar">
+            <nav>
+                <a href="index.html">Dashboard</a>
+                <a href="lotes.html">Lotes</a>
+                <a href="ventas.html">Ventas</a>
+                <a href="salud.html">Salud</a>
+                <a href="agua.html">Agua</a> <a href="costos.html">Costos</a>
+                <a href="inventarios.html">Inventario</a>
+                <a href="seguimiento.html">Seguimiento</a>
+                <a href="reportes.html">Reportes</a>
+                <a href="usuarios.html">Usuarios</a>
+                <a href="configuracion.html">Configuración</a>            
+            </nav>
+        </aside>
+    
     <main>
-        <section>
+        <section class="card">
             <h2>Configuración</h2>
             <form id="configForm">
                 <label>Notificaciones:
@@ -43,8 +45,11 @@
                 <button type="submit">Guardar Configuración</button>
             </form>
         </section>
+
+        <footer>
+            <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
+        </footer>
     </main>
-    <footer>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</footer>
     <script src="app.js"></script> <!-- Cargar primero app.js -->
     <script src="configuracion.js"></script> <!-- Luego configuracion.js -->
 </body>
