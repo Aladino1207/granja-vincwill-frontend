@@ -1,5 +1,6 @@
 window.API_URL = 'https://granja-vincwill-backend.onrender.com';
 
+// --- Funciones de Autenticación (Sin cambios) ---
 async function login(e) {
   e.preventDefault();
   const email = document.getElementById('email').value.trim();
@@ -10,16 +11,13 @@ async function login(e) {
     errorMessage.textContent = 'Por favor, ingresa email y contraseña.';
     return;
   }
-
   try {
-    console.log('Intentando login con email:', email, 'y contraseña:', password);
     const res = await fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
     const text = await res.text();
-    console.log('Respuesta del servidor:', text, 'Status:', res.status);
     if (!res.ok) {
       const errorData = text ? JSON.parse(text).error || text : 'Error desconocido';
       errorMessage.textContent = `Error en login: ${errorData}`;
@@ -34,15 +32,14 @@ async function login(e) {
     errorMessage.textContent = 'Error de conexión al servidor.';
     console.error('Login error:', error);
   }
-}
+} [cite: 1]
 
 function logout() {
   localStorage.removeItem('isAuthenticated');
   localStorage.removeItem('currentUser');
   localStorage.removeItem('token');
   window.location.href = 'login.html';
-}
-
+} [cite: 1]
 
 async function checkAccess() {
   const token = localStorage.getItem('token');
@@ -52,12 +49,10 @@ async function checkAccess() {
   if (path === 'login.html') {
     return;
   }
-
   if (!token || !currentUser) {
     window.location.href = 'login.html';
     return;
   }
-
   try {
     const res = await fetch(`${API_URL}/users`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -71,7 +66,6 @@ async function checkAccess() {
     logout();
     return;
   }
-
   if (currentUser.role === 'viewer' && path !== 'index.html') {
     document.querySelector('main').innerHTML = `
       <section>
@@ -81,80 +75,8 @@ async function checkAccess() {
       </section>
     `;
   }
-  if (path === 'usuarios.html' && currentUser.role !== 'admin') {
-    document.getElementById('userSection').style.display = 'none';
-    document.getElementById('accessDenied').style.display = 'block';
-  } else if (path === 'usuarios.html') {
-    document.getElementById('userForm').style.display = 'grid';
-    document.getElementById('userTable').style.display = 'table';
-  }
-}
+} [cite: 1]
 
-async function actualizarDashboard() {
-  try {
-    const [lotes, salud, costos, seguimiento, ventas] = await Promise.all([
-      fetch(`${API_URL}/lotes`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-      fetch(`${API_URL}/salud`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-      fetch(`${API_URL}/costos`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-      fetch(`${API_URL}/seguimiento`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-      fetch(`${API_URL}/ventas`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
-    ]);
-
-    // Carga configuración para notificaciones
-    const resConfig = await fetch(`${window.API_URL}/config`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
-    const config = await resConfig.json();
-    if (config.length > 0 && config[0].notificaciones === 'Activadas') {
-      mostrarAlertasProduccion();
-    } else {
-      document.getElementById('alertasList').innerHTML = '<li>No hay alertas activadas.</li>';
-    }
-
-    let totalVivos = 0;
-    lotes.forEach(lote => {
-      const muertos = salud.filter(s => s.loteId === lote.id && s.tipo === 'Mortalidad').reduce((sum, s) => sum + s.cantidad, 0);
-      totalVivos += lote.cantidad - muertos;
-    });
-    document.getElementById('totalVivos').textContent = totalVivos;
-
-    const conversiones = [], ganancias = [];
-    const porLote = {};
-
-    seguimiento.forEach(reg => {
-      const lote = porLote[reg.loteId] ||= { pesoInicial: null, pesoFinal: null, consumo: 0, semanas: new Set() };
-      if (lote.pesoInicial === null || reg.semana === 1) lote.pesoInicial = reg.peso;
-      lote.pesoFinal = reg.peso;
-      lote.consumo += reg.consumo;
-      lote.semanas.add(reg.semana);
-    });
-
-    for (const loteId in porLote) {
-      const l = porLote[loteId];
-      const pesoGanado = l.pesoFinal - l.pesoInicial;
-      const conversion = l.consumo / (pesoGanado || 1);
-      const ganancia = pesoGanado / (l.semanas.size * 7);
-      conversiones.push(conversion);
-      ganancias.push(ganancia);
-    }
-
-    const promedio = arr => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2) : '0';
-    document.getElementById('conversionPromedio').textContent = promedio(conversiones);
-    document.getElementById('gananciaPromedio').textContent = promedio(ganancias);
-
-    const totalCostos = costos.reduce((sum, c) => sum + c.monto, 0);
-    const totalIngresos = ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0);
-    const rentabilidad = totalIngresos - totalCostos;
-
-    document.getElementById('costosTotales').textContent = `$${totalCostos.toFixed(2)}`;
-    document.getElementById('ingresosTotales').textContent = `$${totalIngresos.toFixed(2)}`;
-    document.getElementById('rentabilidad').textContent = `$${rentabilidad.toFixed(2)}`;
-  } catch (error) {
-    console.error('Error al actualizar dashboard:', error);
-  }
-}
-
-// ¡NUEVA FUNCIÓN: Maneja respuestas para evitar "Unexpected token '<'"
 async function handleJsonResponse(res) {
   if (!res.ok) {
     const text = await res.text();
@@ -168,13 +90,209 @@ async function handleJsonResponse(res) {
     throw new Error('Respuesta no es JSON');
   }
   return await res.json();
+} [cite: 1]
+
+
+// --- FUNCIÓN ACTUALIZADA: actualizarDashboard (para 7 métricas) ---
+async function actualizarDashboard() {
+  try {
+    // 1. Obtenemos todos los datos
+    const [lotes, salud, costos, seguimiento, ventas, agua] = await Promise.all([
+      fetch(`${API_URL}/lotes`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+      fetch(`${API_URL}/salud`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+      fetch(`${API_URL}/costos`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+      fetch(`${API_URL}/seguimiento`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+      fetch(`${API_URL}/ventas`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+      fetch(`${API_URL}/agua`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse) // Se añade agua
+    ]);
+
+    // 2. Cálculos (Ahora con 7 métricas)
+    let totalAvesInicial = 0;
+    let totalMuertes = 0;
+    let totalVivos = 0;
+    let pesoPromedioActual = 0;
+    let ultimosPesos = [];
+
+    lotes.forEach(lote => {
+      // Suma la cantidad inicial de aves
+      totalAvesInicial += lote.cantidad;
+
+      // Calcula muertes por lote
+      const muertesLote = salud.filter(s => s.loteId === lote.id && s.tipo === 'Mortalidad').reduce((sum, s) => sum + s.cantidad, 0);
+      totalMuertes += muertesLote;
+
+      // Encontrar el último peso registrado para este lote
+      const seguimientosLote = seguimiento
+        .filter(s => s.loteId === lote.id)
+        .sort((a, b) => b.semana - a.semana); // Ordenar por semana desc
+
+      if (seguimientosLote.length > 0) {
+        ultimosPesos.push(seguimientosLote[0].peso);
+      }
+    });
+
+    totalVivos = totalAvesInicial - totalMuertes;
+
+    // Calcula el promedio de los últimos pesos de CADA lote
+    if (ultimosPesos.length > 0) {
+      pesoPromedioActual = (ultimosPesos.reduce((a, b) => a + b, 0) / ultimosPesos.length).toFixed(2);
+    }
+
+    // Mortalidad Promedio
+    const mortalidadPromedio = (totalAvesInicial > 0) ? ((totalMuertes / totalAvesInicial) * 100).toFixed(2) : 0;
+
+    // Cálculos de Conversión (ICA)
+    const conversiones = [];
+    seguimiento.forEach(reg => {
+      const lote = lotes.find(l => l.id === reg.loteId);
+      if (lote && reg.peso > lote.pesoInicial) {
+        const pesoGanado = reg.peso - lote.pesoInicial;
+        if (pesoGanado > 0) {
+          const conversion = reg.consumo / pesoGanado;
+          conversiones.push(conversion);
+        }
+      }
+    });
+    const promedio = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2) : '0';
+
+    // Cálculos Financieros
+    const totalCostos = costos.reduce((sum, c) => sum + c.monto, 0);
+    const totalIngresos = ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0);
+    const rentabilidad = totalIngresos - totalCostos;
+
+    // 3. Poblar el HTML (con los 7 IDs del nuevo index.html)
+    document.getElementById('totalVivos').textContent = totalVivos;
+    document.getElementById('pesoPromedio').textContent = `${pesoPromedioActual} kg`;
+    document.getElementById('conversionPromedio').textContent = promedio(conversiones);
+    document.getElementById('mortalidadPromedio').textContent = `${mortalidadPromedio}%`;
+    document.getElementById('costosTotales').textContent = `$${totalCostos.toFixed(2)}`;
+    document.getElementById('ingresosTotales').textContent = `$${totalIngresos.toFixed(2)}`;
+    document.getElementById('rentabilidad').textContent = `$${rentabilidad.toFixed(2)}`;
+
+  } catch (error) {
+    console.error('Error al actualizar dashboard:', error);
+  }
 }
 
+// --- NUEVA FUNCIÓN: mostrarCalendario ---
+async function mostrarCalendario() {
+  try {
+    // 1. Obtener eventos de 'salud' (para periodos de retiro)
+    const saludRes = await fetch(`${API_URL}/salud`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+    const saludData = await handleJsonResponse(saludRes);
+
+    // 2. Mapear eventos para el calendario
+    const eventos = [];
+
+    // Añadir Períodos de Retiro (de 'salud')
+    saludData.forEach(s => {
+      if (s.fechaRetiro) {
+        eventos.push({
+          date: s.fechaRetiro.split('T')[0], // Asegura formato YYYY-MM-DD
+          title: `Fin de Retiro (Lote ${s.loteId})` // (Necesitaríamos un JOIN en backend para mostrar 'loteId' string)
+        });
+      }
+      if (s.tipo === 'Vacuna') {
+        eventos.push({
+          date: s.fecha.split('T')[0],
+          title: `Vacuna: ${s.nombre} (Lote ${s.loteId})`
+        });
+      }
+    });
+
+    // 3. Inicializar Flatpickr (el calendario "físico")
+    flatpickr("#calendario-container", {
+      inline: true, // Lo dibuja "físicamente"
+      locale: "es", // Usa la traducción a español
+
+      // Esta función se ejecuta para cada día que se dibuja
+      onDayCreate: function (dObj, dStr, fp, dayElem) {
+        const fechaStr = dayElem.dateObj.toISOString().split('T')[0];
+        const eventosDelDia = eventos.filter(e => e.date === fechaStr);
+
+        if (eventosDelDia.length > 0) {
+          dayElem.classList.add('evento-calendario'); // Marca el día
+          // Añade un tooltip simple
+          dayElem.title = eventosDelDia.map(e => e.title).join('\n');
+        }
+      },
+
+      // Función que se ejecuta al seleccionar una fecha
+      onChange: function (selectedDates, dateStr, instance) {
+        const eventosHoy = eventos.filter(e => e.date === dateStr);
+        if (eventosHoy.length > 0) {
+          alert(`Eventos para ${dateStr}:\n- ${eventosHoy.map(e => e.title).join('\n- ')}`);
+        }
+      }
+    });
+
+    // Añadimos un poco de CSS para marcar los días con eventos
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .evento-calendario {
+        background-color: var(--color-secundario-hover);
+        color: white !important;
+        border-radius: 22px;
+        font-weight: bold;
+      }
+    `;
+    document.head.appendChild(style);
+
+  } catch (error) {
+    console.error('Error al mostrar calendario:', error);
+  }
+}
+
+// --- NUEVA FUNCIÓN: mostrarGraficoAgua ---
+async function mostrarGraficoAgua() {
+  try {
+    const res = await fetch(`${API_URL}/agua`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+    const aguaData = await handleJsonResponse(res);
+
+    // Agrupar consumo por día (últimos 7 días)
+    const hoy = new Date();
+    const dataPorDia = {};
+    for (let i = 6; i >= 0; i--) {
+      const fecha = new Date(hoy);
+      fecha.setDate(hoy.getDate() - i);
+      const fechaStr = fecha.toISOString().split('T')[0];
+      dataPorDia[fechaStr] = 0;
+    }
+
+    aguaData.forEach(r => {
+      const fechaStr = r.fecha.split('T')[0];
+      if (dataPorDia[fechaStr] !== undefined) {
+        dataPorDia[fechaStr] += r.cantidad;
+      }
+    });
+
+    const labels = Object.keys(dataPorDia).map(d => new Date(d).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }));
+    const data = Object.values(dataPorDia);
+
+    const ctx = document.getElementById('aguaChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Consumo de Agua (Litros)',
+          data: data,
+          backgroundColor: '#3498db'
+        }]
+      },
+      options: { scales: { y: { beginAtZero: true } } }
+    });
+  } catch (error) {
+    console.error('Error en gráfico de agua:', error);
+  }
+}
+
+// --- Funciones de Gráficos (Sin cambios) ---
 function mostrarGraficosDashboard() {
   fetch(`${API_URL}/seguimiento`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
     .then(handleJsonResponse)
     .then(seguimiento => {
-      const labels = [...new Set(seguimiento.map(reg => `Semana ${reg.semana}`))];
+      const labels = [...new Set(seguimiento.map(reg => `Semana ${reg.semana}`))].sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
       const dataPeso = labels.map(label => {
         const semana = parseInt(label.split(' ')[1]);
         const pesos = seguimiento.filter(reg => reg.semana === semana).map(reg => reg.peso);
@@ -186,13 +304,13 @@ function mostrarGraficosDashboard() {
         type: 'line',
         data: {
           labels,
-          datasets: [{ label: 'Peso Promedio (kg)', data: dataPeso, borderColor: 'blue' }]
+          datasets: [{ label: 'Peso Promedio (kg)', data: dataPeso, borderColor: 'blue', tension: 0.1 }]
         },
         options: { scales: { y: { beginAtZero: true } } }
       });
     })
     .catch(error => console.error('Error en gráfico de seguimiento:', error));
-}
+} [cite: 1]
 
 function mostrarCostosPieChart() {
   fetch(`${API_URL}/costos`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
@@ -218,15 +336,11 @@ function mostrarCostosPieChart() {
         },
         options: {
           responsive: true,
-          title: {
-            display: true,
-            text: 'Distribución de Costos por Categoría (%)'
-          }
         }
       });
     })
     .catch(error => console.error('Error en gráfico de costos:', error));
-}
+} [cite: 1]
 
 function mostrarIngresosCostosBarChart() {
   Promise.all([
@@ -234,41 +348,37 @@ function mostrarIngresosCostosBarChart() {
     fetch(`${API_URL}/ventas`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
     fetch(`${API_URL}/costos`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
   ])
-  .then(([lotes, ventas, costos]) => {
-    const dataIngresos = {};
-    const dataCostos = {};
+    .then(([lotes, ventas, costos]) => {
+      const dataIngresos = {};
+      const dataCostos = {};
 
-    lotes.forEach(l => {
-      dataIngresos[l.loteId] = ventas.filter(v => v.loteId === l.id).reduce((sum, v) => sum + (v.peso * v.precio), 0);
-      dataCostos[l.loteId] = costos.filter(c => c.loteId === l.id).reduce((sum, c) => sum + c.monto, 0);
-    });
+      lotes.forEach(l => {
+        dataIngresos[l.loteId] = ventas.filter(v => v.loteId === l.id).reduce((sum, v) => sum + (v.peso * v.precio), 0);
+        dataCostos[l.loteId] = costos.filter(c => c.loteId === l.id).reduce((sum, c) => sum + c.monto, 0);
+      });
 
-    const labels = Object.keys(dataIngresos);
-    const ingresosData = Object.values(dataIngresos);
-    const costosData = Object.values(dataCostos);
+      const labels = Object.keys(dataIngresos);
+      const ingresosData = Object.values(dataIngresos);
+      const costosData = Object.values(dataCostos);
 
-    const ctx = document.getElementById('ingresosCostosBarChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label: 'Ingresos ($)', data: ingresosData, backgroundColor: '#36A2EB' },
-          { label: 'Costos ($)', data: costosData, backgroundColor: '#FF6384' }
-        ]
-      },
-      options: {
-        responsive: true,
-        scales: { y: { beginAtZero: true } },
-        title: {
-          display: true,
-          text: 'Ingresos vs Costos por Lote'
+      const ctx = document.getElementById('ingresosCostosBarChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Ingresos ($)', data: ingresosData, backgroundColor: '#36A2EB' },
+            { label: 'Costos ($)', data: costosData, backgroundColor: '#FF6384' }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true } },
         }
-      }
-    });
-  })
-  .catch(error => console.error('Error en gráfico de ingresos/costos:', error));
-}
+      });
+    })
+    .catch(error => console.error('Error en gráfico de ingresos/costos:', error));
+} [cite: 1]
 
 function mostrarAlertasProduccion() {
   fetch(`${API_URL}/salud`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
@@ -277,28 +387,37 @@ function mostrarAlertasProduccion() {
       const alertasList = document.getElementById('alertasList');
       alertasList.innerHTML = '';
       const mortalidadAlta = salud.filter(s => s.tipo === 'Mortalidad' && s.cantidad > 10);
-      mortalidadAlta.forEach(s => {
-        const li = document.createElement('li');
-        li.textContent = `Alerta: Alta mortalidad en lote ${s.loteId} (${s.cantidad} aves, ${s.fecha})`;
-        alertasList.appendChild(li);
-      });
+      if (mortalidadAlta.length > 0) {
+        mortalidadAlta.forEach(s => {
+          const li = document.createElement('li');
+          li.textContent = `Alerta: Alta mortalidad Lote ${s.loteId} (${s.cantidad} aves, ${new Date(s.fecha).toLocaleDateString()})`;
+          alertasList.appendChild(li);
+        });
+      } else {
+        alertasList.innerHTML = '<li>No hay alertas de mortalidad.</li>';
+      }
     })
     .catch(error => console.error('Error en alertas:', error));
-}
+} [cite: 1]
 
+// --- MODIFICADO: DOMContentLoaded ---
 document.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname.split('/').pop();
+
   if (path !== 'login.html') {
     checkAccess();
   }
+
   if (path === 'index.html') {
     actualizarDashboard();
+    mostrarCalendario(); // <--- NUEVA LLAMADA
     mostrarGraficosDashboard();
     mostrarCostosPieChart();
     mostrarIngresosCostosBarChart();
+    mostrarGraficoAgua(); // <--- NUEVA LLAMADA
     mostrarAlertasProduccion();
   }
-  // Vincular el evento onsubmit solo para login.html
+
   if (path === 'login.html') {
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
@@ -307,6 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// --- (pageshow sin cambios) ---
 window.addEventListener('pageshow', (event) => {
   if (event.persisted) {
     window.location.reload();

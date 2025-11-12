@@ -3,14 +3,20 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Granja Avícola VincWill - Dashboard</title>
     <link rel="stylesheet" href="styles.css">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
     <header>
-        <h1>Dashboard</h1><a href="#" onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</a>
+        <h1>Dashboard</h1>
+        <button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
     </header>
 
     <aside class="sidebar">
@@ -19,7 +25,8 @@
             <a href="lotes.html">Lotes</a>
             <a href="ventas.html">Ventas</a>
             <a href="salud.html">Salud</a>
-            <a href="agua.html">Agua</a> <a href="costos.html">Costos</a>
+            <a href="agua.html">Agua</a>
+            <a href="costos.html">Costos</a>
             <a href="inventarios.html">Inventario</a>
             <a href="seguimiento.html">Seguimiento</a>
             <a href="reportes.html">Reportes</a>
@@ -28,46 +35,82 @@
         </nav>
     </aside>
 
-    <main class="dashboard-layout">
+    <main class="dashboard-layout-vincwill">
 
-        <section class="card">
-            <h2>Resumen General</h2>
-            <div class="stats-grid">
-            </div>
-        </section>
+        <div class="dashboard-main-kpis">
+            <section class="card">
+                <h2>Resumen General</h2>
+                <div class="stats-grid-vertical">
+                    <div>
+                        <h4>Total Aves Vivas</h4>
+                        <span id="totalVivos">0</span>
+                    </div>
+                    <div>
+                        <h4>Peso Promedio Actual</h4>
+                        <span id="pesoPromedio">0 kg</span>
+                    </div>
+                    <div>
+                        <h4>Conversión (ICA) Prom.</h4>
+                        <span id="conversionPromedio">0</span>
+                    </div>
+                    <div>
+                        <h4>Mortalidad Prom.</h4>
+                        <span id="mortalidadPromedio">0%</span>
+                    </div>
+                    <div>
+                        <h4>Costos Totales</h4>
+                        <span id="costosTotales">$0.00</span>
+                    </div>
+                    <div>
+                        <h4>Ingresos Totales</h4>
+                        <span id="ingresosTotales">$0.00</span>
+                    </div>
+                    <div>
+                        <h4>Rentabilidad</h4>
+                        <span id="rentabilidad">$0.00</span>
+                    </div>
+                </div>
+            </section>
+        </div>
 
-        <section class="card" id="alertasSection">
-            <h3>Alertas de Producción</h3>
-            <ul id="alertasList">
-                <li>No hay alertas activadas.</li>
-            </ul>
-        </section>
+        <div class="dashboard-secondary-grid">
 
-        <section class="card" id="calendarioCard">
-            <h3>Calendario de Tareas</h3>
-            <p>Próximamente: Vacunación Lote 005...</p>
-        </section>
+            <section class="card" id="alertasSection">
+                <h3>Alertas de Producción</h3>
+                <ul id="alertasList">
+                    <li>No hay alertas activadas.</li>
+                </ul>
+            </section>
 
-        <section class="card">
-            <h2>Curva de Producción</h2>
-            <canvas id="produccionChart"></canvas>
-        </section>
+            <section class="card calendario-card">
+                <h3>Calendario de Tareas</h3>
+                <div id="calendario-container"></div>
+            </section>
 
-        <section class="card">
-            <h2>Distribución de Costos</h2>
-            <canvas id="costosPieChart"></canvas>
-        </section>
+            <section class="card">
+                <h2>Curva de Producción</h2>
+                <canvas id="produccionChart"></canvas>
+            </section>
 
-        <section class="card">
-            <h2>Ingresos vs. Costos por Lote</h2>
-            <canvas id="ingresosCostosBarChart"></canvas>
-        </section>
+            <section class="card">
+                <h2>Distribución de Costos</h2>
+                <canvas id="costosPieChart"></canvas>
+            </section>
 
-        <footer>
-            <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
-        </footer>
+            <section class="card">
+                <h2>Ingresos vs. Costos</h2>
+                <canvas id="ingresosCostosBarChart"></canvas>
+            </section>
+
+            <section class="card">
+                <h2>Consumo de Agua (Últ. 7 días)</h2>
+                <canvas id="aguaChart"></canvas>
+            </section>
+        </div>
+
     </main>
 
+    <script src="app.js"></script>
     <script src="app.js"></script>
 </body>
 

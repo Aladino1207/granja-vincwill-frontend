@@ -418,3 +418,86 @@ body.login-page main {
 .form-desplegable-container.is-open .card {
   margin-bottom: var(--espaciado-xl);
 }
+
+/* --- 8. Rediseño del Dashboard (Layout 1/3 + 2/3) --- */
+
+/* * 1. Define el layout principal del dashboard
+ * (Columna 1: 1fr | Columna 2: 2fr)
+ * Esto crea la asimetría que pediste (izquierda delgada, derecha ancha).
+ */
+main.dashboard-layout-vincwill {
+  display: grid;
+  grid-template-columns: 1fr 2fr; /* Columna izq: 1 parte, Columna der: 2 partes */
+  gap: var(--espaciado-xl);
+  width: 100%;
+}
+
+/* * 2. Define la cuadrícula INTERNA de la columna derecha.
+ * Aquí van las 6 tarjetas (Alertas, Calendario, Gráficos).
+ * Serán 2 columnas, tal como en tu diagrama.
+ */
+.dashboard-secondary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 2 columnas iguales */
+  gap: var(--espaciado-xl);
+}
+
+/* * 3. Define el layout VERTICAL para el "Resumen General"
+ * Esto fuerza las 7 métricas a apilarse verticalmente.
+ */
+.stats-grid-vertical {
+  display: grid;
+  grid-template-columns: 1fr; /* 1 sola columna */
+  gap: var(--espaciado-lg);
+}
+
+/* Estilo para cada métrica individual */
+.stats-grid-vertical > div {
+  display: flex;
+  justify-content: space-between; /* Título a la izq, valor a la der. */
+  align-items: center;
+  padding: var(--espaciado-sm) 0;
+  border-bottom: 1px solid var(--color-borde);
+}
+.stats-grid-vertical > div:last-child {
+  border-bottom: none;
+}
+.stats-grid-vertical h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-texto-secundario);
+}
+.stats-grid-vertical span {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-primario);
+}
+
+/* --- 9. Estilos del Calendario (flatpickr.js) --- */
+.calendario-card {
+  /* Asegura que el calendario no se desborde */
+  overflow: hidden;
+}
+.calendario-container .flatpickr-calendar {
+  /* Quita bordes y sombras para integrarlo a la card */
+  box-shadow: none !important;
+  border: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Ajustes responsivos para el nuevo dashboard */
+@media (max-width: 1024px) {
+  /* En tablets, deshacemos el layout de 1/3 + 2/3 y pasamos a 2 columnas iguales */
+  main.dashboard-layout-vincwill {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  /* En móviles, todo pasa a 1 sola columna (como ya lo tenías) */
+  main.dashboard-layout-vincwill,
+  .dashboard-secondary-grid {
+    grid-template-columns: 1fr;
+  }
+}
