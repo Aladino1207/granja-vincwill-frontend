@@ -29,9 +29,8 @@
     <main>
         <section class="card">
             <h2>Registrar Seguimiento</h2>
-            <form id="seguimientoForm">
+            <form id="seguimientoForm" class="form-grid">
                 <label>Lote: <select id="loteSelect" required></select></label>
-
                 <label>Alimento Consumido: <select id="alimentoSelect" required>
                         <option value="">Selecciona un Alimento</option>
                     </select></label>
@@ -45,20 +44,23 @@
         </section>
         <section class="card">
             <h2>Historial de Seguimiento</h2>
-            <table id="seguimientoTable">
-                <thead>
-                    <tr>
-                        <th>Lote</th>
-                        <th>Semana</th>
-                        <th>Peso</th>
-                        <th>Consumo</th>
-                        <th>Observaciones</th>
-                        <th>Fecha</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaSeguimiento"></tbody>
-            </table>
+
+            <div class="tabla-responsive-wrapper">
+                <table id="seguimientoTable">
+                    <thead>
+                        <tr>
+                            <th>Lote</th>
+                            <th>Semana</th>
+                            <th>Peso</th>
+                            <th>Consumo</th>
+                            <th>Observaciones</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaSeguimiento"></tbody>
+                </table>
+            </div>
         </section>
         <footer>
             <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>

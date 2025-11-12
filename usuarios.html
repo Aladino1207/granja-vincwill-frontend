@@ -10,7 +10,8 @@
 
 <body>
   <header>
-    <h1>Gestión de Usuarios</h1><button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
+    <h1>Gestión de Usuarios</h1><button onclick="logout(); return false;" class="header-logout-btn">Cerrar
+      Sesión</button>
   </header>
   <aside class="sidebar">
     <nav>
@@ -35,7 +36,9 @@
       <a href="index.html">Volver al Dashboard</a>
     </section>
     <section id="userSection" class="card">
-      <form id="userForm" style="display: none;">
+      <h2>Gestion De Ususarios</h2>
+
+      <form id="userForm" class="form-grid">
         <input type="text" id="name" placeholder="Nombre" required>
         <input type="email" id="email" placeholder="Email" required>
         <input type="password" id="password" placeholder="Contraseña" required>
@@ -46,17 +49,22 @@
         </select>
         <button type="submit" class="btn btn-primario">Guardar</button>
       </form>
-      <table id="userTable" style="display: none;">
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Email</th>
-            <th>Rol</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="userTableBody"></tbody>
-      </table>
+
+      <section class="card">
+        <div class="tabla-responsive-wrapper">
+          <table id="userTable" class="tabla-moderna">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="userTableBody"></tbody>
+          </table>
+        </div>
+      </section>
     </section>
     <footer>
       <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>

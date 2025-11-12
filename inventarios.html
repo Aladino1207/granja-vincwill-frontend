@@ -1,33 +1,35 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Inventario de Insumos</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <header>
         <h1>Inventarios</h1><button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
     </header>
     <aside class="sidebar">
         <nav>
-          <a href="index.html">Dashboard</a>
-          <a href="lotes.html">Lotes</a>
-          <a href="ventas.html">Ventas</a>
-          <a href="salud.html">Salud</a>
-          <a href="agua.html">Agua</a>
-          <a href="costos.html">Costos</a>
-          <a href="inventarios.html">Inventario</a>
-          <a href="seguimiento.html">Seguimiento</a>
-          <a href="reportes.html">Reportes</a>
-          <a href="usuarios.html">Usuarios</a>
-          <a href="configuracion.html">Configuración</a>
+            <a href="index.html">Dashboard</a>
+            <a href="lotes.html">Lotes</a>
+            <a href="ventas.html">Ventas</a>
+            <a href="salud.html">Salud</a>
+            <a href="agua.html">Agua</a>
+            <a href="costos.html">Costos</a>
+            <a href="inventarios.html">Inventario</a>
+            <a href="seguimiento.html">Seguimiento</a>
+            <a href="reportes.html">Reportes</a>
+            <a href="usuarios.html">Usuarios</a>
+            <a href="configuracion.html">Configuración</a>
         </nav>
     </aside>
     <main>
         <section class="card">
             <h2>Registrar Insumo</h2>
-            <form id="inventarioForm">
+            <form id="inventarioForm" class="form-grid">
                 <label>Producto: <input type="text" id="producto" required></label>
                 <label>Categoría:
                     <select id="categoria">
@@ -45,12 +47,21 @@
         </section>
         <section class="card">
             <h2>Inventario Actual</h2>
-            <table id="inventarioTable">
-                <thead>
-                    <tr><th>Producto</th><th>Categoría</th><th>Cantidad</th><th>Costo Unitario</th><th>Fecha</th><th>Acciones</th></tr>
-                </thead>
-                <tbody id="tablaInventario"></tbody>
-            </table>
+            <div class="tabla-responsive-wrapper">
+                <table id="inventarioTable" class="tabla-moderna">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Categoría</th>
+                            <th>Cantidad</th>
+                            <th>Costo Unitario</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaInventario"></tbody>
+                </table>
+            </div>
         </section>
         <footer>
             <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
@@ -59,4 +70,5 @@
     <script src="app.js"></script>
     <script src="inventario.js"></script>
 </body>
+
 </html>

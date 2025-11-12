@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Granja Avícola VincWill - Reportes</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <header>
         <h1>Reportes</h1><button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
@@ -26,7 +28,7 @@
     <main>
         <section class="card">
             <h2>Generar Reporte</h2>
-            <form id="reporteForm" onsubmit="generarReporte(event); return false;">
+            <form id="reporteForm" class="form-grid" onsubmit="generarReporte(event); return false;">
                 <label>Tipo de Reporte:
                     <select id="tipoReporte">
                         <option value="produccion">Producción</option>
@@ -42,12 +44,14 @@
                 <button type="submit" class="btn btn-primario">Generar Reporte PDF</button>
             </form>
             <h2>Previsualización del Reporte</h2>
-            <table id="reporteTable">
-                <thead>
-                    <tr id="reporteTableHead"></tr>
-                </thead>
-                <tbody id="reporteTableBody"></tbody>
-            </table>
+            <div class="tabla-responsive-wrapper">
+                <table id="reporteTable" class="tabla-moderna">
+                    <thead>
+                        <tr id="reporteTableHead"></tr>
+                    </thead>
+                    <tbody id="reporteTableBody"></tbody>
+                </table>
+            </div>
         </section>
         <footer>
             <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
@@ -58,4 +62,5 @@
     <script src="app.js"></script>
     <script src="reportes.js"></script>
 </body>
+
 </html>
