@@ -1,36 +1,90 @@
-// --- NUEVAS FUNCIONES PARA MANEJAR EL MODAL ---
-const modal = document.getElementById('formModal');
-const form = document.getElementById('costoForm');
-const formTitle = document.getElementById('formTitle');
-const costoIdInput = document.getElementById('costoId');
 
-function openModal() {
-  modal.classList.add('is-open');
-}
-
-function closeModal() {
-  modal.classList.remove('is-open');
-  form.reset(); // Limpia el formulario
-  costoIdInput.value = ''; // Limpia el ID oculto
-  formTitle.textContent = 'Registrar Costo'; // Restaura el título
-}
-
-// --- LÓGICA EXISTENTE (MODIFICADA) ---
-
-// (cargarLotesForSelect sigue igual)
 async function cargarLotesForSelect() {
-  // ... (tu código no cambia) ...
+  try {
+    const res = await fetch(`${window.API_URL}/lotes`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const lotes = await res.json();
+    const select = document.getElementById('loteSelect');
+    if (!select) throw new Error('Elemento loteSelect no encontrado');
+    select.innerHTML = '<option value="">Selecciona un Lote</option>';
+    lotes.forEach(lote => {
+      const option = document.createElement('option');
+      option.value = lote.id;
+      option.textContent = `${lote.loteId}`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error al cargar lotes para select:', error);
+  }
 }
 
-// (cargarCostos sigue igual)
 async function cargarCostos() {
-  // ... (tu código no cambia) ...
+  try {
+    const res = await fetch(`${window.API_URL}/costos`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+    const costos = await res.json();
+    const tbody = document.getElementById('tablaCostos');
+    if (!tbody) throw new Error('Elemento tablaCostos no encontrado');
+    tbody.innerHTML = '';
+    if (Array.isArray(costos) && costos.length > 0) {
+      costos.forEach(costo => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${costo.loteId || 'N/A'}</td>
+          <td>${costo.categoria || 'N/A'}</td>
+          <td>${costo.descripcion || 'N/A'}</td>
+          <td>${costo.monto ? costo.monto.toFixed(2) : 0}</td>
+          <td>${costo.fecha ? new Date(costo.fecha).toLocaleDateString() : 'N/A'}</td>
+          <td>
+            <button onclick="editarCosto(${costo.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
+            <button onclick="eliminarCosto(${costo.id})" class="btn btn-sm btn-peligro">Eliminar</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } else {
+      tbody.innerHTML = '<tr><td colspan="6">No hay costos registrados</td></tr>';
+    }
+  } catch (error) {
+    console.error('Error al cargar costos:', error);
+  }
 }
+
+// --- NUEVA LÓGICA DEL FORMULARIO DESPLEGABLE ---
+
+// Función para ABRIR el formulario
+function abrirFormulario() {
+  const formContainer = document.getElementById('formContainer');
+  const toggleBtn = document.getElementById('toggleFormBtn');
+  formContainer.classList.add('is-open');
+  toggleBtn.textContent = 'Cancelar';
+}
+
+// Función para CERRAR el formulario
+function cerrarFormulario() {
+  const formContainer = document.getElementById('formContainer');
+  const toggleBtn = document.getElementById('toggleFormBtn');
+  const form = document.getElementById('costoForm');
+  const formTitle = document.getElementById('formTitle');
+
+  formContainer.classList.remove('is-open');
+  toggleBtn.textContent = 'Registrar Nuevo Costo';
+
+  // Limpiamos el formulario
+  form.reset();
+  document.getElementById('costoId').value = '';
+  formTitle.textContent = 'Registrar Costo';
+}
+
+// --- Funciones CRUD (Modificadas) ---
 
 async function guardarCosto(e) {
   e.preventDefault();
 
-  const costoId = costoIdInput.value; // Revisa si hay un ID
+  const costoId = document.getElementById('costoId').value;
   const esEdicion = !!costoId;
 
   const costo = {
@@ -58,81 +112,91 @@ async function guardarCosto(e) {
     });
 
     if (res.ok) {
-      closeModal(); // ¡Éxito! Cierra el modal
+      cerrarFormulario(); // ¡Éxito! Cierra el formulario
       await cargarCostos(); // Recarga la tabla
       console.log('Costo guardado y tabla recargada');
     } else {
       const errorText = await res.text();
-      console.error('Error al guardar costo:', errorText);
       alert('Error al guardar costo: ' + (errorText || 'Desconocido'));
     }
   } catch (error) {
-    console.error('Error de conexión:', error);
     alert('Error de conexión');
   }
 }
 
-// ¡MODIFICADA! Ahora abre el modal
 async function editarCosto(id) {
   try {
-    const res = await fetch(`${window.API_URL}/costos/${id}`, { //
+    const res = await fetch(`${window.API_URL}/costos/${id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     const costo = await res.json();
 
     // Rellena el formulario
-    formTitle.textContent = 'Editar Costo';
-    costoIdInput.value = costo.id; // Guarda el ID en el campo oculto
+    document.getElementById('formTitle').textContent = 'Editar Costo';
+    document.getElementById('costoId').value = costo.id;
     document.getElementById('loteSelect').value = costo.loteId;
     document.getElementById('categoria').value = costo.categoria;
     document.getElementById('descripcion').value = costo.descripcion;
     document.getElementById('monto').value = costo.monto;
     document.getElementById('fecha').value = costo.fecha.split('T')[0];
 
-    openModal(); // ¡Abre el modal!
+    abrirFormulario(); // ¡Abre el formulario!
+    window.scrollTo(0, 0); // Sube al inicio de la página
 
   } catch (error) {
     console.error('Error al cargar datos para editar:', error);
   }
 }
 
-// (eliminarCosto sigue igual)
 async function eliminarCosto(id) {
-  // ... (tu código no cambia) ...
+  if (confirm('¿Seguro que quieres eliminar este costo?')) {
+    try {
+      await fetch(`${window.API_URL}/costos/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      cargarCostos();
+    } catch (error) {
+      alert('Error al eliminar costo');
+    }
+  }
 }
 
-// --- MODIFICADO: Event Listeners ---
+// --- Event Listener Principal ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
 
-  const openModalBtn = document.getElementById('openModalBtn');
-  const closeModalBtn = document.getElementById('closeModalBtn');
+  const toggleBtn = document.getElementById('toggleFormBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const form = document.getElementById('costoForm');
+  const formContainer = document.getElementById('formContainer');
 
   if (currentUser && currentUser.role !== 'viewer') {
-    openModalBtn.style.display = 'block'; // Muestra el botón de "Registrar"
+    toggleBtn.style.display = 'block'; // Muestra el botón de "Registrar"
 
-    // Asigna los eventos del modal
-    openModalBtn.addEventListener('click', () => {
-      // Abre el modal para CREAR
-      formTitle.textContent = 'Registrar Costo';
-      costoIdInput.value = ''; // Asegura que no haya ID
-      form.reset();
-      openModal();
+    // Evento para el botón principal (Abrir/Cerrar)
+    toggleBtn.addEventListener('click', () => {
+      const isOpen = formContainer.classList.contains('is-open');
+      if (isOpen) {
+        cerrarFormulario();
+      } else {
+        // Abre para CREAR (limpiando el form)
+        document.getElementById('formTitle').textContent = 'Registrar Costo';
+        form.reset();
+        document.getElementById('costoId').value = '';
+        abrirFormulario();
+      }
     });
 
-    closeModalBtn.addEventListener('click', closeModal);
-
-    // Cierra el modal si se hace clic en el fondo oscuro
-    modal.addEventListener('click', (event) => {
-      if (event.target === modal) {
-        closeModal();
-      }
+    // Evento para el botón de Cancelar dentro del formulario
+    cancelBtn.addEventListener('click', () => {
+      cerrarFormulario();
     });
 
     form.onsubmit = guardarCosto; // Vincula el evento submit
 
   } else {
-    openModalBtn.style.display = 'none'; // Oculta el botón
+    toggleBtn.style.display = 'none'; // Oculta el botón
   }
 
   cargarLotesForSelect();
