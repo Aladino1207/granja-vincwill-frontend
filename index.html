@@ -28,10 +28,10 @@
         </nav>
     </aside>
 
-    <main>
-        <section class="card">
+    <main class="dashboard-layout">
+        <section class="card card-full-width">
             <h2>Resumen General</h2>
-            <div class="tabla-responsive-wrapper">
+            <div class="stats-grid">
                 <p>Total de Aves Vivas: <span id="totalVivos">0</span></p>
                 <p>Conversión Promedio: <span id="conversionPromedio">0</span></p>
                 <p>Ganancia Promedio (kg/semana): <span id="gananciaPromedio">0</span></p>
@@ -39,14 +39,31 @@
                 <p>Ingresos Totales: <span id="ingresosTotales">$0.00</span></p>
                 <p>Rentabilidad: <span id="rentabilidad">$0.00</span></p>
             </div>
-            <canvas id="produccionChart" width="400" height="200"></canvas>
-            <canvas id="costosPieChart" width="400" height="200"></canvas>
-            <canvas id="ingresosCostosBarChart" width="400" height="200"></canvas>
-            <section id="alertasSection">
-                <h3>Alertas de Producción</h3>
-                <ul id="alertasList"></ul>
-            </section>
         </section>
+
+       <section class="card" id="alertasSection">
+      <h3>Alertas de Producción</h3>
+      <ul id="alertasList">
+          <li>No hay alertas activadas.</li>
+      </ul>
+  </section>
+
+  <section class="card">
+      <h2>Curva de Producción</h2>
+      <canvas id="produccionChart" width="400" height="200"></canvas>
+  </section>
+
+  <section class="card">
+      <h2>Distribución de Costos</h2>
+      <canvas id="costosPieChart" width="400" height="200"></canvas>
+  </section>
+  
+  <section class="card card-full-width">
+      <h2>Ingresos vs. Costos por Lote</h2>
+      <canvas id="ingresosCostosBarChart" width="400" height="200"></canvas>
+  </section>
+
+
         <footer>
             <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
         </footer>

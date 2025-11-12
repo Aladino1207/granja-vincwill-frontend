@@ -40,13 +40,18 @@
             <th>Tipo</th>
             <th>Nombre</th>
             <form id="saludForm" onsubmit="guardarSalud(event); return false;">
-              <label for="nombre">Nombre:</label>
-              <input type="text" id="nombre" required> <label for="diasRetiro">Días de Retiro (si aplica):</label>
-              <input type="number" id="diasRetiro" min="0" value="0">
 
-              <label for="cantidad">Cantidad:</label>
-              <input type="number" id="cantidad" required> <label for="fecha">Fecha:</label>
-              <input type="date" id="fecha" required> <button type="submit" class="btn btn-primario">Guardar Evento de Salud</button>
+              <div class="form-group">
+                <label for="nombre">Nombre:</label>
+                <input type="text" id="nombre" required> <label for="diasRetiro">Días de Retiro (si aplica):</label>
+                <input type="number" id="diasRetiro" min="0" value="0">
+              </div>
+              <div class="form-group">
+                <label for="cantidad">Cantidad:</label>
+                <input type="number" id="cantidad" required> <label for="fecha">Fecha:</label>
+              </div>
+              <input type="date" id="fecha" required> <button type="submit" class="btn btn-primario">Guardar Evento de
+                Salud</button>
             </form>
             <th>Cantidad</th>
             <th>Fecha</th>
