@@ -13,6 +13,7 @@
   <header>
     <h1>Gestión de Ventas</h1><a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
   </header>
+
   <aside class="sidebar">
     <nav>
       <a href="index.html">Dashboard</a>
@@ -28,12 +29,13 @@
       <a href="configuracion.html">Configuración</a>
     </nav>
   </aside>
+
   <main>
 
     <section class="card">
       <h2>Registrar Venta</h2>
 
-      <form id="ventaForm" onsubmit="guardarVenta(event); return false;">
+      <form id="ventaForm" onsubmit="guardarVenta(event); return false;" class="form-grid">
         <!--<label for="loteSelect"></label>-->
         <select id="loteSelect" required>
           <option value="">Selecciona un Lote</option>

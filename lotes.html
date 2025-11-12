@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestión de Lotes - Granja VincWill</title>
   <link rel="stylesheet" href="styles.css">
-  </head>
+</head>
 
 <body>
-  
+
   <header>
     <h1>Gestión de Lotes</h1> <button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
   </header>
@@ -30,10 +31,10 @@
   </aside>
 
   <main>
-    
+
     <section class="card">
       <h2>Agregar Nuevo Lote</h2>
-      
+
       <form id="loteForm" class="form-grid">
         <input type="text" id="loteId" placeholder="ID del Lote" required>
         <input type="number" id="cantidad" placeholder="Cantidad" required>
@@ -49,7 +50,7 @@
 
     <section class="card">
       <h2>Lista de Lotes</h2>
-      
+
       <div class="tabla-responsive-wrapper">
         <table id="loteTable" class="tabla-moderna">
           <thead>
@@ -66,7 +67,7 @@
         </table>
       </div>
     </section>
-    
+
     <footer>
       <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
     </footer>
@@ -75,4 +76,5 @@
   <script src="app.js"></script>
   <script src="lotes.js"></script>
 </body>
+
 </html>
