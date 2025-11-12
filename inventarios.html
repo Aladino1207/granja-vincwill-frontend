@@ -9,7 +9,8 @@
 
 <body>
     <header>
-        <h1>Inventarios</h1><button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
+        <h1>Inventarios</h1>
+        <button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
     </header>
     <aside class="sidebar">
         <nav>
@@ -26,25 +27,47 @@
             <a href="configuracion.html">Configuración</a>
         </nav>
     </aside>
-    <main>
+    <main class="main-content">
         <section class="card">
             <h2>Registrar Insumo</h2>
-            <form id="inventarioForm" class="form-grid">
-                <label>Producto: <input type="text" id="producto" required></label>
-                <label>Categoría:
-                    <select id="categoria">
+            <form id="inventarioForm" class="form-grid form-grid-3-col">
+
+                <div class="form-group">
+                    <label for="producto">Producto</label>
+                    <input type="text" id="producto" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="categoria">Categoría</label>
+                    <select id="categoria" class="form-control">
                         <option value="Alimento">Alimento</option>
                         <option value="Vacuna">Vacuna</option>
                         <option value="Cama">Cama</option>
                         <option value="Otro">Otro</option>
                     </select>
-                </label>
-                <label>Cantidad (kg/unidades): <input type="number" id="cantidad" min="1" required></label>
-                <label>Costo Unitario (USD): <input type="number" id="costo" min="0" step="0.01" required></label>
-                <label>Fecha de Ingreso: <input type="date" id="fecha" required></label>
-                <button type="submit" class="btn btn-primario">Agregar Insumo</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="cantidad">Cantidad (kg/unidades)</label>
+                    <input type="number" id="cantidad" class="form-control" min="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="costo">Costo Unitario (USD)</label>
+                    <input type="number" id="costo" class="form-control" min="0" step="0.01" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="fecha">Fecha de Ingreso</label>
+                    <input type="date" id="fecha" class="form-control" required>
+                </div>
+
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <button type="submit" class="btn btn-primario">Agregar Insumo</button>
+                </div>
             </form>
         </section>
+
         <section class="card">
             <h2>Inventario Actual</h2>
             <div class="tabla-responsive-wrapper">
@@ -63,6 +86,7 @@
                 </table>
             </div>
         </section>
+
         <footer>
             <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
         </footer>

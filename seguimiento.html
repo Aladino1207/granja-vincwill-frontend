@@ -9,7 +9,8 @@
 
 <body>
     <header>
-        <h1>Seguimientos</h1><button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
+        <h1>Seguimientos</h1>
+        <button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
     </header>
     <aside class="sidebar">
         <nav>
@@ -17,36 +18,62 @@
             <a href="lotes.html">Lotes</a>
             <a href="ventas.html">Ventas</a>
             <a href="salud.html">Salud</a>
-            <a href="agua.html">Agua</a> <a href="costos.html">Costos</a>
+            <a href="agua.html">Agua</a>
+            <a href="costos.html">Costos</a>
             <a href="inventarios.html">Inventario</a>
             <a href="seguimiento.html">Seguimiento</a>
             <a href="reportes.html">Reportes</a>
             <a href="usuarios.html">Usuarios</a>
             <a href="configuracion.html">Configuración</a>
-
         </nav>
     </aside>
-    <main>
+    <main class="main-content">
         <section class="card">
             <h2>Registrar Seguimiento</h2>
-            <form id="seguimientoForm" class="form-grid">
-                <label>Lote: <select id="loteSelect" required></select></label>
-                <label>Alimento Consumido: <select id="alimentoSelect" required>
-                        <option value="">Selecciona un Alimento</option>
-                    </select></label>
+            <form id="seguimientoForm" class="form-grid form-grid-3-col">
 
-                <label>Semana #: <input type="number" id="semana" min="1" required></label>
-                <label>Peso Promedio (kg): <input type="number" id="peso" min="0" step="0.01" required></label>
-                <label>Consumo de Alimento (kg): <input type="number" id="consumo" min="0" step="0.01" required></label>
-                <label>Observaciones: <input type="text" id="observaciones"></label>
-                <button type="submit" class="btn btn-primario">Guardar Seguimiento</button>
+                <div class="form-group">
+                    <label for="loteSelect">Lote</label>
+                    <select id="loteSelect" class="form-control" required></select>
+                </div>
+
+                <div class="form-group">
+                    <label for="alimentoSelect">Alimento Consumido</label>
+                    <select id="alimentoSelect" class="form-control" required>
+                        <option value="">Selecciona un Alimento</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="semana">Semana #</label>
+                    <input type="number" id="semana" class="form-control" min="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="peso">Peso Promedio (kg)</label>
+                    <input type="number" id="peso" class="form-control" min="0" step="0.01" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="consumo">Consumo de Alimento (kg)</label>
+                    <input type="number" id="consumo" class="form-control" min="0" step="0.01" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="observaciones">Observaciones</label>
+                    <input type="text" id="observaciones" class="form-control">
+                </div>
+
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <button type="submit" class="btn btn-primario">Guardar Seguimiento</button>
+                </div>
             </form>
         </section>
+
         <section class="card">
             <h2>Historial de Seguimiento</h2>
-
             <div class="tabla-responsive-wrapper">
-                <table id="seguimientoTable">
+                <table id="seguimientoTable" class="tabla-moderna">
                     <thead>
                         <tr>
                             <th>Lote</th>
@@ -62,11 +89,11 @@
                 </table>
             </div>
         </section>
+
         <footer>
             <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
         </footer>
     </main>
-
     <script src="app.js"></script>
     <script src="seguimiento.js"></script>
 </body>

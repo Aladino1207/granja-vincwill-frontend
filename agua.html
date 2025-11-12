@@ -10,36 +10,51 @@
 
 <body>
     <header>
-        <h1>Consumo de Agua</h1><a href="#" onclick="logout(); return false;" class="header-logout-btn">CerrarSesión</a>
+        <h1>Consumo de Agua</h1>
+        <button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
     </header>
-
     <aside class="sidebar">
         <nav>
             <a href="index.html">Dashboard</a>
             <a href="lotes.html">Lotes</a>
             <a href="ventas.html">Ventas</a>
             <a href="salud.html">Salud</a>
-            <a href="agua.html">Agua</a> <a href="costos.html">Costos</a>
+            <a href="agua.html">Agua</a>
+            <a href="costos.html">Costos</a>
             <a href="inventarios.html">Inventario</a>
             <a href="seguimiento.html">Seguimiento</a>
             <a href="reportes.html">Reportes</a>
             <a href="usuarios.html">Usuarios</a>
             <a href="configuracion.html">Configuración</a>
-
         </nav>
     </aside>
-
-    <main>
+    <main class="main-content">
         <section class="card">
             <h2>Registrar Consumo de Agua</h2>
+            <form id="aguaForm" class="form-grid form-grid-3-col">
 
-            <form id="aguaForm" class="form-grid">
-                <label>Lote: <select id="loteSelect"></select></label>
-                <input type="number" step="0.1" id="cantidad" placeholder="Cantidad (Litros)" required>
-                <input type="date" id="fechaIngreso" required>
-                <button type="submit" class="btn btn-primario">Registrar Consumo</button>
+                <div class="form-group">
+                    <label for="loteSelect">Lote</label>
+                    <select id="loteSelect" class="form-control" required></select>
+                </div>
+
+                <div class="form-group">
+                    <label for="cantidad">Cantidad (Litros)</label>
+                    <input type="number" id="cantidad" class="form-control" step="0.01" min="0" placeholder="Ej: 50.5"
+                        required>
+                </div>
+
+                <div class="form-group">
+                    <label for="fecha">Fecha</label>
+                    <input type="date" id="fecha" class="form-control" required>
+                </div>
+
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <button type="submit" class="btn btn-primario">Registrar Consumo</button>
+                </div>
             </form>
         </section>
+
         <section class="card">
             <h2>Historial de Consumo de Agua</h2>
             <div class="tabla-responsive-wrapper">
@@ -56,11 +71,11 @@
                 </table>
             </div>
         </section>
+
         <footer>
             <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
         </footer>
     </main>
-
     <script src="app.js"></script>
     <script src="agua.js"></script>
 </body>

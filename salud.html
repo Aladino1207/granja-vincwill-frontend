@@ -11,9 +11,9 @@
 
 <body>
   <header>
-    <h1>Gestión de Salud</h1><button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
+    <h1>Gestión de Salud</h1>
+    <button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
   </header>
-
   <aside class="sidebar">
     <nav>
       <a href="index.html">Dashboard</a>
@@ -27,65 +27,77 @@
       <a href="reportes.html">Reportes</a>
       <a href="usuarios.html">Usuarios</a>
       <a href="configuracion.html">Configuración</a>
-
     </nav>
   </aside>
-  <main>
+
+  <main class="main-content">
+
+    <section class="card">
+      <h2>Registrar Evento de Salud</h2>
+      <form id="saludForm" class="form-grid form-grid-3-col" onsubmit="guardarSalud(event); return false;">
+
+        <div class="form-group">
+          <label for="loteId">Lote</label>
+          <select id="loteId" class="form-control" required>
+            <option value="">Selecciona un Lote</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="tipo">Tipo</label>
+          <input type="text" id="tipo" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="nombre">Nombre (Tratamiento/Vacuna)</label>
+          <input type="text" id="nombre" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="diasRetiro">Días de Retiro (si aplica)</label>
+          <input type="number" id="diasRetiro" class="form-control" min="0" value="0">
+        </div>
+
+        <div class="form-group">
+          <label for="cantidad">Cantidad (Aves/Dosis)</label>
+          <input type="number" id="cantidad" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="fecha">Fecha</label>
+          <input type="date" id="fecha" class="form-control" required>
+        </div>
+
+        <div class="form-group" style="grid-column: 1 / -1;"> <button type="submit" class="btn btn-primario">Guardar
+            Evento</button>
+        </div>
+      </form>
+    </section>
+
     <section class="card">
       <h2>Lista de Eventos de Salud</h2>
-      <table id="saludTable">
-        <thead>
-          <tr>
-            <th>ID del Lote</th>
-            <th>Tipo</th>
-            <th>Nombre</th>
-            <form id="saludForm" onsubmit="guardarSalud(event); return false;">
-
-              <div class="form-group">
-                <label for="nombre">Nombre:</label>
-                <input type="text" id="nombre" required> <label for="diasRetiro">Días de Retiro (si aplica):</label>
-                <input type="number" id="diasRetiro" min="0" value="0">
-              </div>
-              <div class="form-group">
-                <label for="cantidad">Cantidad:</label>
-                <input type="number" id="cantidad" required> <label for="fecha">Fecha:</label>
-              </div>
-              <input type="date" id="fecha" required> <button type="submit" class="btn btn-primario">Guardar Evento de
-                Salud</button>
-            </form>
-            <th>Cantidad</th>
-            <th>Fecha</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="saludTableBody"></tbody>
-      </table>
-
-      <section class="card">
-        <h2>Registrar Evento de Salud</h2>
-
-        <form id="saludForm" onsubmit="guardarSalud(event); return false;">
-          <label for="loteId">Lote:</label>
-          <select id="loteId" required>
-            <option value="">Selecciona un Lote</option>
-            <!-- Se llenará dinámicamente -->
-          </select>
-          <label for="tipo">Tipo:</label>
-          <input type="text" id="tipo" required>
-          <label for="nombre">Nombre:</label>
-          <input type="text" id="nombre" required>
-          <label for="cantidad">Cantidad:</label>
-          <input type="number" id="cantidad" required>
-          <label for="fecha">Fecha:</label>
-          <input type="date" id="fecha" required>
-          <button type="submit" class="btn btn-primario">Guardar Evento de Salud</button>
-        </form>
-      </section>
+      <div class="tabla-responsive-wrapper">
+        <table id="saludTable" class="tabla-moderna">
+          <thead>
+            <tr>
+              <th>ID del Lote</th>
+              <th>Tipo</th>
+              <th>Nombre</th>
+              <th>Cantidad</th>
+              <th>Fecha</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="saludTableBody"></tbody>
+        </table>
+      </div>
     </section>
+
     <footer>
       <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
     </footer>
   </main>
+
   <script src="app.js"></script>
   <script src="salud.js"></script>
 </body>

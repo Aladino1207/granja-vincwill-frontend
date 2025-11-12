@@ -9,7 +9,8 @@
 
 <body>
     <header>
-        <h1>Configuración</h1><button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
+        <h1>Configuración</h1>
+        <button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
     </header>
     <aside class="sidebar">
         <nav>
@@ -17,7 +18,8 @@
             <a href="lotes.html">Lotes</a>
             <a href="ventas.html">Ventas</a>
             <a href="salud.html">Salud</a>
-            <a href="agua.html">Agua</a> <a href="costos.html">Costos</a>
+            <a href="agua.html">Agua</a>
+            <a href="costos.html">Costos</a>
             <a href="inventarios.html">Inventario</a>
             <a href="seguimiento.html">Seguimiento</a>
             <a href="reportes.html">Reportes</a>
@@ -25,31 +27,38 @@
             <a href="configuracion.html">Configuración</a>
         </nav>
     </aside>
-
-    <main>
+    <main class="main-content">
         <section class="card">
             <h2>Configuración</h2>
-            <form id="configForm" class="form-grid">
+            <form id="configForm" class="form-grid form-grid-2-col">
+
                 <div class="form-group">
-                    <label>Notificaciones:</label>
-                    <select id="notificaciones">
+                    <label for="notificaciones">Notificaciones</label>
+                    <select id="notificaciones" class="form-control">
                         <option value="Activadas">Activadas</option>
                         <option value="Desactivadas">Desactivadas</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
-                    <label>Idioma:</label>
-                    <select id="idioma">
+                    <label for="idioma">Idioma</label>
+                    <select id="idioma" class="form-control">
                         <option value="Español">Español</option>
                         <option value="Inglés">Inglés</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label>Nombre de la Granja: <input type="text" id="nombreGranja"></label>
-                    <label>Programa de Vacunación (semanas) <input type="text"
-                            id="vacunasGallinas"></label>
+                    <label for="nombreGranja">Nombre de la Granja</label>
+                    <input type="text" id="nombreGranja" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="vacunasGallinas">Programa de Vacunación (semanas)</label>
+                    <input type="text" id="vacunasGallinas" class="form-control">
+                </div>
+
+                <div class="form-group" style="grid-column: 1 / -1;">
                     <button type="submit" class="btn btn-primario">Guardar Configuración</button>
                 </div>
             </form>
@@ -59,8 +68,8 @@
             <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
         </footer>
     </main>
-    <script src="app.js"></script> <!-- Cargar primero app.js -->
-    <script src="configuracion.js"></script> <!-- Luego configuracion.js -->
+    <script src="app.js"></script>
+    <script src="configuracion.js"></script>
 </body>
 
 </html>
