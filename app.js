@@ -32,14 +32,14 @@ async function login(e) {
     errorMessage.textContent = 'Error de conexión al servidor.';
     console.error('Login error:', error);
   }
-} [cite: 1]
+}
 
 function logout() {
   localStorage.removeItem('isAuthenticated');
   localStorage.removeItem('currentUser');
   localStorage.removeItem('token');
   window.location.href = 'login.html';
-} [cite: 1]
+}
 
 async function checkAccess() {
   const token = localStorage.getItem('token');
@@ -75,7 +75,7 @@ async function checkAccess() {
       </section>
     `;
   }
-} [cite: 1]
+}
 
 async function handleJsonResponse(res) {
   if (!res.ok) {
@@ -90,7 +90,7 @@ async function handleJsonResponse(res) {
     throw new Error('Respuesta no es JSON');
   }
   return await res.json();
-} [cite: 1]
+}
 
 
 // --- FUNCIÓN ACTUALIZADA: actualizarDashboard (para 7 métricas) ---
@@ -310,7 +310,7 @@ function mostrarGraficosDashboard() {
       });
     })
     .catch(error => console.error('Error en gráfico de seguimiento:', error));
-} [cite: 1]
+}
 
 function mostrarCostosPieChart() {
   fetch(`${API_URL}/costos`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
@@ -340,7 +340,7 @@ function mostrarCostosPieChart() {
       });
     })
     .catch(error => console.error('Error en gráfico de costos:', error));
-} [cite: 1]
+}
 
 function mostrarIngresosCostosBarChart() {
   Promise.all([
@@ -378,7 +378,7 @@ function mostrarIngresosCostosBarChart() {
       });
     })
     .catch(error => console.error('Error en gráfico de ingresos/costos:', error));
-} [cite: 1]
+}
 
 function mostrarAlertasProduccion() {
   fetch(`${API_URL}/salud`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
@@ -398,7 +398,7 @@ function mostrarAlertasProduccion() {
       }
     })
     .catch(error => console.error('Error en alertas:', error));
-} [cite: 1]
+}
 
 // --- MODIFICADO: DOMContentLoaded ---
 document.addEventListener('DOMContentLoaded', () => {
