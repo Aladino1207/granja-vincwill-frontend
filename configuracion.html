@@ -30,21 +30,27 @@
         <section class="card">
             <h2>Configuración</h2>
             <form id="configForm" class="form-grid">
-                <label>Notificaciones:
+                <div class="form-group">
+                    <label>Notificaciones:</label>
                     <select id="notificaciones">
                         <option value="Activadas">Activadas</option>
                         <option value="Desactivadas">Desactivadas</option>
                     </select>
-                </label>
-                <label>Idioma:
+                </div>
+                <div class="form-group">
+                    <label>Idioma:</label>
                     <select id="idioma">
                         <option value="Español">Español</option>
                         <option value="Inglés">Inglés</option>
                     </select>
-                </label>
-                <label>Nombre de la Granja: <input type="text" id="nombreGranja"></label>
-                <label>Programa de Vacunación para Gallinas (semanas): <input type="text" id="vacunasGallinas"></label>
-                <button type="submit" class="btn btn-primario">Guardar Configuración</button>
+                </div>
+
+                <div class="form-group">
+                    <label>Nombre de la Granja: <input type="text" id="nombreGranja"></label>
+                    <label>Programa de Vacunación (semanas) <input type="text"
+                            id="vacunasGallinas"></label>
+                    <button type="submit" class="btn btn-primario">Guardar Configuración</button>
+                </div>
             </form>
         </section>
 

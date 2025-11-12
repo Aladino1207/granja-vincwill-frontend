@@ -184,6 +184,25 @@ main {
     gap: var(--espaciado-xl);
 }
 
+/* --- Anulación para la Página de Login --- */
+body.login-page {
+  display: block; /* Desactiva el grid layout del body */
+  grid-template-columns: 1fr;
+  grid-template-areas: "main";
+  height: auto;
+  overflow-y: auto; /* Permite scroll si es necesario */
+}
+
+body.login-page main {
+  /* Restaura el centrado original que tenías */
+  grid-area: unset;
+  display: block;
+  max-width: 450px;
+  margin: var(--espaciado-xl) auto;
+  padding: 0 var(--espaciado-xl);
+  overflow: visible;
+}
+
 /* --- 5. Componentes Estandarizados --- */
 
 /* Contenedor principal para secciones */
