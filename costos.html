@@ -27,51 +27,14 @@
             <a href="configuracion.html">Configuración</a>
         </nav>
     </aside>
+
     <main class="main-content">
         <section class="card">
-            <h2>Registrar Costo</h2>
-            <form id="costoForm" class="form-grid form-grid-3-col">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Historial de Costos</h2>
+                <button id="openModalBtn" class="btn btn-primario">Registrar Nuevo Costo</button>
+            </div>
 
-                <div class="form-group">
-                    <label for="loteSelect">Lote</label>
-                    <select id="loteSelect" class="form-control"></select>
-                </div>
-
-                <div class="form-group">
-                    <label for="categoria">Categoría</label>
-                    <select id="categoria" class="form-control">
-                        <option value="Alimento">Alimento</option>
-                        <option value="Vacuna">Vacuna</option>
-                        <option value="Mano de Obra">Mano de Obra</option>
-                        <option value="Material">Material</option>
-                        <option value="Otro">Otro</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="monto">Monto (USD)</label>
-                    <input type="number" id="monto" class="form-control" min="0" step="0.01" placeholder="Ej: 120.50"
-                        required>
-                </div>
-
-                <div class="form-group" style="grid-column: 1 / 3;">
-                    <label for="descripcion">Descripción</label>
-                    <input type="text" id="descripcion" class="form-control" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="fecha">Fecha</label>
-                    <input type="date" id="fecha" class="form-control" required>
-                </div>
-
-                <div class="form-group" style="grid-column: 1 / -1;">
-                    <button type="submit" class="btn btn-primario">Registrar Costo</button>
-                </div>
-            </form>
-        </section>
-
-        <section class="card">
-            <h2>Historial de Costos</h2>
             <div class="tabla-responsive-wrapper">
                 <table id="costoTable" class="tabla-moderna">
                     <thead>
@@ -93,6 +56,50 @@
             <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
         </footer>
     </main>
+
+    <div id="formModal" class="modal">
+        <div class="modal-content card">
+            <span id="closeModalBtn" class="modal-close-btn">&times;</span>
+
+            <h2 id="formTitle">Registrar Costo</h2>
+
+            <form id="costoForm" class="form-grid form-grid-3-col">
+                <input type="hidden" id="costoId" value="">
+
+                <div class="form-group">
+                    <label for="loteSelect">Lote</label>
+                    <select id="loteSelect" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label for="categoria">Categoría</label>
+                    <select id="categoria" class="form-control">
+                        <option value="Alimento">Alimento</option>
+                        <option value="Vacuna">Vacuna</option>
+                        <option value="Mano de Obra">Mano de Obra</option>
+                        <option value="Material">Material</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="monto">Monto (USD)</label>
+                    <input type="number" id="monto" class="form-control" min="0" step="0.01" placeholder="Ej: 120.50"
+                        required>
+                </div>
+                <div class="form-group" style="grid-column: 1 / 3;">
+                    <label for="descripcion">Descripción</label>
+                    <input type="text" id="descripcion" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="fecha">Fecha</label>
+                    <input type="date" id="fecha" class="form-control" required>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <button type="submit" class="btn btn-primario">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="app.js"></script>
     <script src="costos.js"></script>
 </body>

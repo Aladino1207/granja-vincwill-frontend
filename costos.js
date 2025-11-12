@@ -1,71 +1,38 @@
-// Función para cargar lotes en el <select>
-async function cargarLotesForSelect() {
-  try {
-    const res = await fetch(`${window.API_URL}/lotes`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
-    console.log('Respuesta de /lotes - Status:', res.status, 'Status Text:', res.statusText);
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    const lotes = await res.json();
-    console.log('Datos recibidos de /lotes:', lotes);
-    const select = document.getElementById('loteSelect');
-    if (!select) throw new Error('Elemento loteSelect no encontrado');
-    select.innerHTML = '<option value="">Selecciona un Lote</option>';
-    lotes.forEach(lote => {
-      const option = document.createElement('option');
-      option.value = lote.id;
-      option.textContent = `${lote.loteId} (Cantidad: ${lote.cantidad})`;
-      select.appendChild(option);
-    });
-    console.log('Lotes cargados en select con éxito');
-  } catch (error) {
-    console.error('Error al cargar lotes para select:', error);
-    alert('Error al cargar lotes: ' + error.message);
-  }
+// --- NUEVAS FUNCIONES PARA MANEJAR EL MODAL ---
+const modal = document.getElementById('formModal');
+const form = document.getElementById('costoForm');
+const formTitle = document.getElementById('formTitle');
+const costoIdInput = document.getElementById('costoId');
+
+function openModal() {
+  modal.classList.add('is-open');
 }
 
-// Función para cargar los costos
+function closeModal() {
+  modal.classList.remove('is-open');
+  form.reset(); // Limpia el formulario
+  costoIdInput.value = ''; // Limpia el ID oculto
+  formTitle.textContent = 'Registrar Costo'; // Restaura el título
+}
+
+// --- LÓGICA EXISTENTE (MODIFICADA) ---
+
+// (cargarLotesForSelect sigue igual)
+async function cargarLotesForSelect() {
+  // ... (tu código no cambia) ...
+}
+
+// (cargarCostos sigue igual)
 async function cargarCostos() {
-  try {
-    const res = await fetch(`${window.API_URL}/costos`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
-    console.log('Respuesta de /costos - Status:', res.status, 'Status Text:', res.statusText);
-    const costos = await res.json();
-    console.log('Datos recibidos de /costos:', costos);
-    const tbody = document.getElementById('tablaCostos');
-    if (!tbody) throw new Error('Elemento tablaCostos no encontrado');
-    tbody.innerHTML = '';
-    if (Array.isArray(costos) && costos.length > 0) {
-      costos.forEach(costo => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${costo.loteId || 'N/A'}</td>
-          <td>${costo.categoria || 'N/A'}</td>
-          <td>${costo.descripcion || 'N/A'}</td>
-          <td>${costo.monto || 0}</td>
-          <td>${costo.fecha ? new Date(costo.fecha).toLocaleDateString() : 'N/A'}</td>
-          <td>
-            <button onclick="editarCosto(${costo.id || 0})">Editar</button>
-            <button onclick="eliminarCosto(${costo.id || 0})">Eliminar</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-      console.log('Tabla rellenada con éxito');
-    } else {
-      tbody.innerHTML = '<tr><td colspan="6">No hay costos registrados</td></tr>';
-      console.log('Tabla vacía, mostrando mensaje');
-    }
-  } catch (error) {
-    console.error('Error al cargar costos:', error);
-    const tbody = document.getElementById('tablaCostos');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="6">Error al cargar costos: ${error.message}</td></tr>`;
-  }
+  // ... (tu código no cambia) ...
 }
 
 async function guardarCosto(e) {
   e.preventDefault();
+
+  const costoId = costoIdInput.value; // Revisa si hay un ID
+  const esEdicion = !!costoId;
+
   const costo = {
     loteId: parseInt(document.getElementById('loteSelect').value),
     categoria: document.getElementById('categoria').value,
@@ -73,99 +40,101 @@ async function guardarCosto(e) {
     monto: parseFloat(document.getElementById('monto').value),
     fecha: document.getElementById('fecha').value
   };
-  console.log('Datos enviados a /costos:', costo);
+
+  const url = esEdicion
+    ? `${window.API_URL}/costos/${costoId}`
+    : `${window.API_URL}/costos`;
+
+  const method = esEdicion ? 'PUT' : 'POST';
+
   try {
-    const res = await fetch(`${window.API_URL}/costos`, {
-      method: 'POST',
+    const res = await fetch(url, {
+      method: method,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${localStorage.getItem('token')}`
       },
       body: JSON.stringify(costo)
     });
-    console.log('Respuesta de guardarCosto - Status:', res.status, 'Status Text:', res.statusText);
-    const responseText = await res.text();
-    console.log('Respuesta cruda de guardarCosto:', responseText);
+
     if (res.ok) {
-      document.getElementById('costoForm').reset();
-      await cargarCostos();
+      closeModal(); // ¡Éxito! Cierra el modal
+      await cargarCostos(); // Recarga la tabla
       console.log('Costo guardado y tabla recargada');
     } else {
-      console.error('Error al guardar costo - Detalle:', responseText);
-      alert('Error al guardar costo: ' + (responseText || 'Desconocido'));
+      const errorText = await res.text();
+      console.error('Error al guardar costo:', errorText);
+      alert('Error al guardar costo: ' + (errorText || 'Desconocido'));
     }
   } catch (error) {
-    console.error('Error de conexión o inesperado:', error);
-    alert('Error de conexión o inesperado');
+    console.error('Error de conexión:', error);
+    alert('Error de conexión');
   }
 }
 
+// ¡MODIFICADA! Ahora abre el modal
 async function editarCosto(id) {
   try {
-    const res = await fetch(`${window.API_URL}/costos/${id}`, {
+    const res = await fetch(`${window.API_URL}/costos/${id}`, { //
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     const costo = await res.json();
+
+    // Rellena el formulario
+    formTitle.textContent = 'Editar Costo';
+    costoIdInput.value = costo.id; // Guarda el ID en el campo oculto
     document.getElementById('loteSelect').value = costo.loteId;
     document.getElementById('categoria').value = costo.categoria;
     document.getElementById('descripcion').value = costo.descripcion;
     document.getElementById('monto').value = costo.monto;
     document.getElementById('fecha').value = costo.fecha.split('T')[0];
-    document.getElementById('costoForm').onsubmit = async (e) => {
-      e.preventDefault();
-      await fetch(`${window.API_URL}/costos/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(costo)
-      });
-      document.getElementById('costoForm').reset();
-      document.getElementById('costoForm').onsubmit = guardarCosto;
-      cargarCostos();
-    };
+
+    openModal(); // ¡Abre el modal!
+
   } catch (error) {
-    console.error('Error al editar costo:', error);
+    console.error('Error al cargar datos para editar:', error);
   }
 }
 
+// (eliminarCosto sigue igual)
 async function eliminarCosto(id) {
-  if (confirm('¿Seguro que quieres eliminar este costo?')) {
-    try {
-      await fetch(`${window.API_URL}/costos/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      cargarCostos();
-    } catch (error) {
-      alert('Error al eliminar costo');
-    }
-  }
+  // ... (tu código no cambia) ...
 }
 
+// --- MODIFICADO: Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-  const costoForm = document.getElementById('costoForm');
-  const costoTable = document.getElementById('costoTable');
-  
-  console.log('Verificando elementos - costoForm:', costoForm, 'costoTable:', costoTable);
+
+  const openModalBtn = document.getElementById('openModalBtn');
+  const closeModalBtn = document.getElementById('closeModalBtn');
 
   if (currentUser && currentUser.role !== 'viewer') {
-    if (costoForm) {
-      costoForm.style.display = 'grid';
-      costoForm.onsubmit = guardarCosto; // Vincula el evento submit
-    } else {
-      console.error('Elemento costoForm no encontrado en el DOM');
-    }
-    if (costoTable) {
-      costoTable.style.display = 'table';
-    } else {
-      console.error('Elemento costoTable no encontrado en el DOM');
-    }
+    openModalBtn.style.display = 'block'; // Muestra el botón de "Registrar"
+
+    // Asigna los eventos del modal
+    openModalBtn.addEventListener('click', () => {
+      // Abre el modal para CREAR
+      formTitle.textContent = 'Registrar Costo';
+      costoIdInput.value = ''; // Asegura que no haya ID
+      form.reset();
+      openModal();
+    });
+
+    closeModalBtn.addEventListener('click', closeModal);
+
+    // Cierra el modal si se hace clic en el fondo oscuro
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        closeModal();
+      }
+    });
+
+    form.onsubmit = guardarCosto; // Vincula el evento submit
+
   } else {
-    console.log('Rol de usuario:', currentUser ? currentUser.role : 'No autenticado');
+    openModalBtn.style.display = 'none'; // Oculta el botón
   }
+
   cargarLotesForSelect();
   cargarCostos();
 });

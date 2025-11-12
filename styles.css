@@ -388,3 +388,73 @@ body.login-page main {
     grid-template-columns: 1fr;
   }
 }
+
+/* --- 7. Componente Modal --- */
+
+/* El fondo oscuro que cubre la pantalla */
+.modal {
+  display: none; /* Oculto por defecto */
+  position: fixed; /* Se queda fijo en la pantalla */
+  z-index: 1000; /* Se asegura de estar por encima de todo */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto; /* Permite scroll si el modal es muy grande */
+  background-color: rgba(0, 0, 0, 0.6); /* Fondo negro semitransparente */
+  
+  /* Para centrar el contenido */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* La clase que usará JS para mostrar el modal */
+.modal.is-open {
+  display: flex;
+}
+
+/* El contenido del modal (¡reusamos nuestra clase .card!) */
+.modal-content {
+  /* Tomará el estilo de .card que ya tienes */
+  background-color: var(--color-fondo-componente);
+  border-radius: var(--borde-radio);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  padding: var(--espaciado-lg);
+  
+  width: 90%; /* Ancho en móviles */
+  max-width: 800px; /* Ancho máximo en escritorio */
+  position: relative; /* Para posicionar el botón de cerrar */
+  
+  /* Animación de entrada */
+  animation: modal-fade-in 0.3s ease-out;
+}
+
+/* Botón para cerrar (la 'X') */
+.modal-close-btn {
+  color: #aaa;
+  position: absolute;
+  top: var(--espaciado-md);
+  right: var(--espaciado-lg);
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: var(--transicion-rapida);
+}
+.modal-close-btn:hover,
+.modal-close-btn:focus {
+  color: var(--color-primario);
+  text-decoration: none;
+}
+
+/* Animación simple de aparición */
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
