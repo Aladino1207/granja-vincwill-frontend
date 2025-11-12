@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Granja Avícola VincWill - Dashboard</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
     <header>
-        <h1>Dashboard</h1><a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
+        <h1>Dashboard</h1><a href="#" onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</a>
     </header>
-    
+
     <aside class="sidebar">
         <nav>
             <a href="index.html">Dashboard</a>
@@ -22,14 +24,14 @@
             <a href="seguimiento.html">Seguimiento</a>
             <a href="reportes.html">Reportes</a>
             <a href="usuarios.html">Usuarios</a>
-            <a href="configuracion.html">Configuración</a>      
+            <a href="configuracion.html">Configuración</a>
         </nav>
     </aside>
-    
+
     <main>
         <section class="card">
             <h2>Resumen General</h2>
-            <div>
+            <div class="tabla-responsive-wrapper">
                 <p>Total de Aves Vivas: <span id="totalVivos">0</span></p>
                 <p>Conversión Promedio: <span id="conversionPromedio">0</span></p>
                 <p>Ganancia Promedio (kg/semana): <span id="gananciaPromedio">0</span></p>
@@ -49,7 +51,8 @@
             <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
         </footer>
     </main>
-    
+
     <script src="app.js"></script>
 </body>
+
 </html>
