@@ -34,8 +34,8 @@
         <section class="card">
             <h2>Registrar Consumo de Agua</h2>
 
-            <form id="ventaForm" onsubmit="guardarVenta(event); return false;" class="form-grid">
-                <label>Lote: <select id="loteSelect"></select></label>
+            <form id="aguaForm" class="form-grid" class="form-grid">
+                <label>Lote: <select id="loteSelect" placeholder></select></label>
                 <input type="number" step="0.1" id="cantidad" placeholder="Cantidad (Litros)" required>
                 <input type="date" id="fechaIngreso" required>
                 <button type="submit" class="btn btn-primario">Registrar Consumo</button>
@@ -44,7 +44,7 @@
         <section class="card">
             <h2>Historial de Consumo de Agua</h2>
             <div class="tabla-responsive-wrapper">
-                <table id="aguaTable">
+                <table id="aguaTable" class="tabla-moderna">
                     <thead>
                         <tr>
                             <th>Lote</th>
