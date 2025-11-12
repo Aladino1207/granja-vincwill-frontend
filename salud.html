@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,10 +8,12 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
+
 <body>
   <header>
-    <h1>Gestión de Salud</h1><a href="#" onclick="logout(); return false;">Cerrar Sesión</a>
+    <h1>Gestión de Salud</h1><button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
   </header>
+  
   <aside class="sidebar">
     <nav>
       <a href="index.html">Dashboard</a>
@@ -24,7 +27,7 @@
       <a href="reportes.html">Reportes</a>
       <a href="usuarios.html">Usuarios</a>
       <a href="configuracion.html">Configuración</a>
-      
+
     </nav>
   </aside>
   <main>
@@ -37,13 +40,14 @@
             <th>Tipo</th>
             <th>Nombre</th>
             <form id="saludForm" onsubmit="guardarSalud(event); return false;">
-            <label for="nombre">Nombre:</label>
-            <input type="text" id="nombre" required> <label for="diasRetiro">Días de Retiro (si aplica):</label>
-            <input type="number" id="diasRetiro" min="0" value="0">
-                      
-            <label for="cantidad">Cantidad:</label>
-            <input type="number" id="cantidad" required> <label for="fecha">Fecha:</label>
-            <input type="date" id="fecha" required> <button type="submit">Guardar Evento de Salud</button> </form>
+              <label for="nombre">Nombre:</label>
+              <input type="text" id="nombre" required> <label for="diasRetiro">Días de Retiro (si aplica):</label>
+              <input type="number" id="diasRetiro" min="0" value="0">
+
+              <label for="cantidad">Cantidad:</label>
+              <input type="number" id="cantidad" required> <label for="fecha">Fecha:</label>
+              <input type="date" id="fecha" required> <button type="submit">Guardar Evento de Salud</button>
+            </form>
             <th>Cantidad</th>
             <th>Fecha</th>
             <th>Acciones</th>
@@ -71,7 +75,7 @@
           <input type="date" id="fecha" required>
           <button type="submit">Guardar Evento de Salud</button>
         </form>
-      </section>  
+      </section>
     </section>
     <footer>
       <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
@@ -80,4 +84,5 @@
   <script src="app.js"></script>
   <script src="salud.js"></script>
 </body>
+
 </html>
