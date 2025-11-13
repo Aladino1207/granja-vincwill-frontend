@@ -177,66 +177,134 @@ async function actualizarDashboard() {
 // --- NUEVA FUNCIÓN: mostrarCalendario ---
 async function mostrarCalendario() {
   try {
-    // 1. Obtener eventos de 'salud' (para periodos de retiro)
-    const saludRes = await fetch(`${API_URL}/salud`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-    const saludData = await handleJsonResponse(saludRes);
+    // 1. Obtener datos necesarios: Eventos de Salud, Configuración y Lotes
+    const [saludRes, configRes, lotesRes] = await Promise.all([
+      fetch(`${API_URL}/salud`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
+      fetch(`${API_URL}/config`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
+      fetch(`${API_URL}/lotes`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+    ]);
 
-    // 2. Mapear eventos para el calendario
+    const saludData = await handleJsonResponse(saludRes);
+    const configData = await handleJsonResponse(configRes);
+    const lotesData = await handleJsonResponse(lotesRes); // Necesitamos los lotes para saber cuándo entraron
+
+    // 2. Mapear eventos existentes (Retiros y Vacunas ya registradas)
     const eventos = [];
 
-    // Añadir Períodos de Retiro (de 'salud')
     saludData.forEach(s => {
       if (s.fechaRetiro) {
         eventos.push({
-          date: s.fechaRetiro.split('T')[0], // Asegura formato YYYY-MM-DD
-          title: `Fin de Retiro (Lote ${s.loteId})` // (Necesitaríamos un JOIN en backend para mostrar 'loteId' string)
+          date: s.fechaRetiro.split('T')[0],
+          title: `Fin Retiro: ${s.nombre} (Lote ${s.loteId})`,
+          tipo: 'retiro'
         });
       }
+      // Si ya registraste una vacuna manualmente, la mostramos también
       if (s.tipo === 'Vacuna') {
         eventos.push({
           date: s.fecha.split('T')[0],
-          title: `Vacuna: ${s.nombre} (Lote ${s.loteId})`
+          title: `Aplicada: ${s.nombre} (Lote ${s.loteId})`,
+          tipo: 'historial'
         });
       }
     });
 
-    // 3. Inicializar Flatpickr (el calendario "físico")
-    flatpickr("#calendario-container", {
-      inline: true, // Lo dibuja "físicamente"
-      locale: "es", // Usa la traducción a español
+    // 3. --- LÓGICA NUEVA: PROYECCIÓN DE VACUNAS ---
+    // Leemos la configuración (ej: "1, 2, 4, 8")
+    const configVacunas = configData.length > 0 ? configData[0].vacunasGallinas : '';
 
-      // Esta función se ejecuta para cada día que se dibuja
+    if (configVacunas) {
+      // Convertimos "1, 2, 8" en un array de números [1, 2, 8]
+      const semanas = configVacunas.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+
+      // Para cada lote ACTIVO, calculamos sus fechas futuras
+      lotesData.forEach(lote => {
+        if (lote.estado === 'disponible') { // Solo proyectamos para lotes vivos
+          const fechaIngreso = new Date(lote.fechaIngreso);
+
+          semanas.forEach(semana => {
+            // Calculamos la fecha: Ingreso + (Semanas * 7 días)
+            const fechaProyectada = new Date(fechaIngreso);
+            fechaProyectada.setDate(fechaIngreso.getDate() + (semana * 7));
+
+            // Solo mostramos fechas futuras o de hoy
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+
+            if (fechaProyectada >= hoy) {
+              eventos.push({
+                date: fechaProyectada.toISOString().split('T')[0],
+                title: `PENDIENTE: Vacuna Semana ${semana} (Lote ${lote.loteId})`,
+                tipo: 'pendiente'
+              });
+            }
+          });
+        }
+      });
+    }
+
+    // 4. Inicializar Flatpickr con los nuevos eventos
+    flatpickr("#calendario-container", {
+      inline: true,
+      locale: "es",
+      enable: [
+        { from: "today", to: "today" }, // Habilita hoy siempre
+        ...eventos.map(e => e.date)     // Habilita las fechas con eventos
+      ],
+
+      // Renderizado personalizado de los días
       onDayCreate: function (dObj, dStr, fp, dayElem) {
         const fechaStr = dayElem.dateObj.toISOString().split('T')[0];
         const eventosDelDia = eventos.filter(e => e.date === fechaStr);
 
         if (eventosDelDia.length > 0) {
-          dayElem.classList.add('evento-calendario'); // Marca el día
-          // Añade un tooltip simple
+          // Usamos clases diferentes según el tipo de evento
+          if (eventosDelDia.some(e => e.tipo === 'retiro')) {
+            dayElem.classList.add('evento-retiro');
+          } else if (eventosDelDia.some(e => e.tipo === 'pendiente')) {
+            dayElem.classList.add('evento-pendiente');
+          } else {
+            dayElem.classList.add('evento-normal');
+          }
+
           dayElem.title = eventosDelDia.map(e => e.title).join('\n');
         }
       },
 
-      // Función que se ejecuta al seleccionar una fecha
       onChange: function (selectedDates, dateStr, instance) {
         const eventosHoy = eventos.filter(e => e.date === dateStr);
         if (eventosHoy.length > 0) {
-          alert(`Eventos para ${dateStr}:\n- ${eventosHoy.map(e => e.title).join('\n- ')}`);
+          alert(`Agenda para ${dateStr}:\n- ${eventosHoy.map(e => e.title).join('\n- ')}`);
         }
       }
     });
 
-    // Añadimos un poco de CSS para marcar los días con eventos
-    const style = document.createElement('style');
-    style.innerHTML = `
-      .evento-calendario {
-        background-color: var(--color-secundario-hover);
-        color: white !important;
-        border-radius: 22px;
-        font-weight: bold;
-      }
-    `;
-    document.head.appendChild(style);
+    // 5. Inyectar estilos CSS para diferenciar los eventos
+    const estiloId = 'estilos-calendario-dinamico';
+    if (!document.getElementById(estiloId)) {
+      const style = document.createElement('style');
+      style.id = estiloId;
+      style.innerHTML = `
+        .evento-retiro {
+          background-color: #e74c3c !important; /* Rojo para alertas de retiro */
+          color: white !important;
+          border: 1px solid #c0392b !important;
+        }
+        .evento-pendiente {
+          background-color: #f1c40f !important; /* Amarillo para vacunas pendientes */
+          color: black !important;
+          font-weight: bold;
+        }
+        .evento-normal {
+          background-color: #3498db !important; /* Azul para historial */
+          color: white !important;
+        }
+        .flatpickr-day.evento-pendiente:hover {
+           background-color: #f39c12 !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
 
   } catch (error) {
     console.error('Error al mostrar calendario:', error);
