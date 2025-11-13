@@ -556,3 +556,128 @@ main.dashboard-layout-vincwill {
     grid-template-columns: 1fr;
   }
 }
+
+/* --- 10. CORRECCIONES PARA LAPTOPS Y PANTALLAS MEDIANAS (Responsividad) --- */
+
+/* Punto de quiebre: Laptops estándar y configuraciones con Zoom (aprox. 1440px hacia abajo) */
+@media (max-width: 1440px) {
+
+  /* 1. Desactivar el "App Mode" (Alto fijo) */
+  body {
+    display: block;
+    /* Adiós al grid rígido del body */
+    height: auto;
+    /* Altura automática (crece con el contenido) */
+    overflow-y: auto;
+    /* Scroll natural del navegador */
+  }
+
+  /* 2. Sidebar fluye normal o se mantiene fijo pero sin romper el layout */
+  .sidebar {
+    width: 100%;
+    /* Ocupa todo el ancho en móviles/tablets pequeños... */
+    height: auto;
+    display: none;
+    /* ...O lo ocultamos temporalmente en laptops pequeñas si molesta */
+  }
+
+  /* MEJOR OPCIÓN PARA LAPTOP: Sidebar a la izquierda, pero body fluye */
+  @media (min-width: 769px) {
+    body {
+      display: grid;
+      /* Mantenemos columnas, pero quitamos filas fijas */
+      grid-template-columns: 220px 1fr;
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        "header header"
+        "sidebar main";
+      height: auto;
+      /* CRÍTICO: Permite que la página crezca */
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      display: block;
+      height: 100%;
+      /* Se estira con el contenido */
+    }
+
+    header {
+      position: sticky;
+      /* El header se pega arriba al scrollear */
+      top: 0;
+      z-index: 500;
+    }
+  }
+
+  /* 3. Arreglar el MAIN para que no corte contenido */
+  main {
+    height: auto;
+    /* Se ajusta al contenido */
+    overflow: visible;
+    /* Muestra todo, sin barras de scroll internas raras */
+    padding: var(--espaciado-lg);
+  }
+
+  /* 4. Reajustar el Dashboard (Index) para Laptops */
+  main.dashboard-layout-vincwill {
+    /* Cambiamos de (1fr 2fr) a (1fr 1fr) o todo apilado */
+    grid-template-columns: 1fr;
+    /* Apilamos todo en una columna central */
+    gap: var(--espaciado-lg);
+  }
+
+  /* El Resumen General se vuelve horizontal para aprovechar el ancho */
+  .stats-grid-vertical {
+    display: grid;
+    /* 2 columnas de métricas en lugar de una lista vertical larga */
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--espaciado-md);
+  }
+
+  /* Ajuste para que los bordes del resumen se vean bien en cuadrícula */
+  .stats-grid-vertical>div {
+    border-bottom: none;
+    border: 1px solid var(--color-borde);
+    padding: var(--espaciado-sm);
+    border-radius: var(--borde-radio);
+    background-color: #f8f9fa;
+    /* Un fondo sutil */
+    flex-direction: column;
+    /* Texto centrado */
+    align-items: flex-start;
+  }
+
+  /* La cuadrícula secundaria (gráficos) también se simplifica */
+  .dashboard-secondary-grid {
+    grid-template-columns: 1fr;
+    /* 1 gráfico debajo de otro */
+  }
+
+  /* Forzamos altura mínima en los gráficos para que se vean */
+  .card canvas {
+    min-height: 250px;
+  }
+}
+
+/* --- Ajuste específico para Tablas en pantallas pequeñas --- */
+@media (max-width: 1366px) {
+
+  /* Aseguramos que las tablas tengan scroll horizontal si no caben */
+  .tabla-responsive-wrapper {
+    overflow-x: auto;
+    display: block;
+    width: 100%;
+  }
+
+  /* Evita que las celdas se rompan feo */
+  .tabla-moderna th,
+  .tabla-moderna td {
+    white-space: nowrap;
+    /* Mantiene el texto en una línea */
+    padding: var(--espaciado-sm);
+    /* Menos padding */
+    font-size: 0.9rem;
+    /* Letra un poco más chica */
+  }
+}
