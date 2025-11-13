@@ -174,133 +174,101 @@ async function actualizarDashboard() {
   }
 }
 
-// --- NUEVA FUNCIÓN: mostrarCalendario ---
+// --- mostrarCalendario ---
 async function mostrarCalendario() {
   try {
-    // 1. Obtener datos necesarios: Eventos de Salud, Configuración y Lotes
-    const [saludRes, configRes, lotesRes] = await Promise.all([
-      fetch(`${API_URL}/salud`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
-      fetch(`${API_URL}/config`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
-      fetch(`${API_URL}/lotes`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+    // 1. Traemos: Tu Agenda Manual y los Retiros Sanitarios (Automáticos)
+    const [agendaRes, saludRes] = await Promise.all([
+      fetch(`${API_URL}/agenda`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
+      fetch(`${API_URL}/salud`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
     ]);
 
+    const agendaData = await handleJsonResponse(agendaRes);
     const saludData = await handleJsonResponse(saludRes);
-    const configData = await handleJsonResponse(configRes);
-    const lotesData = await handleJsonResponse(lotesRes); // Necesitamos los lotes para saber cuándo entraron
 
-    // 2. Mapear eventos existentes (Retiros y Vacunas ya registradas)
-    const eventos = [];
+    const eventosMapa = [];
 
+    // A. Añadir tus eventos manuales (Configuración)
+    agendaData.forEach(ev => {
+      eventosMapa.push({
+        date: ev.fecha,
+        title: `AGENDA: ${ev.descripcion}`, // Ej: "AGENDA: Vacunar Lote 001..."
+        tipo: 'pendiente' // Los pintaremos de amarillo/naranja
+      });
+    });
+
+    // B. Añadir alertas de seguridad (Desde Salud)
     saludData.forEach(s => {
       if (s.fechaRetiro) {
-        eventos.push({
+        eventosMapa.push({
           date: s.fechaRetiro.split('T')[0],
-          title: `Fin Retiro: ${s.nombre} (Lote ${s.loteId})`,
-          tipo: 'retiro'
-        });
-      }
-      // Si ya registraste una vacuna manualmente, la mostramos también
-      if (s.tipo === 'Vacuna') {
-        eventos.push({
-          date: s.fecha.split('T')[0],
-          title: `Aplicada: ${s.nombre} (Lote ${s.loteId})`,
-          tipo: 'historial'
+          title: `BIOSEGURIDAD: Fin Retiro ${s.nombre} (Lote ${s.loteId})`,
+          tipo: 'retiro' // Los pintaremos de rojo
         });
       }
     });
 
-    // 3. --- LÓGICA NUEVA: PROYECCIÓN DE VACUNAS ---
-    // Leemos la configuración (ej: "1, 2, 4, 8")
-    const configVacunas = configData.length > 0 ? configData[0].vacunasGallinas : '';
-
-    if (configVacunas) {
-      // Convertimos "1, 2, 8" en un array de números [1, 2, 8]
-      const semanas = configVacunas.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-
-      // Para cada lote ACTIVO, calculamos sus fechas futuras
-      lotesData.forEach(lote => {
-        if (lote.estado === 'disponible') { // Solo proyectamos para lotes vivos
-          const fechaIngreso = new Date(lote.fechaIngreso);
-
-          semanas.forEach(semana => {
-            // Calculamos la fecha: Ingreso + (Semanas * 7 días)
-            const fechaProyectada = new Date(fechaIngreso);
-            fechaProyectada.setDate(fechaIngreso.getDate() + (semana * 7));
-
-            // Solo mostramos fechas futuras o de hoy
-            const hoy = new Date();
-            hoy.setHours(0, 0, 0, 0);
-
-            if (fechaProyectada >= hoy) {
-              eventos.push({
-                date: fechaProyectada.toISOString().split('T')[0],
-                title: `PENDIENTE: Vacuna Semana ${semana} (Lote ${lote.loteId})`,
-                tipo: 'pendiente'
-              });
-            }
-          });
-        }
-      });
-    }
-
-    // 4. Inicializar Flatpickr con los nuevos eventos
+    // 3. Inicializar Calendario
     flatpickr("#calendario-container", {
       inline: true,
       locale: "es",
       enable: [
-        { from: "today", to: "today" }, // Habilita hoy siempre
-        ...eventos.map(e => e.date)     // Habilita las fechas con eventos
+        { from: "today", to: "today" },
+        ...eventosMapa.map(e => e.date)
       ],
 
-      // Renderizado personalizado de los días
+      // Dibujar los puntos de colores
       onDayCreate: function (dObj, dStr, fp, dayElem) {
         const fechaStr = dayElem.dateObj.toISOString().split('T')[0];
-        const eventosDelDia = eventos.filter(e => e.date === fechaStr);
+        const eventosDelDia = eventosMapa.filter(e => e.date === fechaStr);
 
         if (eventosDelDia.length > 0) {
-          // Usamos clases diferentes según el tipo de evento
+          // Prioridad de colores: Rojo (Retiro) > Amarillo (Agenda)
           if (eventosDelDia.some(e => e.tipo === 'retiro')) {
             dayElem.classList.add('evento-retiro');
-          } else if (eventosDelDia.some(e => e.tipo === 'pendiente')) {
-            dayElem.classList.add('evento-pendiente');
           } else {
-            dayElem.classList.add('evento-normal');
+            dayElem.classList.add('evento-pendiente');
           }
 
+          // Tooltip nativo al pasar el mouse
           dayElem.title = eventosDelDia.map(e => e.title).join('\n');
         }
       },
 
+      // Al hacer clic en una fecha
       onChange: function (selectedDates, dateStr, instance) {
-        const eventosHoy = eventos.filter(e => e.date === dateStr);
+        const eventosHoy = eventosMapa.filter(e => e.date === dateStr);
+
         if (eventosHoy.length > 0) {
-          alert(`Agenda para ${dateStr}:\n- ${eventosHoy.map(e => e.title).join('\n- ')}`);
+          // Muestra la lista de tareas para ese día
+          const mensaje = eventosHoy.map(e => `• ${e.title}`).join('\n');
+          alert(`📅 Actividades para el ${dateStr}:\n\n${mensaje}`);
+        } else {
+          // Si haces clic en hoy y no hay nada
+          alert(`No hay actividades programadas para el ${dateStr}.`);
         }
       }
     });
 
-    // 5. Inyectar estilos CSS para diferenciar los eventos
-    const estiloId = 'estilos-calendario-dinamico';
+    // Inyección de estilos para los colores (si no existen)
+    const estiloId = 'estilos-calendario-vincwill';
     if (!document.getElementById(estiloId)) {
       const style = document.createElement('style');
       style.id = estiloId;
       style.innerHTML = `
         .evento-retiro {
-          background-color: #e74c3c !important; /* Rojo para alertas de retiro */
+          background-color: #e74c3c !important; /* Rojo Alerta */
           color: white !important;
           border: 1px solid #c0392b !important;
         }
         .evento-pendiente {
-          background-color: #f1c40f !important; /* Amarillo para vacunas pendientes */
-          color: black !important;
+          background-color: #f39c12 !important; /* Naranja Agenda */
+          color: white !important;
           font-weight: bold;
         }
-        .evento-normal {
-          background-color: #3498db !important; /* Azul para historial */
-          color: white !important;
-        }
+        /* Efecto hover */
         .flatpickr-day.evento-pendiente:hover {
-           background-color: #f39c12 !important;
+           background-color: #d35400 !important;
         }
       `;
       document.head.appendChild(style);

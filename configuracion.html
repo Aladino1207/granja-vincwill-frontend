@@ -16,22 +16,15 @@
         <nav>
             <a href="index.html">Dashboard</a>
             <a href="lotes.html">Lotes</a>
-            <a href="ventas.html">Ventas</a>
-            <a href="salud.html">Salud</a>
-            <a href="agua.html">Agua</a>
-            <a href="costos.html">Costos</a>
-            <a href="inventarios.html">Inventario</a>
-            <a href="seguimiento.html">Seguimiento</a>
-            <a href="reportes.html">Reportes</a>
-            <a href="usuarios.html">Usuarios</a>
             <a href="configuracion.html">Configuración</a>
         </nav>
     </aside>
-    <main class="main-content">
-        <section class="card">
-            <h2>Configuración</h2>
-            <form id="configForm" class="form-grid form-grid-2-col">
 
+    <main class="main-content">
+
+        <section class="card">
+            <h2>Ajustes Generales</h2>
+            <form id="configForm" class="form-grid form-grid-3-col">
                 <div class="form-group">
                     <label for="notificaciones">Notificaciones</label>
                     <select id="notificaciones" class="form-control">
@@ -39,7 +32,6 @@
                         <option value="Desactivadas">Desactivadas</option>
                     </select>
                 </div>
-
                 <div class="form-group">
                     <label for="idioma">Idioma</label>
                     <select id="idioma" class="form-control">
@@ -47,21 +39,55 @@
                         <option value="Inglés">Inglés</option>
                     </select>
                 </div>
-
                 <div class="form-group">
                     <label for="nombreGranja">Nombre de la Granja</label>
                     <input type="text" id="nombreGranja" class="form-control">
                 </div>
 
-                <div class="form-group">
-                    <label for="vacunasGallinas">Programa de Vacunación (semanas)</label>
-                    <input type="text" id="vacunasGallinas" class="form-control">
-                </div>
-
                 <div class="form-group" style="grid-column: 1 / -1;">
-                    <button type="submit" class="btn btn-primario">Guardar Configuración</button>
+                    <button type="submit" class="btn btn-primario">Guardar Ajustes</button>
                 </div>
             </form>
+        </section>
+
+        <section class="card">
+            <h2>Programación de Vacunación y Tareas</h2>
+            <p style="color: #666; margin-bottom: 1rem;">
+                Agrega aquí tus recordatorios manuales (Ej: "Vacunar Lote 001").
+                Aparecerán en el calendario del Dashboard.
+            </p>
+
+            <form id="agendaForm" class="form-grid form-grid-3-col" style="align-items: end;">
+                <div class="form-group" style="grid-column: 1 / 3;">
+                    <label for="descEvento">Descripción / Tarea</label>
+                    <input type="text" id="descEvento" class="form-control" required
+                        placeholder="Ej: Vacunar Lote 001 con Newcastle">
+                </div>
+                <div class="form-group">
+                    <label for="fechaEvento">Fecha Programada</label>
+                    <input type="date" id="fechaEvento" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primario" style="width: 100%;">Agendar</button>
+                </div>
+            </form>
+
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid #eee;">
+
+            <h3>Actividades Programadas</h3>
+            <div class="tabla-responsive-wrapper">
+                <table class="tabla-moderna">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Descripción</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaAgendaBody">
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <footer>
