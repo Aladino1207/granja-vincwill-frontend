@@ -241,4 +241,3 @@ document.addEventListener('DOMContentLoaded', () => {
   cargarVentas();
 
 });
-
