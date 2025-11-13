@@ -1,7 +1,8 @@
+// --- Lógica de Carga ---
+
 async function cargarLotesForSelect() {
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado para cargar lotes:', token);
     const res = await fetch(`${window.API_URL}/lotes`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -13,33 +14,36 @@ async function cargarLotesForSelect() {
     lotes.forEach(lote => {
       const option = document.createElement('option');
       option.value = lote.id;
-      option.textContent = `${lote.loteId} (Cantidad: ${lote.cantidad})`;
+      option.textContent = `${lote.loteId} (Stock: ${lote.cantidad})`;
+      // Guardamos la cantidad en un dataset por si la necesitamos validar
       option.dataset.cantidad = lote.cantidad;
       select.appendChild(option);
     });
   } catch (error) {
     console.error('Error al cargar lotes para select:', error);
-    alert('Error al cargar lotes: ' + error.message);
   }
 }
 
 async function cargarVentas() {
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado para cargar ventas:', token);
     if (!token) throw new Error('No autenticado');
+
     const res = await fetch(`${window.API_URL}/ventas`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
+      throw new Error(`HTTP error! status: ${res.status}`);
     }
+
     const ventas = await res.json();
-    console.log('Ventas recibidas:', ventas);
     const tbody = document.getElementById('ventaTableBody');
-    if (!tbody) throw new Error('Elemento ventaTableBody no encontrado');
+
+    if (!tbody) throw new Error('Elemento ventaTableBody no encontrado'); // Esto ya no fallará
     tbody.innerHTML = '';
+
     if (Array.isArray(ventas) && ventas.length > 0) {
       ventas.forEach(venta => {
         const tr = document.createElement('tr');
@@ -51,8 +55,8 @@ async function cargarVentas() {
           <td>${new Date(venta.fecha).toLocaleDateString()}</td>
           <td>${venta.cliente || 'Sin cliente'}</td>
           <td>
-            <button onclick="editarVenta(${venta.id})">Editar</button>
-            <button onclick="eliminarVenta(${venta.id})">Eliminar</button>
+            <button onclick="editarVenta(${venta.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
+            <button onclick="eliminarVenta(${venta.id})" class="btn btn-sm btn-peligro">Eliminar</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -62,74 +66,79 @@ async function cargarVentas() {
     }
   } catch (error) {
     console.error('Error al cargar ventas:', error);
-    const tbody = document.getElementById('ventaTableBody');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="7">Error al cargar ventas: ${error.message}</td></tr>`;
   }
 }
 
+// --- LÓGICA DEL FORMULARIO DESPLEGABLE ---
+
+function abrirFormulario() {
+  document.getElementById('formContainer').classList.add('is-open');
+  document.getElementById('toggleFormBtn').textContent = 'Cancelar';
+}
+
+function cerrarFormulario() {
+  document.getElementById('formContainer').classList.remove('is-open');
+  document.getElementById('toggleFormBtn').textContent = 'Registrar Nueva Venta';
+
+  document.getElementById('ventaForm').reset();
+  document.getElementById('ventaId').value = '';
+  document.getElementById('formTitle').textContent = 'Registrar Venta';
+}
+
+// --- Funciones CRUD ---
+
 async function guardarVenta(e) {
   e.preventDefault();
-  console.log('Intentando guardar venta...');
 
+  const ventaId = document.getElementById('ventaId').value;
+  const esEdicion = !!ventaId;
+
+  // Validación básica
   const loteSelect = document.getElementById('loteSelect');
-  if (!loteSelect) {
-    console.error('Elemento loteSelect no encontrado');
-    alert('Error: El select de lotes no está disponible.');
-    return;
-  }
   const loteId = loteSelect.value;
-  const cantidadVendida = parseInt(document.getElementById('cantidadVendida').value);
-  const peso = parseFloat(document.getElementById('peso').value);
-  const precio = parseFloat(document.getElementById('precio').value);
-  const fecha = document.getElementById('fecha').value;
-  const cliente = document.getElementById('cliente').value || 'Sin cliente';
-
-  console.log('Datos del formulario antes de enviar:', { loteId, cantidadVendida, peso, precio, fecha, cliente });
-
-  if (!loteId || isNaN(cantidadVendida) || isNaN(peso) || isNaN(precio) || !fecha) {
-    alert('Por favor, completa todos los campos correctamente.');
+  if (!loteId) {
+    alert('Por favor selecciona un lote.');
     return;
   }
 
   const venta = {
     loteId: parseInt(loteId),
-    cantidadVendida,
-    peso,
-    precio,
-    fecha,
-    cliente
+    cantidadVendida: parseInt(document.getElementById('cantidadVendida').value),
+    peso: parseFloat(document.getElementById('peso').value),
+    precio: parseFloat(document.getElementById('precio').value),
+    fecha: document.getElementById('fecha').value,
+    cliente: document.getElementById('cliente').value || 'Sin cliente'
   };
+
+  const url = esEdicion
+    ? `${window.API_URL}/ventas/${ventaId}`
+    : `${window.API_URL}/ventas`;
+  const method = esEdicion ? 'PUT' : 'POST';
 
   try {
     const token = localStorage.getItem('token');
-    console.log('Token usado para guardar:', token);
-    console.log('Datos enviados:', venta);
-    console.log('URL de la petición:', `${window.API_URL}/ventas`);
-    const startTime = Date.now();
-    const res = await fetch(`${window.API_URL}/ventas`, {
-      method: 'POST',
+    const res = await fetch(url, {
+      method: method,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
       body: JSON.stringify(venta)
     });
-    const endTime = Date.now();
-    console.log(`Tiempo de respuesta: ${endTime - startTime}ms`);
-    console.log('Respuesta del servidor antes de texto:', res.status, res.statusText);
+
     const responseText = await res.text();
-    console.log('Respuesta cruda:', responseText);
+
     if (!res.ok) {
       const errorData = responseText ? JSON.parse(responseText).error || responseText : 'Error desconocido';
-      console.error('Error del servidor:', errorData);
       alert('Error al guardar venta: ' + errorData);
       return;
     }
-    const data = JSON.parse(responseText);
-    console.log('Venta guardada:', data);
-    document.getElementById('ventaForm').reset();
-    cargarVentas();
-    alert('Venta guardada exitosamente');
+
+    // Éxito
+    cerrarFormulario();
+    await cargarVentas();
+    await cargarLotesForSelect(); // Recargamos lotes para actualizar stock en el select
+
   } catch (error) {
     console.error('Error de conexión:', error);
     alert('Error de conexión');
@@ -138,47 +147,24 @@ async function guardarVenta(e) {
 
 async function editarVenta(id) {
   try {
-    console.log('Intentando editar venta con id:', id);
     const res = await fetch(`${window.API_URL}/ventas/${id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
-    console.log('Respuesta de editarVenta - Status:', res.status, 'Status Text:', res.statusText);
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const venta = await res.json();
-    console.log('Datos recibidos para edición:', venta);
+
+    document.getElementById('formTitle').textContent = 'Editar Venta';
+    document.getElementById('ventaId').value = venta.id;
     document.getElementById('loteSelect').value = venta.loteId;
     document.getElementById('cantidadVendida').value = venta.cantidadVendida;
     document.getElementById('peso').value = venta.peso;
     document.getElementById('precio').value = venta.precio;
     document.getElementById('fecha').value = venta.fecha.split('T')[0];
     document.getElementById('cliente').value = venta.cliente || '';
-    document.getElementById('ventaForm').onsubmit = async (e) => {
-      e.preventDefault();
-      const updatedVenta = {
-        loteId: parseInt(document.getElementById('loteSelect').value),
-        cantidadVendida: parseInt(document.getElementById('cantidadVendida').value),
-        peso: parseFloat(document.getElementById('peso').value),
-        precio: parseFloat(document.getElementById('precio').value),
-        fecha: document.getElementById('fecha').value,
-        cliente: document.getElementById('cliente').value || 'Sin cliente'
-      };
-      const putRes = await fetch(`${window.API_URL}/ventas/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(updatedVenta)
-      });
-      console.log('Respuesta de PUT - Status:', putRes.status, 'Status Text:', putRes.statusText);
-      if (putRes.ok) {
-        document.getElementById('ventaForm').reset();
-        document.getElementById('ventaForm').onsubmit = guardarVenta;
-        cargarVentas();
-      } else {
-        throw new Error(`HTTP error! status: ${putRes.status}`);
-      }
-    };
+
+    abrirFormulario();
+    window.scrollTo(0, 0);
+
   } catch (error) {
     console.error('Error al editar venta:', error);
     alert('Error al editar venta: ' + error.message);
@@ -186,38 +172,71 @@ async function editarVenta(id) {
 }
 
 async function eliminarVenta(id) {
-  if (confirm('¿Seguro que quieres eliminar esta venta?')) {
+  if (confirm('¿Seguro que quieres eliminar esta venta? Esto devolverá los pollos al lote.')) {
     try {
-      console.log('Intentando eliminar venta con id:', id);
       const res = await fetch(`${window.API_URL}/ventas/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      console.log('Respuesta de eliminarVenta - Status:', res.status, 'Status Text:', res.statusText);
       if (res.ok) {
         cargarVentas();
+        cargarLotesForSelect(); // Actualizar stock
       } else {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
     } catch (error) {
       console.error('Error al eliminar venta:', error);
-      alert('Error al eliminar venta: ' + error.message);
+      alert('Error al eliminar venta');
     }
   }
 }
 
+// --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
+  const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+
+  const toggleBtn = document.getElementById('toggleFormBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const form = document.getElementById('ventaForm');
+  const formContainer = document.getElementById('formContainer');
+
+  // Lógica automática para sugerir cantidad (Opcional)
   const loteSelect = document.getElementById('loteSelect');
   if (loteSelect) {
     loteSelect.addEventListener('change', (e) => {
+      // Al cambiar de lote, podríamos sugerir la cantidad total disponible
+      // (Esto es opcional, pero útil)
       const selectedOption = e.target.options[e.target.selectedIndex];
-      const cantidad = selectedOption.dataset.cantidad || 0;
-      document.getElementById('cantidadVendida').value = cantidad;
+      if (selectedOption && selectedOption.dataset.cantidad) {
+        // Descomenta si quieres que se autocomplete la cantidad máxima
+        // document.getElementById('cantidadVendida').value = selectedOption.dataset.cantidad;
+      }
     });
   }
+
+  if (currentUser && currentUser.role !== 'viewer') {
+    toggleBtn.style.display = 'block';
+
+    toggleBtn.addEventListener('click', () => {
+      const isOpen = formContainer.classList.contains('is-open');
+      if (isOpen) {
+        cerrarFormulario();
+      } else {
+        // Abrir para crear
+        document.getElementById('formTitle').textContent = 'Registrar Venta';
+        document.getElementById('ventaId').value = '';
+        document.getElementById('ventaForm').reset();
+        abrirFormulario();
+      }
+    });
+
+    cancelBtn.addEventListener('click', cerrarFormulario);
+    form.onsubmit = guardarVenta;
+
+  } else {
+    toggleBtn.style.display = 'none';
+  }
+
   cargarLotesForSelect();
   cargarVentas();
 });
-
-// Vincula el evento submit al formulario
-document.getElementById('ventaForm').onsubmit = guardarVenta;
