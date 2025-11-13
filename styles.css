@@ -62,21 +62,36 @@ a {
   color: var(--color-secundario);
   text-decoration: none;
 }
+
 a:hover {
   text-decoration: underline;
 }
-img, canvas {
+
+img,
+canvas {
   max-width: 100%;
   display: block;
 }
-h1, h2, h3 {
+
+h1,
+h2,
+h3 {
   margin-bottom: var(--espaciado-md);
   color: var(--color-primario);
   line-height: 1.3;
 }
-h1 { font-size: 2.25rem; }
-h2 { font-size: 1.75rem; }
-h3 { font-size: 1.25rem; }
+
+h1 {
+  font-size: 2.25rem;
+}
+
+h2 {
+  font-size: 1.75rem;
+}
+
+h3 {
+  font-size: 1.25rem;
+}
 
 /* --- 4. Diseño de la Página (Layout) --- */
 
@@ -124,7 +139,8 @@ header h1 {
   border-bottom: none;
 }
 
-.sidebar nav a:hover, .sidebar nav a.active {
+.sidebar nav a:hover,
+.sidebar nav a.active {
   background-color: var(--color-secundario-hover);
   text-decoration: none;
   border-bottom: none;
@@ -141,6 +157,7 @@ header h1 {
   font-weight: 500;
   transition: var(--transicion-rapida);
 }
+
 .header-logout-btn:hover {
   background-color: var(--color-peligro-hover);
 }
@@ -167,6 +184,7 @@ main.dashboard-layout {
   grid-template-columns: repeat(3, 1fr);
   gap: var(--espaciado-xl);
 }
+
 main.dashboard-layout .card-full-width {
   grid-column: 1 / -1;
 }
@@ -192,6 +210,7 @@ main.dashboard-layout .card-full-width {
   .form-grid-2-col {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .form-grid-3-col {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -202,11 +221,13 @@ main.dashboard-layout .card-full-width {
   display: flex;
   flex-direction: column;
 }
+
 .form-group label {
   margin-bottom: var(--espaciado-sm);
   font-weight: 500;
   color: var(--color-texto-secundario);
 }
+
 .form-control,
 input[type="text"],
 input[type="number"],
@@ -220,8 +241,10 @@ select {
   border: 1px solid var(--color-borde);
   border-radius: var(--borde-radio);
   transition: var(--transicion-rapida);
-  width: 100%; /* Asegura que ocupen el 100% de su contenedor */
+  width: 100%;
+  /* Asegura que ocupen el 100% de su contenedor */
 }
+
 .form-control:focus,
 input[type="text"]:focus,
 input[type="number"]:focus,
@@ -248,28 +271,34 @@ select:focus {
   text-decoration: none;
   display: inline-block;
 }
+
 .btn-primario {
   background-color: var(--color-secundario);
   color: var(--color-texto-claro);
 }
+
 .btn-primario:hover {
   background-color: var(--color-secundario-hover);
   text-decoration: none;
 }
+
 .btn-peligro {
   background-color: var(--color-peligro);
   color: var(--color-texto-claro);
 }
+
 .btn-peligro:hover {
   background-color: var(--color-peligro-hover);
   text-decoration: none;
 }
+
 .btn-sm {
   font-size: 0.875rem;
   padding: var(--espaciado-xs) var(--espaciado-sm);
 }
+
 /* Espaciado de botones en formularios */
-.form-grid > .btn-primario {
+.form-grid>.btn-primario {
   margin-top: var(--espaciado-md);
 }
 
@@ -277,14 +306,18 @@ select:focus {
 .tabla-responsive-wrapper {
   width: 100%;
   overflow-x: auto;
-  max-height: 600px; /* Altura máxima */
-  overflow-y: auto; /* Scroll vertical */
+  max-height: 600px;
+  /* Altura máxima */
+  overflow-y: auto;
+  /* Scroll vertical */
 }
+
 .tabla-moderna {
   width: 100%;
   border-collapse: collapse;
   margin-top: var(--espaciado-lg);
 }
+
 .tabla-moderna th,
 .tabla-moderna td {
   padding: var(--espaciado-md);
@@ -292,18 +325,22 @@ select:focus {
   border-bottom: 1px solid var(--color-borde);
   vertical-align: middle;
 }
+
 .tabla-moderna thead th {
   background-color: var(--color-fondo-pagina);
   font-weight: 700;
   color: var(--color-primario);
 }
+
 .tabla-moderna tbody tr:hover {
   background-color: #ecf0f1;
 }
+
 .tabla-moderna td:last-child {
   text-align: right;
   white-space: nowrap;
 }
+
 .tabla-moderna td:last-child .btn {
   margin-left: var(--espaciado-sm);
 }
@@ -317,6 +354,7 @@ body.login-page {
   height: auto;
   overflow-y: auto;
 }
+
 body.login-page main {
   grid-area: unset;
   display: block;
@@ -325,16 +363,20 @@ body.login-page main {
   padding: 0 var(--espaciado-md);
   overflow: visible;
 }
+
 .login-container .card {
   padding: var(--espaciado-xl);
 }
+
 .login-container h2 {
   text-align: center;
   font-size: 1.75rem;
 }
+
 .login-container .form-grid {
   grid-template-columns: 1fr;
 }
+
 .login-container .btn-primario {
   width: 100%;
   margin-top: var(--espaciado-md);
@@ -347,8 +389,9 @@ body.login-page main {
   main.dashboard-layout {
     grid-template-columns: repeat(2, 1fr);
   }
+
   main.dashboard-layout #calendarioCard {
-      grid-column: 1 / -1;
+    grid-column: 1 / -1;
   }
 }
 
@@ -362,23 +405,24 @@ body.login-page main {
       "header"
       "main";
   }
-  
+
   .sidebar {
-    display: none; /* Oculta el sidebar */
+    display: none;
+    /* Oculta el sidebar */
     /* (En un futuro, se podría hacer un botón para mostrarlo) */
   }
-  
+
   header {
     padding: 0 var(--espaciado-md);
   }
-  
+
   main,
   main.dashboard-layout {
     padding: var(--espaciado-lg) var(--espaciado-md);
     /* Todos los layouts pasan a 1 columna */
     grid-template-columns: 1fr;
   }
-  
+
   /* Asegura que en móvil todo ocupe 1 columna */
   main.dashboard-layout .card-full-width,
   main.dashboard-layout #calendarioCard {
@@ -399,7 +443,8 @@ body.login-page main {
 .form-desplegable-container {
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.5s ease-out; /* La animación */
+  transition: max-height 0.5s ease-out;
+  /* La animación */
   margin: 0;
   padding: 0;
 }
@@ -408,8 +453,8 @@ body.login-page main {
  * Le damos un valor alto para que el contenido quepa.
 */
 .form-desplegable-container.is-open {
-  max-height: 1000px; /* Un valor lo suficientemente alto */
-  transition: max-height 0.5s ease-in;
+  max-height: 5000px;
+  transition: max-height 0.8s ease-in;
 }
 
 /* * Para que la tarjeta del formulario tenga el espaciado
@@ -427,7 +472,8 @@ body.login-page main {
  */
 main.dashboard-layout-vincwill {
   display: grid;
-  grid-template-columns: 1fr 2fr; /* Columna izq: 1 parte, Columna der: 2 partes */
+  grid-template-columns: 1fr 2fr;
+  /* Columna izq: 1 parte, Columna der: 2 partes */
   gap: var(--espaciado-xl);
   width: 100%;
 }
@@ -438,7 +484,8 @@ main.dashboard-layout-vincwill {
  */
 .dashboard-secondary-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr; /* 2 columnas iguales */
+  grid-template-columns: 1fr 1fr;
+  /* 2 columnas iguales */
   gap: var(--espaciado-xl);
 }
 
@@ -447,26 +494,31 @@ main.dashboard-layout-vincwill {
  */
 .stats-grid-vertical {
   display: grid;
-  grid-template-columns: 1fr; /* 1 sola columna */
+  grid-template-columns: 1fr;
+  /* 1 sola columna */
   gap: var(--espaciado-lg);
 }
 
 /* Estilo para cada métrica individual */
-.stats-grid-vertical > div {
+.stats-grid-vertical>div {
   display: flex;
-  justify-content: space-between; /* Título a la izq, valor a la der. */
+  justify-content: space-between;
+  /* Título a la izq, valor a la der. */
   align-items: center;
   padding: var(--espaciado-sm) 0;
   border-bottom: 1px solid var(--color-borde);
 }
-.stats-grid-vertical > div:last-child {
+
+.stats-grid-vertical>div:last-child {
   border-bottom: none;
 }
+
 .stats-grid-vertical h4 {
   margin: 0;
   font-size: 1rem;
   color: var(--color-texto-secundario);
 }
+
 .stats-grid-vertical span {
   font-size: 1.1rem;
   font-weight: 700;
@@ -478,6 +530,7 @@ main.dashboard-layout-vincwill {
   /* Asegura que el calendario no se desborde */
   overflow: hidden;
 }
+
 .calendario-container .flatpickr-calendar {
   /* Quita bordes y sombras para integrarlo a la card */
   box-shadow: none !important;
@@ -488,6 +541,7 @@ main.dashboard-layout-vincwill {
 
 /* Ajustes responsivos para el nuevo dashboard */
 @media (max-width: 1024px) {
+
   /* En tablets, deshacemos el layout de 1/3 + 2/3 y pasamos a 2 columnas iguales */
   main.dashboard-layout-vincwill {
     grid-template-columns: 1fr 1fr;
@@ -495,6 +549,7 @@ main.dashboard-layout-vincwill {
 }
 
 @media (max-width: 768px) {
+
   /* En móviles, todo pasa a 1 sola columna (como ya lo tenías) */
   main.dashboard-layout-vincwill,
   .dashboard-secondary-grid {
