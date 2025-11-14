@@ -639,7 +639,92 @@ main.dashboard-layout-vincwill {
   main.dashboard-layout-vincwill,
   .dashboard-secondary-grid {
     grid-template-columns: 1fr !important;
-    
+
   }
 }
 
+/* --- 11. Rediseño de Sidebar (Categorías y Acordeón) --- */
+
+/* 1. Resetea el 'gap' de la nav principal */
+.sidebar nav {
+  gap: 0;
+}
+
+/* 2. Estilo para el grupo (Ej: "OPERACIONES" + sus enlaces) */
+.nav-group {
+  margin-bottom: var(--espaciado-md);
+}
+
+/* 3. Estilo para el Título de la Categoría (Clicable) */
+.nav-category-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-secundario);
+  /* Azul brillante */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: var(--espaciado-sm) var(--espaciado-md);
+  margin: 0;
+  cursor: pointer;
+  /* Indica que es clicable */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: var(--borde-radio);
+  transition: background-color 0.2s ease;
+}
+
+.nav-category-title:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* 4. Contenedor de los enlaces (el que se despliega) */
+.nav-links-container {
+  max-height: 1000px;
+  /* Visible por defecto (como pediste) */
+  overflow: hidden;
+  transition: max-height 0.4s ease-in-out;
+}
+
+/* 5. Estilo para cuando está COLAPSADO (JS añade esta clase) */
+.nav-links-container.is-collapsed {
+  max-height: 0;
+}
+
+/* 6. Estilo para los enlaces (tu 'a') */
+.nav-link {
+  color: var(--color-texto-claro);
+  text-decoration: none;
+  font-weight: 500;
+  padding: var(--espaciado-sm) var(--espaciado-md);
+  margin: var(--espaciado-xs) 0;
+  display: block;
+  border-radius: var(--borde-radio);
+  transition: var(--transicion-rapida);
+}
+
+/* 7. Indentación para los enlaces DENTRO de una categoría */
+.nav-group .nav-link {
+  padding-left: var(--espaciado-xl);
+  /* <-- INDENTACIÓN */
+  font-size: 0.95rem;
+  color: #bdc3c7;
+  /* Un gris claro para anidar */
+}
+
+/* 8. Estilo para el enlace de "Dashboard" (sin indentación) */
+.nav-group.nav-group-main .nav-link {
+  padding-left: var(--espaciado-md);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--color-texto-claro);
+}
+
+/* 9. Estilo Hover y Activo (para la página actual) */
+.nav-link:hover,
+.nav-link.active {
+  background-color: var(--color-secundario-hover);
+  color: var(--color-texto-claro) !important;
+  text-decoration: none;
+  border-bottom: none;
+}
