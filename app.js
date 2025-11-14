@@ -422,46 +422,7 @@ function mostrarAlertasProduccion() {
 document.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname.split('/').pop();
 
-  // 1. Lógica del Acordeón (Desplegable)
-  document.querySelectorAll('.nav-category-title').forEach(title => {
-    title.addEventListener('click', () => {
-      // Busca el contenedor de enlaces (ej: #operaciones-links)
-      const targetId = title.dataset.target;
-      const targetContainer = document.querySelector(targetId);
-
-      if (targetContainer) {
-        // Alterna la clase 'is-collapsed'
-        targetContainer.classList.toggle('is-collapsed');
-
-        // Opcional: Añadir un indicador visual (ej: una flecha)
-        // title.querySelector('.arrow').classList.toggle('rotated');
-      }
-    });
-  });
-
-  // 2. Lógica para el enlace "Activo" (resaltar página actual)
-  try {
-    const path = window.location.pathname.split('/').pop();
-    let activeLink;
-
-    if (path === 'index.html' || path === '') {
-      activeLink = document.querySelector('.sidebar nav a[href="index.html"]');
-    } else {
-      activeLink = document.querySelector(`.sidebar nav a[href="${path}"]`);
-    }
-
-    if (activeLink) {
-      activeLink.classList.add('active');
-
-      // (Opcional) Asegura que el grupo padre esté abierto si está activo
-      // const parentContainer = activeLink.closest('.nav-links-container');
-      // if (parentContainer) {
-      //   parentContainer.classList.remove('is-collapsed');
-      // }
-    }
-  } catch (e) {
-    console.warn("No se pudo setear el link activo del sidebar:", e);
-  }
+  
 
   if (path !== 'login.html') {
     checkAccess(); // Se ejecuta en TODAS las páginas (excepto login)
