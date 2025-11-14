@@ -1,7 +1,6 @@
 window.API_URL = 'https://granja-vincwill-backend.onrender.com';
 
 // --- V 3.0: FUNCIÓN UTILITARIA GLOBAL ---
-// Esta función es la CLAVE de V 3.0
 function getSelectedGranjaId() {
   try {
     const granja = JSON.parse(localStorage.getItem('selectedGranja'));
@@ -11,10 +10,8 @@ function getSelectedGranjaId() {
   } catch (e) {
     console.error("Error al parsear granja seleccionada:", e);
   }
-
-  // Si no hay granja o falla el parseo, limpiamos todo y vamos a login.
   console.warn('No hay granja seleccionada, redirigiendo...');
-  logout(); // Forzamos logout y limpieza
+  logout();
   return null;
 }
 
@@ -45,9 +42,7 @@ async function login(e) {
     localStorage.setItem('token', data.token);
     localStorage.setItem('currentUser', JSON.stringify(data.user));
     errorMessage.textContent = '';
-
-    // --- CAMBIO CLAVE: De index.html a granjas.html ---
-    window.location.href = 'granjas.html';
+    window.location.href = 'granjas.html'; // Redirige a la selección de granja
 
   } catch (error) {
     errorMessage.textContent = 'Error de conexión al servidor.';
@@ -59,7 +54,7 @@ async function login(e) {
 function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('currentUser');
-  localStorage.removeItem('selectedGranja'); // ¡MUY IMPORTANTE!
+  localStorage.removeItem('selectedGranja'); // Limpia la granja seleccionada
   window.location.href = 'login.html';
 }
 
@@ -67,10 +62,10 @@ function logout() {
 async function checkAccess() {
   const token = localStorage.getItem('token');
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-  const selectedGranja = localStorage.getItem('selectedGranja'); // Solo chequear si existe
+  const selectedGranja = localStorage.getItem('selectedGranja');
   const path = window.location.pathname.split('/').pop();
 
-  if (path === 'login.html') return;
+  if (path === 'login.html') return; // Ya está en login
 
   if (!token || !currentUser) {
     logout();
@@ -81,31 +76,24 @@ async function checkAccess() {
     if (path === 'granjas.html') {
       return; // Está en la página correcta
     }
-    // Si no tiene granja y no está en granjas.html, lo forzamos a ir
-    window.location.href = 'granjas.html';
+    window.location.href = 'granjas.html'; // Forzar selección
     return;
   }
 
-  // Si tiene token Y granja, no debe estar en login o granjas
   if (path === 'login.html' || path === 'granjas.html') {
-    window.location.href = 'index.html';
+    window.location.href = 'index.html'; // Ya tiene todo, al dashboard
     return;
   }
 
-  // Verificación de token
   try {
     const res = await fetch(`${API_URL}/mis-granjas`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) { // Si el token expiró o es inválido
-      logout();
-      return;
-    }
+    if (!res.ok) { logout(); return; }
   } catch (error) {
     console.error('Token verification error:', error);
     logout();
     return;
   }
 
-  // Lógica de permisos de roles
   if (currentUser.role === 'viewer' && path !== 'index.html') {
     document.querySelector('main').innerHTML = `
       <section class="card">
@@ -113,7 +101,6 @@ async function checkAccess() {
         <p>No tienes permisos para ver esta página.</p>
         <a href="index.html">Volver al Dashboard</a>
       </section>`;
-    // Ocultar elementos de UI si es viewer
     document.querySelectorAll('.form-desplegable-container, #toggleFormBtn').forEach(el => {
       el.style.display = 'none';
     });
@@ -135,46 +122,32 @@ async function actualizarDashboard() {
       fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
     ]);
 
-    // --- Cálculos ---
-    let totalAvesInicial = 0;
-    let totalMuertes = 0;
-    let ultimosPesos = [];
-
+    // --- (El resto de tus cálculos de dashboard) ---
+    let totalAvesInicial = 0, totalMuertes = 0, ultimosPesos = [];
     lotes.forEach(lote => {
       totalAvesInicial += lote.cantidadInicial || 0;
-      // Las muertes ya se restaron, pero las contamos para la métrica
       const muertesLote = salud.filter(s => s.loteId === lote.id && s.tipo.toLowerCase() === 'mortalidad').reduce((sum, s) => sum + s.cantidad, 0);
       totalMuertes += muertesLote;
-
       const seguimientosLote = seguimiento.filter(s => s.loteId === lote.id).sort((a, b) => b.semana - a.semana);
-      if (seguimientosLote.length > 0) {
-        ultimosPesos.push(seguimientosLote[0].peso);
-      }
+      if (seguimientosLote.length > 0) ultimosPesos.push(seguimientosLote[0].peso);
     });
-
     const totalVivos = lotes.filter(l => l.estado === 'disponible').reduce((sum, l) => sum + l.cantidad, 0);
     const pesoPromedioActual = ultimosPesos.length ? (ultimosPesos.reduce((a, b) => a + b, 0) / ultimosPesos.length).toFixed(2) : 0;
     const mortalidadPromedio = (totalAvesInicial > 0) ? ((totalMuertes / totalAvesInicial) * 100).toFixed(2) : 0;
-
     const conversiones = [];
     seguimiento.forEach(reg => {
       const lote = lotes.find(l => l.id === reg.loteId);
       if (lote && reg.peso > lote.pesoInicial) {
         const pesoGanado = reg.peso - lote.pesoInicial;
-        if (pesoGanado > 0) {
-          const conversion = reg.consumo / pesoGanado;
-          conversiones.push(conversion);
-        }
+        if (pesoGanado > 0) conversiones.push(reg.consumo / pesoGanado);
       }
     });
     const promedio = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2) : '0';
-
     const totalCostos = costos.reduce((sum, c) => sum + c.monto, 0);
-    const totalIngresos = ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0); // Asumiendo precio es por kg
+    const totalIngresos = ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0);
     const rentabilidad = totalIngresos - totalCostos;
 
-    // --- Poblar HTML ---
-    if (document.getElementById('totalVivos')) { // Chequeo de seguridad
+    if (document.getElementById('totalVivos')) {
       document.getElementById('totalVivos').textContent = totalVivos;
       document.getElementById('pesoPromedio').textContent = `${pesoPromedioActual} kg`;
       document.getElementById('conversionPromedio').textContent = promedio(conversiones);
@@ -183,7 +156,6 @@ async function actualizarDashboard() {
       document.getElementById('ingresosTotales').textContent = `$${totalIngresos.toFixed(2)}`;
       document.getElementById('rentabilidad').textContent = `$${rentabilidad.toFixed(2)}`;
     }
-
   } catch (error) {
     console.error('Error al actualizar dashboard:', error);
   }
@@ -191,15 +163,15 @@ async function actualizarDashboard() {
 
 async function handleJsonResponse(res) {
   if (!res.ok) {
-    if (res.status === 401) logout(); // Si el token expira, desloguear
+    if (res.status === 401) logout();
     const text = await res.text();
     console.error('Fetch error:', res.status, text);
     throw new Error(`HTTP ${res.status}: ${text}`);
   }
   try {
     const text = await res.text();
-    if (!text) return null; // Manejar respuestas vacías (ej: DELETE 204)
-    return JSON.parse(text); // Parsear el texto
+    if (!text) return null;
+    return JSON.parse(text);
   } catch (e) {
     console.error("Error al parsear JSON:", e, res);
     throw new Error("Respuesta del servidor no es JSON válido.");
@@ -215,46 +187,26 @@ async function mostrarCalendario() {
       fetch(`${API_URL}/agenda?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
       fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
     ]);
-
     const agendaData = await handleJsonResponse(agendaRes);
     const saludData = await handleJsonResponse(saludRes);
     const eventosMapa = [];
-
     if (agendaData) {
-      agendaData.forEach(ev => {
-        eventosMapa.push({
-          date: ev.fecha,
-          title: `AGENDA: ${ev.descripcion}`,
-          tipo: 'pendiente'
-        });
-      });
+      agendaData.forEach(ev => eventosMapa.push({ date: ev.fecha, title: `AGENDA: ${ev.descripcion}`, tipo: 'pendiente' }));
     }
     if (saludData) {
       saludData.forEach(s => {
-        if (s.fechaRetiro) {
-          eventosMapa.push({
-            date: s.fechaRetiro.split('T')[0],
-            title: `BIOSEGURIDAD: Fin Retiro ${s.nombre} (Lote ${s.loteId})`,
-            tipo: 'retiro'
-          });
-        }
+        if (s.fechaRetiro) eventosMapa.push({ date: s.fechaRetiro.split('T')[0], title: `BIOSEGURIDAD: Fin Retiro ${s.nombre} (Lote ${s.loteId})`, tipo: 'retiro' });
       });
     }
-
     flatpickr("#calendario-container", {
-      inline: true,
-      locale: "es",
+      inline: true, locale: "es",
       enable: [{ from: "today", to: "today" }, ...eventosMapa.map(e => e.date)],
       onDayCreate: function (dObj, dStr, fp, dayElem) {
         const fechaStr = dayElem.dateObj.toISOString().split('T')[0];
         const eventosDelDia = eventosMapa.filter(e => e.date === fechaStr);
-
         if (eventosDelDia.length > 0) {
-          if (eventosDelDia.some(e => e.tipo === 'retiro')) {
-            dayElem.classList.add('evento-retiro');
-          } else {
-            dayElem.classList.add('evento-pendiente');
-          }
+          if (eventosDelDia.some(e => e.tipo === 'retiro')) dayElem.classList.add('evento-retiro');
+          else dayElem.classList.add('evento-pendiente');
           dayElem.title = eventosDelDia.map(e => e.title).join('\n');
         }
       },
@@ -266,7 +218,6 @@ async function mostrarCalendario() {
         }
       }
     });
-
     const estiloId = 'estilos-calendario-vincwill';
     if (!document.getElementById(estiloId)) {
       const style = document.createElement('style');
@@ -288,24 +239,18 @@ async function mostrarGraficoAgua() {
     const res = await fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
     const aguaData = await handleJsonResponse(res);
     if (!aguaData) return;
-
-    const hoy = new Date();
-    const dataPorDia = {};
+    const hoy = new Date(), dataPorDia = {};
     for (let i = 6; i >= 0; i--) {
       const fecha = new Date(hoy);
       fecha.setDate(hoy.getDate() - i);
-      const fechaStr = fecha.toISOString().split('T')[0];
-      dataPorDia[fechaStr] = 0;
+      dataPorDia[fecha.toISOString().split('T')[0]] = 0;
     }
     aguaData.forEach(r => {
       const fechaStr = r.fecha.split('T')[0];
-      if (dataPorDia[fechaStr] !== undefined) {
-        dataPorDia[fechaStr] += r.cantidad;
-      }
+      if (dataPorDia[fechaStr] !== undefined) dataPorDia[fechaStr] += r.cantidad;
     });
     const labels = Object.keys(dataPorDia).map(d => new Date(d).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }));
     const data = Object.values(dataPorDia);
-
     const ctx = document.getElementById('aguaChart').getContext('2d');
     new Chart(ctx, {
       type: 'bar',
@@ -346,9 +291,7 @@ function mostrarCostosPieChart() {
     .then(costos => {
       if (!costos) return;
       const categories = {};
-      costos.forEach(c => {
-        categories[c.categoria] = (categories[c.categoria] || 0) + c.monto;
-      });
+      costos.forEach(c => { categories[c.categoria] = (categories[c.categoria] || 0) + c.monto; });
       const labels = Object.keys(categories);
       const data = Object.values(categories);
       const ctx = document.getElementById('costosPieChart').getContext('2d');
@@ -371,8 +314,7 @@ function mostrarIngresosCostosBarChart() {
   ])
     .then(([lotes, ventas, costos]) => {
       if (!lotes || !ventas || !costos) return;
-      const dataIngresos = {};
-      const dataCostos = {};
+      const dataIngresos = {}, dataCostos = {};
       lotes.forEach(l => {
         dataIngresos[l.loteId] = ventas.filter(v => v.loteId === l.id).reduce((sum, v) => sum + (v.peso * v.precio), 0);
         dataCostos[l.loteId] = costos.filter(c => c.loteId === l.id).reduce((sum, c) => sum + c.monto, 0);
@@ -422,8 +364,36 @@ function mostrarAlertasProduccion() {
 document.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname.split('/').pop();
 
-  
+  if (path !== 'login.html' && path !== 'granjas.html') {
+    // --- Lógica del Sidebar V 3.1 (Acordeón) ---
+    // ESTO ESTÁ AHORA DENTRO DE UN CHECK SEGURO
+    document.querySelectorAll('.nav-category-title').forEach(title => {
+      title.addEventListener('click', () => {
+        const targetId = title.dataset.target;
+        const targetContainer = document.querySelector(targetId);
+        if (targetContainer) {
+          targetContainer.classList.toggle('is-collapsed');
+        }
+      });
+    });
 
+    // Lógica del enlace "Activo"
+    try {
+      let activeLink = document.querySelector(`.sidebar nav a[href="${path}"]`);
+      if (activeLink) {
+        activeLink.classList.add('active');
+        // Abrir el grupo padre si está colapsado
+        const parentContainer = activeLink.closest('.nav-links-container');
+        if (parentContainer && parentContainer.classList.contains('is-collapsed')) {
+          parentContainer.classList.remove('is-collapsed');
+        }
+      }
+    } catch (e) {
+      console.warn("No se pudo setear el link activo del sidebar:", e);
+    }
+  }
+
+  // Lógica de Vistas (Login, Granjas, Dashboard)
   if (path !== 'login.html') {
     checkAccess(); // Se ejecuta en TODAS las páginas (excepto login)
   }
