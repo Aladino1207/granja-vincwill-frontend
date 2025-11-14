@@ -528,7 +528,8 @@ main.dashboard-layout-vincwill {
 .form-desplegable-container {
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.5s ease-out; /* La animación */
+  transition: max-height 0.5s ease-out;
+  /* La animación */
   margin: 0;
   padding: 0;
 }
@@ -537,7 +538,8 @@ main.dashboard-layout-vincwill {
  * Le damos un valor alto para que el contenido quepa.
 */
 .form-desplegable-container.is-open {
-  max-height: 1000px; /* Un valor lo suficientemente alto */
+  max-height: 1000px;
+  /* Un valor lo suficientemente alto */
   transition: max-height 0.5s ease-in;
 }
 
@@ -835,16 +837,21 @@ main.dashboard-layout-vincwill {
   /* Oculto por defecto */
   position: fixed;
   z-index: 1050;
-  /* Más alto que el sidebar y todo lo demás */
   left: 0;
   top: 0;
   width: 100%;
   height: 100%;
   overflow: auto;
   background-color: rgba(0, 0, 0, 0.6);
-  display: flex;
+  /* 'display: flex' se movió a la clase .is-open */
   align-items: center;
   justify-content: center;
+}
+
+/* Clase que añade JS para mostrarlo */
+.modal-wrapper.is-open {
+  display: flex;
+  /* <-- El display:flex solo va aquí */
 }
 
 /* Clase que añade JS para mostrarlo */

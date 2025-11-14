@@ -18,11 +18,8 @@
   <aside class="sidebar">
     <nav>
       <div class="nav-group nav-group-main">
-        <div class="nav-links-container">
-          <a href="index.html" class="nav-link">Dashboard</a>
-        </div>
+        <div class="nav-links-container"><a href="index.html" class="nav-link">Dashboard</a></div>
       </div>
-
       <div class="nav-group">
         <h4 class="nav-category-title" data-target="#operaciones-links">Operaciones</h4>
         <div class="nav-links-container" id="operaciones-links">
@@ -33,21 +30,19 @@
           <a href="inventarios.html" class="nav-link">Inventario</a>
         </div>
       </div>
-
       <div class="nav-group">
         <h4 class="nav-category-title" data-target="#finanzas-links">Finanzas</h4>
         <div class="nav-links-container" id="finanzas-links">
           <a href="clientes.html" class="nav-link">Clientes</a>
-          <a href="proveedores.html" class="nav-link">Proveedores</a>
-          <a href="ventas.html" class="nav-link">Ventas</a>
+          <a href="ventas.html" class="nav-link active">Ventas</a>
           <a href="costos.html" class="nav-link">Costos</a>
           <a href="reportes.html" class="nav-link">Reportes</a>
         </div>
       </div>
-
       <div class="nav-group">
         <h4 class="nav-category-title" data-target="#admin-links">Administración</h4>
         <div class="nav-links-container" id="admin-links">
+          <a href="proveedores.html" class="nav-link">Proveedores</a>
           <a href="usuarios.html" class="nav-link">Usuarios y Granjas</a>
           <a href="configuracion.html" class="nav-link">Configuración</a>
         </div>
@@ -71,8 +66,20 @@
             </select>
           </div>
 
+          <div class="form-group" style="grid-column: 2 / 4;">
+            <label for="clienteSearch">Cliente</label>
+            <div class="searchable-dropdown" id="clienteDropdown">
+              <input type="text" id="clienteSearch" class="form-control"
+                placeholder="Buscar por Nombre, Cédula o RUC..." required>
+              <input type="hidden" id="clienteId" value="">
+              <button type="button" id="openQuickAddCliente" class="btn-add-quick">+</button>
+              <div class="search-results" id="clienteResults">
+              </div>
+            </div>
+          </div>
+
           <div class="form-group">
-            <label for="cantidadVendida">Cantidad Vendida</label>
+            <label for="cantidadVendida">Cantidad Vendida (Aves)</label>
             <input type="number" id="cantidadVendida" class="form-control" placeholder="Ej: 500" required>
           </div>
 
@@ -89,11 +96,6 @@
           <div class="form-group">
             <label for="fecha">Fecha</label>
             <input type="date" id="fecha" class="form-control" required>
-          </div>
-
-          <div class="form-group">
-            <label for="cliente">Cliente</label>
-            <input type="text" id="cliente" class="form-control" placeholder="Nombre del Cliente" required>
           </div>
 
           <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
@@ -115,12 +117,12 @@
         <table id="ventaTable" class="tabla-moderna">
           <thead>
             <tr>
-              <th>ID del Lote</th>
+              <th>Lote</th>
+              <th>Cliente</th>
               <th>Cantidad</th>
               <th>Peso (kg)</th>
-              <th>Precio</th>
+              <th>Precio ($/kg)</th>
               <th>Fecha</th>
-              <th>Cliente</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -133,6 +135,37 @@
       <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
     </footer>
   </main>
+
+  <div id="quickAddModal" class="modal-wrapper">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Crear Nuevo Cliente</h2>
+        <span class="modal-close-btn" id="closeQuickAddModal">&times;</span>
+      </div>
+      <form id="quickAddForm" class="form-grid form-grid-2-col">
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label for="quick_nombre">Nombre Completo o Razón Social</label>
+          <input type="text" id="quick_nombre" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="quick_tipoIdentificacion">Tipo de Identificación</label>
+          <select id="quick_tipoIdentificacion" class="form-control" required>
+            <option value="Cédula">Cédula</option>
+            <option value="RUC">RUC</option>
+            <option value="Pasaporte">Pasaporte</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="quick_identificacion">N° Identificación</label>
+          <input type="text" id="quick_identificacion" class="form-control" required>
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <p id="quickAddError" style="color: red; display: none;"></p>
+          <button type="submit" class="btn btn-primario">Crear y Seleccionar</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script src="app.js"></script>
   <script src="ventas.js"></script>
