@@ -525,6 +525,29 @@ main.dashboard-layout-vincwill {
   color: var(--color-primario);
 }
 
+.form-desplegable-container {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease-out; /* La animación */
+  margin: 0;
+  padding: 0;
+}
+
+/* * Clase que JS añadirá para "abrir" el desplegable.
+ * Le damos un valor alto para que el contenido quepa.
+*/
+.form-desplegable-container.is-open {
+  max-height: 1000px; /* Un valor lo suficientemente alto */
+  transition: max-height 0.5s ease-in;
+}
+
+/* * Para que la tarjeta del formulario tenga el espaciado
+ * correcto SÓLO cuando está abierta.
+*/
+.form-desplegable-container.is-open .card {
+  margin-bottom: var(--espaciado-xl);
+}
+
 /* --- 9. Estilos del Calendario (flatpickr.js) --- */
 .calendario-card {
   /* Asegura que el calendario no se desborde */
@@ -727,4 +750,156 @@ main.dashboard-layout-vincwill {
   color: var(--color-texto-claro) !important;
   text-decoration: none;
   border-bottom: none;
+}
+
+/* --- 12. Componente Searchable Dropdown (Combobox) --- */
+.searchable-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.searchable-dropdown input.form-control {
+  padding-right: 30px;
+  /* Espacio para el ícono de "añadir" */
+}
+
+/* El contenedor de los resultados de búsqueda */
+.search-results {
+  display: none;
+  /* Oculto por defecto */
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: #fff;
+  border: 1px solid var(--color-borde);
+  border-top: none;
+  border-radius: 0 0 var(--borde-radio) var(--borde-radio);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.searchable-dropdown.is-open .search-results {
+  display: block;
+}
+
+/* Cada item en la lista */
+.search-item {
+  padding: var(--espaciado-sm) var(--espaciado-md);
+  cursor: pointer;
+}
+
+.search-item:hover {
+  background-color: var(--color-fondo-pagina);
+}
+
+.search-item strong {
+  color: var(--color-primario);
+}
+
+.search-item span {
+  font-size: 0.85rem;
+  color: var(--color-texto-secundario);
+}
+
+/* El botón "+" para añadir nuevo */
+.btn-add-quick {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 1.5rem;
+  line-height: 1;
+  background-color: var(--color-secundario);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-add-quick:hover {
+  background-color: var(--color-secundario-hover);
+}
+
+/* --- 13. Componente Modal de Creación Rápida --- */
+/* Este modal se superpone a todo, incluyendo el formulario desplegable */
+.modal-wrapper {
+  display: none;
+  /* Oculto por defecto */
+  position: fixed;
+  z-index: 1050;
+  /* Más alto que el sidebar y todo lo demás */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Clase que añade JS para mostrarlo */
+.modal-wrapper.is-open {
+  display: flex;
+}
+
+.modal-content {
+  /* Reutilizamos .card, pero con ajustes */
+  background-color: var(--color-fondo-componente);
+  border-radius: var(--borde-radio);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  padding: var(--espaciado-lg);
+  width: 90%;
+  max-width: 600px;
+  /* Más pequeño, para formularios rápidos */
+  position: relative;
+  animation: modal-fade-in 0.3s ease-out;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-borde);
+  padding-bottom: var(--espaciado-md);
+  margin-bottom: var(--espaciado-lg);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.modal-close-btn {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #aaa;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal-close-btn:hover {
+  color: var(--color-primario);
+}
+
+/* Animación (ya la tenías) */
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

@@ -1,18 +1,13 @@
 // --- Lógica de Carga (BLINDADA) ---
 async function cargarLotesForSelect() {
   try {
-    const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
-    const granjaId = getSelectedGranjaId();
-    if (!granjaId) return;
-
-    // V 3.0: Añadimos granjaId al fetch
-    const res = await fetch(`${API_URL}/lotes?granjaId=${granjaId}`, {
-      headers: { Authorization: `Bearer ${token}` }
+    const res = await fetch(`${window.API_URL}/lotes`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
     const select = document.getElementById('loteSelect');
+    if (!select) throw new Error('Elemento loteSelect no encontrado');
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
     lotes.forEach(lote => {
       const option = document.createElement('option');
@@ -27,23 +22,18 @@ async function cargarLotesForSelect() {
 
 async function cargarCostos() {
   try {
-    const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
-    const granjaId = getSelectedGranjaId();
-    if (!granjaId) return;
-
-    // V 3.0: Añadimos granjaId al fetch
-    const res = await fetch(`${API_URL}/costos?granjaId=${granjaId}`, {
-      headers: { Authorization: `Bearer ${token}` }
+    const res = await fetch(`${window.API_URL}/costos`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     const costos = await res.json();
     const tbody = document.getElementById('tablaCostos');
+    if (!tbody) throw new Error('Elemento tablaCostos no encontrado');
     tbody.innerHTML = '';
     if (Array.isArray(costos) && costos.length > 0) {
       costos.forEach(costo => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${costo.loteId || 'General'}</td>
+          <td>${costo.loteId || 'N/A'}</td>
           <td>${costo.categoria || 'N/A'}</td>
           <td>${costo.descripcion || 'N/A'}</td>
           <td>${costo.monto ? costo.monto.toFixed(2) : 0}</td>
@@ -61,6 +51,30 @@ async function cargarCostos() {
   } catch (error) {
     console.error('Error al cargar costos:', error);
   }
+}
+
+// Función para ABRIR el formulario
+function abrirFormulario() {
+  const formContainer = document.getElementById('formContainer');
+  const toggleBtn = document.getElementById('toggleFormBtn');
+  formContainer.classList.add('is-open');
+  toggleBtn.textContent = 'Cancelar';
+}
+
+// Función para CERRAR el formulario
+function cerrarFormulario() {
+  const formContainer = document.getElementById('formContainer');
+  const toggleBtn = document.getElementById('toggleFormBtn');
+  const form = document.getElementById('costoForm');
+  const formTitle = document.getElementById('formTitle');
+
+  formContainer.classList.remove('is-open');
+  toggleBtn.textContent = 'Registrar Nuevo Costo';
+
+  // Limpiamos el formulario
+  form.reset();
+  document.getElementById('costoId').value = '';
+  formTitle.textContent = 'Registrar Costo';
 }
 
 // --- LÓGICA DEL FORMULARIO DESPLEGABLE (Sin cambios) ---
@@ -84,41 +98,38 @@ async function guardarCosto(e) {
 
   const costoId = document.getElementById('costoId').value;
   const esEdicion = !!costoId;
-  // V 3.0: Obtenemos la granja activa
-  const granjaId = getSelectedGranjaId();
-  if (!granjaId) return;
 
   const costo = {
-    loteId: parseInt(document.getElementById('loteSelect').value) || null, // Permitir costos generales
+    loteId: parseInt(document.getElementById('loteSelect').value),
     categoria: document.getElementById('categoria').value,
     descripcion: document.getElementById('descripcion').value,
     monto: parseFloat(document.getElementById('monto').value),
-    fecha: document.getElementById('fecha').value,
-    granjaId: granjaId // V 3.0: Añadido
+    fecha: document.getElementById('fecha').value
   };
 
   const url = esEdicion
-    ? `${API_URL}/costos/${costoId}`
-    : `${API_URL}/costos`;
+    ? `${window.API_URL}/costos/${costoId}`
+    : `${window.API_URL}/costos`;
+
   const method = esEdicion ? 'PUT' : 'POST';
 
   try {
-    const token = localStorage.getItem('token');
     const res = await fetch(url, {
       method: method,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${localStorage.getItem('token')}`
       },
       body: JSON.stringify(costo)
     });
 
     if (res.ok) {
-      cerrarFormulario();
-      await cargarCostos();
+      cerrarFormulario(); // ¡Éxito! Cierra el formulario
+      await cargarCostos(); // Recarga la tabla
+      console.log('Costo guardado y tabla recargada');
     } else {
-      const errorText = await res.json();
-      alert('Error al guardar costo: ' + (errorText.error || 'Desconocido'));
+      const errorText = await res.text();
+      alert('Error al guardar costo: ' + (errorText || 'Desconocido'));
     }
   } catch (error) {
     alert('Error de conexión');
@@ -127,17 +138,12 @@ async function guardarCosto(e) {
 
 async function editarCosto(id) {
   try {
-    const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
-    const granjaId = getSelectedGranjaId();
-    if (!granjaId) return;
-
-    // V 3.0: Añadimos granjaId al fetch
-    const res = await fetch(`${API_URL}/costos/${id}?granjaId=${granjaId}`, {
-      headers: { Authorization: `Bearer ${token}` }
+    const res = await fetch(`${window.API_URL}/costos/${id}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     });
     const costo = await res.json();
 
+    // Rellena el formulario
     document.getElementById('formTitle').textContent = 'Editar Costo';
     document.getElementById('costoId').value = costo.id;
     document.getElementById('loteSelect').value = costo.loteId;
@@ -146,8 +152,8 @@ async function editarCosto(id) {
     document.getElementById('monto').value = costo.monto;
     document.getElementById('fecha').value = costo.fecha.split('T')[0];
 
-    abrirFormulario();
-    window.scrollTo(0, 0);
+    abrirFormulario(); // ¡Abre el formulario!
+    window.scrollTo(0, 0); // Sube al inicio de la página
 
   } catch (error) {
     console.error('Error al cargar datos para editar:', error);
@@ -157,32 +163,17 @@ async function editarCosto(id) {
 async function eliminarCosto(id) {
   if (confirm('¿Seguro que quieres eliminar este costo?')) {
     try {
-      const token = localStorage.getItem('token');
-      // V 3.0: Obtenemos la granja activa
-      const granjaId = getSelectedGranjaId();
-      if (!granjaId) return;
-
-      // V 3.0: Añadimos granjaId al fetch
-      await fetch(`${API_URL}/costos/${id}?granjaId=${granjaId}`, {
+      await fetch(`${window.API_URL}/costos/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       cargarCostos();
     } catch (error) {
       alert('Error al eliminar costo');
     }
   }
-}
-
-// --- Event Listener Principal (BLINDADO) ---
-document.addEventListener('DOMContentLoaded', () => {
+} document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-  const granja = JSON.parse(localStorage.getItem('selectedGranja'));
-
-  // V 3.0: Poner el nombre de la granja en el título
-  if (granja) {
-    document.querySelector('header h1').textContent = `Costos (${granja.nombre})`;
-  }
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
@@ -190,25 +181,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const formContainer = document.getElementById('formContainer');
 
   if (currentUser && currentUser.role !== 'viewer') {
-    toggleBtn.style.display = 'block';
+    toggleBtn.style.display = 'block'; // Muestra el botón de "Registrar"
 
+    // Evento para el botón principal (Abrir/Cerrar)
     toggleBtn.addEventListener('click', () => {
       const isOpen = formContainer.classList.contains('is-open');
       if (isOpen) {
         cerrarFormulario();
       } else {
+        // Abre para CREAR (limpiando el form)
+        document.getElementById('formTitle').textContent = 'Registrar Costo';
         form.reset();
         document.getElementById('costoId').value = '';
-        formTitle.textContent = 'Registrar Costo';
         abrirFormulario();
       }
     });
-    cancelBtn.addEventListener('click', cerrarFormulario);
-    form.onsubmit = guardarCosto;
+
+    // Evento para el botón de Cancelar dentro del formulario
+    cancelBtn.addEventListener('click', () => {
+      cerrarFormulario();
+    });
+
+    form.onsubmit = guardarCosto; // Vincula el evento submit
+
   } else {
-    toggleBtn.style.display = 'none';
+    toggleBtn.style.display = 'none'; // Oculta el botón
   }
 
-  cargarLotesForSelect(); // Carga lotes de esta granja
-  cargarCostos(); // Carga costos de esta granja
+  cargarLotesForSelect();
+  cargarCostos();
 });

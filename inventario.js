@@ -1,13 +1,15 @@
+// --- V 3.1: Variable global para la lista de proveedores ---
+let listaProveedores = [];
+
 // --- Lógica de Carga (BLINDADA) ---
 async function cargarInventario() {
   try {
     const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    // V 3.0: Añadimos granjaId al fetch
-    const res = await fetch(`${API_URL}/inventario?granjaId=${granjaId}`, {
+    // V 3.1: El backend ahora incluye el Proveedor
+    const res = await fetch(`${window.API_URL}/inventario?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -19,7 +21,7 @@ async function cargarInventario() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${item.producto || 'N/A'}</td>
-          <td>${item.categoria || 'N/A'}</td>
+          <td>${item.Proveedor ? item.Proveedor.nombreCompania : 'N/A'}</td> <td>${item.categoria || 'N/A'}</td>
           <td>${item.cantidad || 0}</td>
           <td>${item.costo ? item.costo.toFixed(2) : 0}</td>
           <td>${item.fecha ? new Date(item.fecha).toLocaleDateString() : 'N/A'}</td>
@@ -31,14 +33,31 @@ async function cargarInventario() {
         tbody.appendChild(tr);
       });
     } else {
-      tbody.innerHTML = '<tr><td colspan="6">No hay inventario registrado</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7">No hay inventario registrado</td></tr>'; // Colspan es 7 ahora
     }
   } catch (error) {
     console.error('Error al cargar inventario:', error);
   }
 }
 
-// --- LÓGICA DEL FORMULARIO DESPLEGABLE (Sin cambios) ---
+// --- V 3.1: NUEVA Lógica para cargar Proveedores ---
+async function cargarProveedores() {
+  try {
+    const token = localStorage.getItem('token');
+    // Los proveedores son globales (endpoint de Admin)
+    const res = await fetch(`${window.API_URL}/proveedores`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('No se pudieron cargar proveedores');
+    listaProveedores = await res.json();
+    // Inicialmente no mostramos resultados, solo cuando el usuario escribe
+  } catch (error) {
+    console.error(error);
+    alert('Error al cargar la lista de proveedores.');
+  }
+}
+
+// --- LÓGICA DEL FORMULARIO DESPLEGABLE ---
 function abrirFormulario() {
   document.getElementById('formContainer').classList.add('is-open');
   document.getElementById('toggleFormBtn').textContent = 'Cancelar';
@@ -48,17 +67,16 @@ function cerrarFormulario() {
   document.getElementById('toggleFormBtn').textContent = 'Registrar Nuevo Insumo';
   document.getElementById('inventarioForm').reset();
   document.getElementById('inventarioId').value = '';
+  document.getElementById('proveedorId').value = ''; // Limpiar ID oculto
   document.getElementById('formTitle').textContent = 'Registrar Insumo';
 }
 
 // --- Funciones CRUD (BLINDADAS) ---
-
 async function guardarInventario(e) {
   e.preventDefault();
 
   const inventarioId = document.getElementById('inventarioId').value;
   const esEdicion = !!inventarioId;
-  // V 3.0: Obtenemos la granja activa
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
@@ -68,7 +86,8 @@ async function guardarInventario(e) {
     cantidad: parseFloat(document.getElementById('cantidad').value),
     costo: parseFloat(document.getElementById('costo').value),
     fecha: document.getElementById('fecha').value,
-    granjaId: granjaId // V 3.0: Añadido
+    proveedorId: document.getElementById('proveedorId').value ? parseInt(document.getElementById('proveedorId').value) : null, // V 3.1
+    granjaId: granjaId
   };
 
   const url = esEdicion
@@ -102,12 +121,10 @@ async function guardarInventario(e) {
 async function editarInventario(id) {
   try {
     const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    // V 3.0: Añadimos granjaId al fetch
-    const res = await fetch(`${API_URL}/inventario/${id}?granjaId=${granjaId}`, {
+    const res = await fetch(`${window.API_URL}/inventario/${id}?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('No se pudo cargar el item');
@@ -121,6 +138,15 @@ async function editarInventario(id) {
     document.getElementById('costo').value = item.costo || '';
     document.getElementById('fecha').value = item.fecha ? item.fecha.split('T')[0] : '';
 
+    // V 3.1: Rellenar el campo de proveedor
+    if (item.proveedorId) {
+      const proveedor = listaProveedores.find(p => p.id === item.proveedorId);
+      if (proveedor) {
+        document.getElementById('proveedorSearch').value = `${proveedor.nombreCompania} (${proveedor.ruc})`;
+        document.getElementById('proveedorId').value = proveedor.id;
+      }
+    }
+
     abrirFormulario();
     window.scrollTo(0, 0);
 
@@ -133,12 +159,10 @@ async function eliminarInventario(id) {
   if (confirm('¿Seguro que quieres eliminar este insumo?')) {
     try {
       const token = localStorage.getItem('token');
-      // V 3.0: Obtenemos la granja activa
       const granjaId = getSelectedGranjaId();
       if (!granjaId) return;
 
-      // V 3.0: Añadimos granjaId al fetch
-      await fetch(`${API_URL}/inventario/${id}?granjaId=${granjaId}`, {
+      await fetch(`${window.API_URL}/inventario/${id}?granjaId=${granjaId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -149,12 +173,139 @@ async function eliminarInventario(id) {
   }
 }
 
+// --- V 3.1: LÓGICA DEL COMBOBOX CON BÚSQUEDA (PROVEEDOR) ---
+
+function setupProveedorSearch() {
+  const searchInput = document.getElementById('proveedorSearch');
+  const resultsContainer = document.getElementById('proveedorResults');
+  const dropdown = document.getElementById('proveedorDropdown');
+  const hiddenInput = document.getElementById('proveedorId');
+
+  // 1. Mostrar resultados al escribir
+  searchInput.addEventListener('input', () => {
+    const query = searchInput.value.toLowerCase();
+    if (query.length < 2) {
+      resultsContainer.innerHTML = '';
+      dropdown.classList.remove('is-open');
+      return;
+    }
+
+    const filtrados = listaProveedores.filter(p =>
+      p.nombreCompania.toLowerCase().includes(query) ||
+      p.ruc.includes(query)
+    );
+
+    resultsContainer.innerHTML = ''; // Limpiar
+    if (filtrados.length > 0) {
+      filtrados.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'search-item';
+        item.innerHTML = `<strong>${p.nombreCompania}</strong> <span>(${p.ruc})</span>`;
+        item.onclick = () => {
+          seleccionarProveedor(p);
+        };
+        resultsContainer.appendChild(item);
+      });
+      dropdown.classList.add('is-open');
+    } else {
+      dropdown.classList.remove('is-open');
+    }
+  });
+
+  // 2. Función para seleccionar un proveedor
+  function seleccionarProveedor(proveedor) {
+    searchInput.value = `${proveedor.nombreCompania} (${proveedor.ruc})`;
+    hiddenInput.value = proveedor.id;
+    dropdown.classList.remove('is-open');
+  }
+
+  // 3. Cerrar si se hace clic fuera
+  document.addEventListener('click', (e) => {
+    if (!dropdown.contains(e.target)) {
+      dropdown.classList.remove('is-open');
+    }
+  });
+
+  // 4. Limpiar si el usuario borra el texto
+  searchInput.addEventListener('change', () => {
+    if (searchInput.value === '') {
+      hiddenInput.value = '';
+    }
+  });
+}
+
+// --- V 3.1: LÓGICA DEL MODAL DE CREACIÓN RÁPIDA (PROVEEDOR) ---
+
+function setupQuickAddModal() {
+  const modal = document.getElementById('quickAddModal');
+  const openBtn = document.getElementById('openQuickAddProveedor');
+  const closeBtn = document.getElementById('closeQuickAddModal');
+  const form = document.getElementById('quickAddForm');
+  const errorMsg = document.getElementById('quickAddError');
+
+  openBtn.addEventListener('click', () => {
+    modal.classList.add('is-open');
+  });
+  closeBtn.addEventListener('click', () => {
+    modal.classList.remove('is-open');
+  });
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.classList.remove('is-open');
+  });
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    errorMsg.style.display = 'none';
+
+    const nuevoProveedor = {
+      nombreCompania: document.getElementById('quick_nombreCompania').value,
+      ruc: document.getElementById('quick_ruc').value,
+      telefono: document.getElementById('quick_telefono').value
+    };
+
+    try {
+      const token = localStorage.getItem('token');
+      // Usamos el endpoint global de admin
+      const res = await fetch(`${window.API_URL}/proveedores`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(nuevoProveedor)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Error del servidor');
+      }
+
+      const proveedorCreado = await res.json();
+
+      // 1. Cerrar el modal
+      modal.classList.remove('is-open');
+      form.reset();
+
+      // 2. Actualizar la lista global de proveedores
+      await cargarProveedores();
+
+      // 3. Autoseleccionar el proveedor recién creado
+      document.getElementById('proveedorSearch').value = `${proveedorCreado.nombreCompania} (${proveedorCreado.ruc})`;
+      document.getElementById('proveedorId').value = proveedorCreado.id;
+
+    } catch (error) {
+      errorMsg.textContent = `Error: ${error.message}`;
+      errorMsg.style.display = 'block';
+    }
+  };
+}
+
+
 // --- Event Listener Principal (BLINDADO) ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
 
-  // V 3.0: Poner el nombre de la granja en el título
   if (granja) {
     document.querySelector('header h1').textContent = `Inventario (${granja.nombre})`;
   }
@@ -174,6 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         form.reset();
         document.getElementById('inventarioId').value = '';
+        document.getElementById('proveedorId').value = '';
         formTitle.textContent = 'Registrar Insumo';
         abrirFormulario();
       }
@@ -182,9 +334,14 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelBtn.addEventListener('click', cerrarFormulario);
     form.onsubmit = guardarInventario;
 
+    // V 3.1: Inicializar búsqueda y modal
+    setupProveedorSearch();
+    setupQuickAddModal();
+
   } else {
     toggleBtn.style.display = 'none';
   }
 
   cargarInventario();
+  cargarProveedores(); // Carga la lista de proveedores al iniciar
 });

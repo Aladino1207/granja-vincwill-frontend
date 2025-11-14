@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <title>Inventario de Insumos</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 
 <body>
@@ -15,11 +16,8 @@
     <aside class="sidebar">
         <nav>
             <div class="nav-group nav-group-main">
-                <div class="nav-links-container">
-                    <a href="index.html" class="nav-link">Dashboard</a>
-                </div>
+                <div class="nav-links-container"><a href="index.html" class="nav-link">Dashboard</a></div>
             </div>
-
             <div class="nav-group">
                 <h4 class="nav-category-title" data-target="#operaciones-links">Operaciones</h4>
                 <div class="nav-links-container" id="operaciones-links">
@@ -27,32 +25,30 @@
                     <a href="salud.html" class="nav-link">Salud</a>
                     <a href="agua.html" class="nav-link">Agua</a>
                     <a href="seguimiento.html" class="nav-link">Seguimiento</a>
-                    <a href="inventarios.html" class="nav-link">Inventario</a>
+                    <a href="inventarios.html" class="nav-link active">Inventario</a>
                 </div>
             </div>
-
             <div class="nav-group">
                 <h4 class="nav-category-title" data-target="#finanzas-links">Finanzas</h4>
                 <div class="nav-links-container" id="finanzas-links">
                     <a href="clientes.html" class="nav-link">Clientes</a>
-                    <a href="proveedores.html" class="nav-link">Proveedores</a>
                     <a href="ventas.html" class="nav-link">Ventas</a>
                     <a href="costos.html" class="nav-link">Costos</a>
                     <a href="reportes.html" class="nav-link">Reportes</a>
                 </div>
             </div>
-
             <div class="nav-group">
                 <h4 class="nav-category-title" data-target="#admin-links">Administración</h4>
                 <div class="nav-links-container" id="admin-links">
+                    <a href="proveedores.html" class="nav-link">Proveedores</a>
                     <a href="usuarios.html" class="nav-link">Usuarios y Granjas</a>
                     <a href="configuracion.html" class="nav-link">Configuración</a>
                 </div>
             </div>
         </nav>
     </aside>
-    <main class="main-content">
 
+    <main class="main-content">
         <div id="formContainer" class="form-desplegable-container">
             <section class="card">
                 <h2 id="formTitle">Registrar Insumo</h2>
@@ -72,6 +68,18 @@
                             <option value="Cama">Cama</option>
                             <option value="Otro">Otro</option>
                         </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="proveedorSearch">Proveedor (Opcional)</label>
+                        <div class="searchable-dropdown" id="proveedorDropdown">
+                            <input type="text" id="proveedorSearch" class="form-control"
+                                placeholder="Buscar RUC o Nombre...">
+                            <input type="hidden" id="proveedorId" value="">
+                            <button type="button" id="openQuickAddProveedor" class="btn-add-quick">+</button>
+                            <div class="search-results" id="proveedorResults">
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -109,6 +117,7 @@
                     <thead>
                         <tr>
                             <th>Producto</th>
+                            <th>Proveedor</th>
                             <th>Categoría</th>
                             <th>Cantidad</th>
                             <th>Costo Unitario</th>
@@ -125,6 +134,34 @@
             <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
         </footer>
     </main>
+
+    <div id="quickAddModal" class="modal-wrapper">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Crear Nuevo Proveedor</h2>
+                <span class="modal-close-btn" id="closeQuickAddModal">&times;</span>
+            </div>
+            <form id="quickAddForm" class="form-grid form-grid-2-col">
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label for="quick_nombreCompania">Nombre de la Compañía</label>
+                    <input type="text" id="quick_nombreCompania" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="quick_ruc">RUC</label>
+                    <input type="text" id="quick_ruc" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="quick_telefono">Teléfono</label>
+                    <input type="tel" id="quick_telefono" class="form-control">
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <p id="quickAddError" style="color: red; display: none;"></p>
+                    <button type="submit" class="btn btn-primario">Crear y Seleccionar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="app.js"></script>
     <script src="inventario.js"></script>
 </body>
