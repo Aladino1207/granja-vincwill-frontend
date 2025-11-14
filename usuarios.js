@@ -33,19 +33,35 @@ async function cargarUsuarios() {
 async function cargarTodasGranjas() {
   try {
     const token = localStorage.getItem('token');
-    // Este es un endpoint de Admin, no necesita granjaId
     const res = await fetch(`${API_URL}/granjas/todas`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('Error al cargar granjas');
     allGranjas = await res.json();
-    console.log('Granjas cargadas para asignar:', allGranjas);
+
+    // Poblar la tabla de granjas
+    const tbody = document.getElementById('tablaGranjasBody');
+    tbody.innerHTML = '';
+    if (allGranjas.length > 0) {
+      allGranjas.forEach(g => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+                <td>${g.nombre}</td>
+                <td>${g.ubicacion || 'N/A'}</td>
+                <td><button class="btn btn-sm btn-peligro" disabled>Borrar</button></td>
+            `;
+        tbody.appendChild(tr);
+      });
+    } else {
+      tbody.innerHTML = '<tr><td colspan="3">No hay granjas creadas.</td></tr>';
+    }
+
   } catch (error) {
     console.error('Error al cargar lista de granjas:', error);
   }
 }
 
-// --- LÓGICA DEL FORMULARIO DESPLEGABLE (Sin cambios) ---
+// --- LÓGICA DEL FORMULARIO DESPLEGABLE (Usuarios) ---
 function abrirFormulario() {
   document.getElementById('formContainer').classList.add('is-open');
   document.getElementById('toggleFormBtn').textContent = 'Cancelar';
@@ -70,7 +86,6 @@ async function guardarUsuario(e) {
     name: document.getElementById('name').value,
     email: document.getElementById('email').value,
     role: document.getElementById('role').value,
-    // Solo envía la contraseña si se escribió una
     password: passwordInput ? passwordInput : undefined
   };
 
@@ -107,7 +122,6 @@ async function guardarUsuario(e) {
 async function editarUsuario(id) {
   try {
     const token = localStorage.getItem('token');
-    // GET /users/:id (Global)
     const res = await fetch(`${API_URL}/users/${id}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -123,12 +137,45 @@ async function editarUsuario(id) {
     document.getElementById('password').placeholder = 'Dejar en blanco para no cambiar';
 
     abrirFormulario();
-    window.scrollTo(0, 0);
+    window.scrollTo(0, 0); // Sube al formulario
 
   } catch (error) {
     console.error('Error al cargar datos para editar:', error);
   }
 }
+
+// --- V 3.0: Lógica de Creación de Granjas ---
+async function guardarGranja(e) {
+  e.preventDefault();
+
+  const granja = {
+    nombre: document.getElementById('granjaNombre').value,
+    ubicacion: document.getElementById('granjaUbicacion').value
+  };
+
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/granjas`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(granja)
+    });
+
+    if (res.ok) {
+      document.getElementById('granjaForm').reset();
+      await cargarTodasGranjas(); // Recargar la lista de granjas
+    } else {
+      const errorData = await res.json();
+      alert('Error al crear granja: ' + (errorData.error || 'Desconocido'));
+    }
+  } catch (error) {
+    alert('Error de conexión al crear granja');
+  }
+}
+
 
 // --- V 3.0: Lógica de Asignación de Granjas ---
 async function asignarGranjas(userId, userName) {
@@ -167,41 +214,45 @@ async function asignarGranjas(userId, userName) {
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
 
-  // Título (es global)
-  document.querySelector('header h1').textContent = `Gestión de Usuarios (Global)`;
+  document.querySelector('header h1').textContent = `Gestión Global (Admin)`;
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
-  const form = document.getElementById('userForm');
+  const userForm = document.getElementById('userForm');
   const formContainer = document.getElementById('formContainer');
+  const granjaForm = document.getElementById('granjaForm');
 
   // Lógica de permisos
   if (currentUser && currentUser.role === 'admin') {
-    document.getElementById('userSection').style.display = 'block';
-    toggleBtn.style.display = 'block';
+    document.getElementById('adminSection').style.display = 'grid'; // Mostrar todo el admin
 
+    // --- Lógica de formulario de usuarios ---
+    toggleBtn.style.display = 'block';
     toggleBtn.addEventListener('click', () => {
       const isOpen = formContainer.classList.contains('is-open');
       if (isOpen) {
         cerrarFormulario();
       } else {
-        form.reset();
+        userForm.reset();
         document.getElementById('usuarioId').value = '';
         formTitle.textContent = 'Crear Nuevo Usuario';
         document.getElementById('password').placeholder = 'Contraseña (requerida)';
         abrirFormulario();
       }
     });
-
     cancelBtn.addEventListener('click', cerrarFormulario);
-    form.onsubmit = guardarUsuario;
+    userForm.onsubmit = guardarUsuario;
 
+    // --- Lógica de formulario de granjas ---
+    granjaForm.onsubmit = guardarGranja;
+
+    // Cargar datos
     cargarUsuarios();
     cargarTodasGranjas(); // Carga la lista para las asignaciones
 
   } else {
     // Oculta todo si no es admin
     document.getElementById('accessDenied').style.display = 'block';
-    document.getElementById('userSection').style.display = 'none';
+    document.getElementById('adminSection').style.display = 'none';
   }
 });
