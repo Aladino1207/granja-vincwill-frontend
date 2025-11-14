@@ -1,14 +1,26 @@
-// --- Lógica de Carga ---
+// --- Lógica de Carga (BLINDADA) ---
 async function cargarLotes() {
   try {
     const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/lotes`, {
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return; // Si no hay granja, no hacemos nada
+
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${API_URL}/lotes?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
     const tbody = document.getElementById('loteTableBody');
     tbody.innerHTML = '';
+
+    if (lotes.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6">No hay lotes registrados en esta granja.</td></tr>';
+      return;
+    }
+
     lotes.forEach(lote => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -29,8 +41,7 @@ async function cargarLotes() {
   }
 }
 
-// --- LÓGICA DEL FORMULARIO DESPLEGABLE ---
-
+// --- LÓGICA DEL FORMULARIO DESPLEGABLE (Sin cambios) ---
 function abrirFormulario() {
   document.getElementById('formContainer').classList.add('is-open');
   document.getElementById('toggleFormBtn').textContent = 'Cancelar';
@@ -41,11 +52,11 @@ function cerrarFormulario() {
   document.getElementById('toggleFormBtn').textContent = 'Agregar Nuevo Lote';
 
   document.getElementById('loteForm').reset();
-  document.getElementById('loteDbId').value = '';
+  document.getElementById('loteDbId').value = ''; // Usamos loteDbId para el ID numérico
   document.getElementById('formTitle').textContent = 'Agregar Nuevo Lote';
 }
 
-// --- Funciones CRUD (Modificadas) ---
+// --- Funciones CRUD (BLINDADAS) ---
 
 async function guardarLote(e) {
   e.preventDefault();
@@ -53,17 +64,27 @@ async function guardarLote(e) {
   const loteDbId = document.getElementById('loteDbId').value;
   const esEdicion = !!loteDbId;
 
+  // V 3.0: Obtenemos la granja activa
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
+
   const lote = {
     loteId: document.getElementById('loteId').value,
     cantidad: parseInt(document.getElementById('cantidad').value),
     pesoInicial: parseFloat(document.getElementById('pesoInicial').value),
     fechaIngreso: document.getElementById('fechaIngreso').value,
-    estado: document.getElementById('estado').value
+    estado: document.getElementById('estado').value,
+    granjaId: granjaId // V 3.0: Añadimos granjaId al body
   };
 
+  // V 3.0: Añadimos cantidadInicial si es un lote nuevo
+  if (!esEdicion) {
+    lote.cantidadInicial = lote.cantidad;
+  }
+
   const url = esEdicion
-    ? `${API_URL}/lotes/${loteDbId}`
-    : `${API_URL}/lotes`;
+    ? `${API_URL}/lotes/${loteDbId}` // PUT
+    : `${API_URL}/lotes`; // POST
   const method = esEdicion ? 'PUT' : 'POST';
 
   try {
@@ -74,7 +95,7 @@ async function guardarLote(e) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify(lote)
+      body: JSON.stringify(lote) // Enviamos el objeto con granjaId
     });
     if (res.ok) {
       cerrarFormulario();
@@ -91,15 +112,19 @@ async function guardarLote(e) {
 async function editarLote(id) {
   try {
     const token = localStorage.getItem('token');
-    // Asumimos que el backend tiene un endpoint GET /lotes/:id (lo cual es estándar)
-    const res = await fetch(`${API_URL}/lotes/${id}`, {
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${API_URL}/lotes/${id}?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('No se pudo cargar el lote');
     const lote = await res.json();
 
     document.getElementById('formTitle').textContent = 'Editar Lote';
-    document.getElementById('loteDbId').value = lote.id; // Guardamos el ID de la BD
+    document.getElementById('loteDbId').value = lote.id; // ID numérico de la DB
     document.getElementById('loteId').value = lote.loteId;
     document.getElementById('cantidad').value = lote.cantidad;
     document.getElementById('pesoInicial').value = lote.pesoInicial;
@@ -111,15 +136,20 @@ async function editarLote(id) {
 
   } catch (error) {
     console.error('Error al cargar datos para editar:', error);
-    alert('Error al cargar datos. Asegúrate que el backend tenga GET /lotes/:id');
+    alert('Error al cargar datos del lote.');
   }
 }
 
 async function eliminarLote(id) {
-  if (confirm('¿Seguro que quieres eliminar este lote?')) {
+  if (confirm('¿Seguro que quieres eliminar este lote? Esto eliminará TODOS sus seguimientos, costos, ventas, etc.')) {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${API_URL}/lotes/${id}`, { // Usamos el ID numérico
+      // V 3.0: Obtenemos la granja activa
+      const granjaId = getSelectedGranjaId();
+      if (!granjaId) return;
+
+      // V 3.0: Añadimos granjaId al fetch (DELETE usa query params)
+      await fetch(`${API_URL}/lotes/${id}?granjaId=${granjaId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -130,9 +160,15 @@ async function eliminarLote(id) {
   }
 }
 
-// --- Event Listener Principal ---
+// --- Event Listener Principal (MODIFICADO) ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const granja = JSON.parse(localStorage.getItem('selectedGranja'));
+
+  // V 3.0: Poner el nombre de la granja en el título
+  if (granja) {
+    document.querySelector('header h1').textContent = `Lotes (${granja.nombre})`;
+  }
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
@@ -161,5 +197,5 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleBtn.style.display = 'none';
   }
 
-  cargarLotes();
+  cargarLotes(); // Carga solo los lotes de la granja activa
 });

@@ -1,6 +1,24 @@
 window.API_URL = 'https://granja-vincwill-backend.onrender.com';
 
-// --- Funciones de Autenticación (Sin cambios) ---
+// --- V 3.0: FUNCIÓN UTILITARIA GLOBAL ---
+// Esta función es la CLAVE de V 3.0
+function getSelectedGranjaId() {
+  try {
+    const granja = JSON.parse(localStorage.getItem('selectedGranja'));
+    if (granja && granja.id) {
+      return granja.id;
+    }
+  } catch (e) {
+    console.error("Error al parsear granja seleccionada:", e);
+  }
+
+  // Si no hay granja o falla el parseo, limpiamos todo y vamos a login.
+  console.warn('No hay granja seleccionada, redirigiendo...');
+  logout(); // Forzamos logout y limpieza
+  return null;
+}
+
+// --- V 3.0: login() MODIFICADO ---
 async function login(e) {
   e.preventDefault();
   const email = document.getElementById('email').value.trim();
@@ -27,37 +45,57 @@ async function login(e) {
     localStorage.setItem('token', data.token);
     localStorage.setItem('currentUser', JSON.stringify(data.user));
     errorMessage.textContent = '';
-    window.location.href = 'index.html';
+
+    // --- CAMBIO CLAVE: De index.html a granjas.html ---
+    window.location.href = 'granjas.html';
+
   } catch (error) {
     errorMessage.textContent = 'Error de conexión al servidor.';
     console.error('Login error:', error);
   }
 }
 
+// --- V 3.0: logout() MODIFICADO ---
 function logout() {
-  localStorage.removeItem('isAuthenticated');
-  localStorage.removeItem('currentUser');
   localStorage.removeItem('token');
+  localStorage.removeItem('currentUser');
+  localStorage.removeItem('selectedGranja'); // ¡MUY IMPORTANTE!
   window.location.href = 'login.html';
 }
 
+// --- V 3.0: checkAccess() REESCRITO ---
 async function checkAccess() {
   const token = localStorage.getItem('token');
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const selectedGranja = localStorage.getItem('selectedGranja'); // Solo chequear si existe
   const path = window.location.pathname.split('/').pop();
 
-  if (path === 'login.html') {
-    return;
-  }
+  if (path === 'login.html') return;
+
   if (!token || !currentUser) {
-    window.location.href = 'login.html';
+    logout();
     return;
   }
+
+  if (!selectedGranja) {
+    if (path === 'granjas.html') {
+      return; // Está en la página correcta
+    }
+    // Si no tiene granja y no está en granjas.html, lo forzamos a ir
+    window.location.href = 'granjas.html';
+    return;
+  }
+
+  // Si tiene token Y granja, no debe estar en login o granjas
+  if (path === 'login.html' || path === 'granjas.html') {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  // Verificación de token
   try {
-    const res = await fetch(`${API_URL}/users`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!res.ok) {
+    const res = await fetch(`${API_URL}/mis-granjas`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) { // Si el token expiró o es inválido
       logout();
       return;
     }
@@ -66,82 +104,58 @@ async function checkAccess() {
     logout();
     return;
   }
+
+  // Lógica de permisos de roles
   if (currentUser.role === 'viewer' && path !== 'index.html') {
     document.querySelector('main').innerHTML = `
-      <section>
+      <section class="card">
         <h2>Acceso Denegado</h2>
-        <p>Solo los usuarios con rol de Administrador o Empleado pueden acceder a esta página.</p>
+        <p>No tienes permisos para ver esta página.</p>
         <a href="index.html">Volver al Dashboard</a>
-      </section>
-    `;
+      </section>`;
+    // Ocultar elementos de UI si es viewer
+    document.querySelectorAll('.form-desplegable-container, #toggleFormBtn').forEach(el => {
+      el.style.display = 'none';
+    });
   }
 }
 
-async function handleJsonResponse(res) {
-  if (!res.ok) {
-    const text = await res.text();
-    console.error('Fetch error:', res.status, text);
-    throw new Error(`HTTP ${res.status}: ${text}`);
-  }
-  const contentType = res.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
-    const text = await res.text();
-    console.error('Non-JSON response:', text);
-    throw new Error('Respuesta no es JSON');
-  }
-  return await res.json();
-}
-
-
-// --- FUNCIÓN ACTUALIZADA: actualizarDashboard (para 7 métricas) ---
+// --- V 3.0: actualizarDashboard() BLINDADO ---
 async function actualizarDashboard() {
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
+
   try {
-    // 1. Obtenemos todos los datos
     const [lotes, salud, costos, seguimiento, ventas, agua] = await Promise.all([
-      fetch(`${API_URL}/lotes`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-      fetch(`${API_URL}/salud`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-      fetch(`${API_URL}/costos`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-      fetch(`${API_URL}/seguimiento`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-      fetch(`${API_URL}/ventas`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-      fetch(`${API_URL}/agua`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse) // Se añade agua
+      fetch(`${API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+      fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+      fetch(`${API_URL}/costos?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+      fetch(`${API_URL}/seguimiento?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+      fetch(`${API_URL}/ventas?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+      fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
     ]);
 
-    // 2. Cálculos (Ahora con 7 métricas)
+    // --- Cálculos ---
     let totalAvesInicial = 0;
     let totalMuertes = 0;
-    let totalVivos = 0;
-    let pesoPromedioActual = 0;
     let ultimosPesos = [];
 
     lotes.forEach(lote => {
-      // Suma la cantidad inicial de aves
-      totalAvesInicial += lote.cantidad;
-
-      // Calcula muertes por lote
-      const muertesLote = salud.filter(s => s.loteId === lote.id && s.tipo === 'Mortalidad').reduce((sum, s) => sum + s.cantidad, 0);
+      totalAvesInicial += lote.cantidadInicial || 0;
+      // Las muertes ya se restaron, pero las contamos para la métrica
+      const muertesLote = salud.filter(s => s.loteId === lote.id && s.tipo.toLowerCase() === 'mortalidad').reduce((sum, s) => sum + s.cantidad, 0);
       totalMuertes += muertesLote;
 
-      // Encontrar el último peso registrado para este lote
-      const seguimientosLote = seguimiento
-        .filter(s => s.loteId === lote.id)
-        .sort((a, b) => b.semana - a.semana); // Ordenar por semana desc
-
+      const seguimientosLote = seguimiento.filter(s => s.loteId === lote.id).sort((a, b) => b.semana - a.semana);
       if (seguimientosLote.length > 0) {
         ultimosPesos.push(seguimientosLote[0].peso);
       }
     });
 
-    totalVivos = totalAvesInicial - totalMuertes;
-
-    // Calcula el promedio de los últimos pesos de CADA lote
-    if (ultimosPesos.length > 0) {
-      pesoPromedioActual = (ultimosPesos.reduce((a, b) => a + b, 0) / ultimosPesos.length).toFixed(2);
-    }
-
-    // Mortalidad Promedio
+    const totalVivos = lotes.filter(l => l.estado === 'disponible').reduce((sum, l) => sum + l.cantidad, 0);
+    const pesoPromedioActual = ultimosPesos.length ? (ultimosPesos.reduce((a, b) => a + b, 0) / ultimosPesos.length).toFixed(2) : 0;
     const mortalidadPromedio = (totalAvesInicial > 0) ? ((totalMuertes / totalAvesInicial) * 100).toFixed(2) : 0;
 
-    // Cálculos de Conversión (ICA)
     const conversiones = [];
     seguimiento.forEach(reg => {
       const lote = lotes.find(l => l.id === reg.loteId);
@@ -155,137 +169,126 @@ async function actualizarDashboard() {
     });
     const promedio = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2) : '0';
 
-    // Cálculos Financieros
     const totalCostos = costos.reduce((sum, c) => sum + c.monto, 0);
-    const totalIngresos = ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0);
+    const totalIngresos = ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0); // Asumiendo precio es por kg
     const rentabilidad = totalIngresos - totalCostos;
 
-    // 3. Poblar el HTML (con los 7 IDs del nuevo index.html)
-    document.getElementById('totalVivos').textContent = totalVivos;
-    document.getElementById('pesoPromedio').textContent = `${pesoPromedioActual} kg`;
-    document.getElementById('conversionPromedio').textContent = promedio(conversiones);
-    document.getElementById('mortalidadPromedio').textContent = `${mortalidadPromedio}%`;
-    document.getElementById('costosTotales').textContent = `$${totalCostos.toFixed(2)}`;
-    document.getElementById('ingresosTotales').textContent = `$${totalIngresos.toFixed(2)}`;
-    document.getElementById('rentabilidad').textContent = `$${rentabilidad.toFixed(2)}`;
+    // --- Poblar HTML ---
+    if (document.getElementById('totalVivos')) { // Chequeo de seguridad
+      document.getElementById('totalVivos').textContent = totalVivos;
+      document.getElementById('pesoPromedio').textContent = `${pesoPromedioActual} kg`;
+      document.getElementById('conversionPromedio').textContent = promedio(conversiones);
+      document.getElementById('mortalidadPromedio').textContent = `${mortalidadPromedio}%`;
+      document.getElementById('costosTotales').textContent = `$${totalCostos.toFixed(2)}`;
+      document.getElementById('ingresosTotales').textContent = `$${totalIngresos.toFixed(2)}`;
+      document.getElementById('rentabilidad').textContent = `$${rentabilidad.toFixed(2)}`;
+    }
 
   } catch (error) {
     console.error('Error al actualizar dashboard:', error);
   }
 }
 
-// --- mostrarCalendario ---
-async function mostrarCalendario() {
+async function handleJsonResponse(res) {
+  if (!res.ok) {
+    if (res.status === 401) logout(); // Si el token expira, desloguear
+    const text = await res.text();
+    console.error('Fetch error:', res.status, text);
+    throw new Error(`HTTP ${res.status}: ${text}`);
+  }
   try {
-    // 1. Traemos: Tu Agenda Manual y los Retiros Sanitarios (Automáticos)
+    const text = await res.text();
+    if (!text) return null; // Manejar respuestas vacías (ej: DELETE 204)
+    return JSON.parse(text); // Parsear el texto
+  } catch (e) {
+    console.error("Error al parsear JSON:", e, res);
+    throw new Error("Respuesta del servidor no es JSON válido.");
+  }
+}
+
+// --- V 3.0: GRÁFICOS BLINDADOS ---
+async function mostrarCalendario() {
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
+  try {
     const [agendaRes, saludRes] = await Promise.all([
-      fetch(`${API_URL}/agenda`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
-      fetch(`${API_URL}/salud`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      fetch(`${API_URL}/agenda?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
+      fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
     ]);
 
     const agendaData = await handleJsonResponse(agendaRes);
     const saludData = await handleJsonResponse(saludRes);
-
     const eventosMapa = [];
 
-    // A. Añadir tus eventos manuales (Configuración)
-    agendaData.forEach(ev => {
-      eventosMapa.push({
-        date: ev.fecha,
-        title: `AGENDA: ${ev.descripcion}`, // Ej: "AGENDA: Vacunar Lote 001..."
-        tipo: 'pendiente' // Los pintaremos de amarillo/naranja
-      });
-    });
-
-    // B. Añadir alertas de seguridad (Desde Salud)
-    saludData.forEach(s => {
-      if (s.fechaRetiro) {
+    if (agendaData) {
+      agendaData.forEach(ev => {
         eventosMapa.push({
-          date: s.fechaRetiro.split('T')[0],
-          title: `BIOSEGURIDAD: Fin Retiro ${s.nombre} (Lote ${s.loteId})`,
-          tipo: 'retiro' // Los pintaremos de rojo
+          date: ev.fecha,
+          title: `AGENDA: ${ev.descripcion}`,
+          tipo: 'pendiente'
         });
-      }
-    });
+      });
+    }
+    if (saludData) {
+      saludData.forEach(s => {
+        if (s.fechaRetiro) {
+          eventosMapa.push({
+            date: s.fechaRetiro.split('T')[0],
+            title: `BIOSEGURIDAD: Fin Retiro ${s.nombre} (Lote ${s.loteId})`,
+            tipo: 'retiro'
+          });
+        }
+      });
+    }
 
-    // 3. Inicializar Calendario
     flatpickr("#calendario-container", {
       inline: true,
       locale: "es",
-      enable: [
-        { from: "today", to: "today" },
-        ...eventosMapa.map(e => e.date)
-      ],
-
-      // Dibujar los puntos de colores
+      enable: [{ from: "today", to: "today" }, ...eventosMapa.map(e => e.date)],
       onDayCreate: function (dObj, dStr, fp, dayElem) {
         const fechaStr = dayElem.dateObj.toISOString().split('T')[0];
         const eventosDelDia = eventosMapa.filter(e => e.date === fechaStr);
 
         if (eventosDelDia.length > 0) {
-          // Prioridad de colores: Rojo (Retiro) > Amarillo (Agenda)
           if (eventosDelDia.some(e => e.tipo === 'retiro')) {
             dayElem.classList.add('evento-retiro');
           } else {
             dayElem.classList.add('evento-pendiente');
           }
-
-          // Tooltip nativo al pasar el mouse
           dayElem.title = eventosDelDia.map(e => e.title).join('\n');
         }
       },
-
-      // Al hacer clic en una fecha
       onChange: function (selectedDates, dateStr, instance) {
         const eventosHoy = eventosMapa.filter(e => e.date === dateStr);
-
         if (eventosHoy.length > 0) {
-          // Muestra la lista de tareas para ese día
           const mensaje = eventosHoy.map(e => `• ${e.title}`).join('\n');
           alert(`📅 Actividades para el ${dateStr}:\n\n${mensaje}`);
-        } else {
-          // Si haces clic en hoy y no hay nada
-          alert(`No hay actividades programadas para el ${dateStr}.`);
         }
       }
     });
 
-    // Inyección de estilos para los colores (si no existen)
     const estiloId = 'estilos-calendario-vincwill';
     if (!document.getElementById(estiloId)) {
       const style = document.createElement('style');
       style.id = estiloId;
       style.innerHTML = `
-        .evento-retiro {
-          background-color: #e74c3c !important; /* Rojo Alerta */
-          color: white !important;
-          border: 1px solid #c0392b !important;
-        }
-        .evento-pendiente {
-          background-color: #f39c12 !important; /* Naranja Agenda */
-          color: white !important;
-          font-weight: bold;
-        }
-        /* Efecto hover */
-        .flatpickr-day.evento-pendiente:hover {
-           background-color: #d35400 !important;
-        }
+        .evento-retiro { background-color: #e74c3c !important; color: white !important; border: 1px solid #c0392b !important; }
+        .evento-pendiente { background-color: #f39c12 !important; color: white !important; font-weight: bold; }
+        .flatpickr-day.evento-pendiente:hover { background-color: #d35400 !important; }
       `;
       document.head.appendChild(style);
     }
-
-  } catch (error) {
-    console.error('Error al mostrar calendario:', error);
-  }
+  } catch (error) { console.error('Error al mostrar calendario:', error); }
 }
 
-// --- NUEVA FUNCIÓN: mostrarGraficoAgua ---
 async function mostrarGraficoAgua() {
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
   try {
-    const res = await fetch(`${API_URL}/agua`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+    const res = await fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
     const aguaData = await handleJsonResponse(res);
+    if (!aguaData) return;
 
-    // Agrupar consumo por día (últimos 7 días)
     const hoy = new Date();
     const dataPorDia = {};
     for (let i = 6; i >= 0; i--) {
@@ -294,54 +297,41 @@ async function mostrarGraficoAgua() {
       const fechaStr = fecha.toISOString().split('T')[0];
       dataPorDia[fechaStr] = 0;
     }
-
     aguaData.forEach(r => {
       const fechaStr = r.fecha.split('T')[0];
       if (dataPorDia[fechaStr] !== undefined) {
         dataPorDia[fechaStr] += r.cantidad;
       }
     });
-
     const labels = Object.keys(dataPorDia).map(d => new Date(d).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }));
     const data = Object.values(dataPorDia);
 
     const ctx = document.getElementById('aguaChart').getContext('2d');
     new Chart(ctx, {
       type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Consumo de Agua (Litros)',
-          data: data,
-          backgroundColor: '#3498db'
-        }]
-      },
+      data: { labels, datasets: [{ label: 'Consumo de Agua (Litros)', data: data, backgroundColor: '#3498db' }] },
       options: { scales: { y: { beginAtZero: true } } }
     });
-  } catch (error) {
-    console.error('Error en gráfico de agua:', error);
-  }
+  } catch (error) { console.error('Error en gráfico de agua:', error); }
 }
 
-// --- Funciones de Gráficos (Sin cambios) ---
 function mostrarGraficosDashboard() {
-  fetch(`${API_URL}/seguimiento`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
+  fetch(`${API_URL}/seguimiento?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
     .then(handleJsonResponse)
     .then(seguimiento => {
+      if (!seguimiento) return;
       const labels = [...new Set(seguimiento.map(reg => `Semana ${reg.semana}`))].sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
       const dataPeso = labels.map(label => {
         const semana = parseInt(label.split(' ')[1]);
         const pesos = seguimiento.filter(reg => reg.semana === semana).map(reg => reg.peso);
         return pesos.length ? pesos.reduce((a, b) => a + b) / pesos.length : 0;
       });
-
       const ctx = document.getElementById('produccionChart').getContext('2d');
       new Chart(ctx, {
         type: 'line',
-        data: {
-          labels,
-          datasets: [{ label: 'Peso Promedio (kg)', data: dataPeso, borderColor: 'blue', tension: 0.1 }]
-        },
+        data: { labels, datasets: [{ label: 'Peso Promedio (kg)', data: dataPeso, borderColor: 'blue', tension: 0.1 }] },
         options: { scales: { y: { beginAtZero: true } } }
       });
     })
@@ -349,80 +339,72 @@ function mostrarGraficosDashboard() {
 }
 
 function mostrarCostosPieChart() {
-  fetch(`${API_URL}/costos`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
+  fetch(`${API_URL}/costos?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
     .then(handleJsonResponse)
     .then(costos => {
+      if (!costos) return;
       const categories = {};
       costos.forEach(c => {
         categories[c.categoria] = (categories[c.categoria] || 0) + c.monto;
       });
-
       const labels = Object.keys(categories);
       const data = Object.values(categories);
-
       const ctx = document.getElementById('costosPieChart').getContext('2d');
       new Chart(ctx, {
         type: 'pie',
-        data: {
-          labels,
-          datasets: [{
-            data,
-            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
-          }]
-        },
-        options: {
-          responsive: true,
-        }
+        data: { labels, datasets: [{ data, backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'] }] },
+        options: { responsive: true }
       });
     })
     .catch(error => console.error('Error en gráfico de costos:', error));
 }
 
 function mostrarIngresosCostosBarChart() {
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
   Promise.all([
-    fetch(`${API_URL}/lotes`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-    fetch(`${API_URL}/ventas`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-    fetch(`${API_URL}/costos`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
+    fetch(`${API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+    fetch(`${API_URL}/ventas?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+    fetch(`${API_URL}/costos?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
   ])
     .then(([lotes, ventas, costos]) => {
+      if (!lotes || !ventas || !costos) return;
       const dataIngresos = {};
       const dataCostos = {};
-
       lotes.forEach(l => {
         dataIngresos[l.loteId] = ventas.filter(v => v.loteId === l.id).reduce((sum, v) => sum + (v.peso * v.precio), 0);
         dataCostos[l.loteId] = costos.filter(c => c.loteId === l.id).reduce((sum, c) => sum + c.monto, 0);
       });
-
       const labels = Object.keys(dataIngresos);
       const ingresosData = Object.values(dataIngresos);
       const costosData = Object.values(dataCostos);
-
       const ctx = document.getElementById('ingresosCostosBarChart').getContext('2d');
       new Chart(ctx, {
         type: 'bar',
         data: {
-          labels,
-          datasets: [
+          labels, datasets: [
             { label: 'Ingresos ($)', data: ingresosData, backgroundColor: '#36A2EB' },
             { label: 'Costos ($)', data: costosData, backgroundColor: '#FF6384' }
           ]
         },
-        options: {
-          responsive: true,
-          scales: { y: { beginAtZero: true } },
-        }
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
       });
     })
     .catch(error => console.error('Error en gráfico de ingresos/costos:', error));
 }
 
 function mostrarAlertasProduccion() {
-  fetch(`${API_URL}/salud`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
+  fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
     .then(handleJsonResponse)
     .then(salud => {
+      if (!salud) return;
       const alertasList = document.getElementById('alertasList');
       alertasList.innerHTML = '';
-      const mortalidadAlta = salud.filter(s => s.tipo === 'Mortalidad' && s.cantidad > 10);
+      const mortalidadAlta = salud.filter(s => s.tipo.toLowerCase() === 'mortalidad' && s.cantidad > 10);
       if (mortalidadAlta.length > 0) {
         mortalidadAlta.forEach(s => {
           const li = document.createElement('li');
@@ -436,33 +418,34 @@ function mostrarAlertasProduccion() {
     .catch(error => console.error('Error en alertas:', error));
 }
 
-// --- MODIFICADO: DOMContentLoaded ---
+// --- DOMContentLoaded (MODIFICADO) ---
 document.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname.split('/').pop();
 
   if (path !== 'login.html') {
-    checkAccess();
-  }
-
-  if (path === 'index.html') {
-    actualizarDashboard();
-    mostrarCalendario(); // <--- NUEVA LLAMADA
-    mostrarGraficosDashboard();
-    mostrarCostosPieChart();
-    mostrarIngresosCostosBarChart();
-    mostrarGraficoAgua(); // <--- NUEVA LLAMADA
-    mostrarAlertasProduccion();
+    checkAccess(); // Se ejecuta en TODAS las páginas (excepto login)
   }
 
   if (path === 'login.html') {
     const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-      loginForm.onsubmit = login;
+    if (loginForm) loginForm.onsubmit = login;
+  }
+
+  if (path === 'index.html') {
+    const granja = JSON.parse(localStorage.getItem('selectedGranja'));
+    if (granja) {
+      document.querySelector('header h1').textContent = `Dashboard (${granja.nombre})`;
     }
+    actualizarDashboard();
+    mostrarCalendario();
+    mostrarGraficosDashboard();
+    mostrarCostosPieChart();
+    mostrarIngresosCostosBarChart();
+    mostrarGraficoAgua();
+    mostrarAlertasProduccion();
   }
 });
 
-// --- (pageshow sin cambios) ---
 window.addEventListener('pageshow', (event) => {
   if (event.persisted) {
     window.location.reload();

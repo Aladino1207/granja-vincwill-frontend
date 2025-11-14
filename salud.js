@@ -1,18 +1,24 @@
-// --- Lógica de Carga (sin cambios) ---
+// --- Lógica de Carga (BLINDADA) ---
 async function cargarLotesForSelect() {
   try {
-    const res = await fetch(`${window.API_URL}/lotes`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${API_URL}/lotes?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
-    const select = document.getElementById('loteId');
+    const select = document.getElementById('loteId'); // ID del select en salud.html
     if (!select) throw new Error('Elemento loteId no encontrado');
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
     lotes.forEach(lote => {
       const option = document.createElement('option');
       option.value = lote.id;
-      option.textContent = `${lote.loteId}`;
+      option.textContent = `${lote.loteId} (Stock: ${lote.cantidad})`;
       select.appendChild(option);
     });
   } catch (error) {
@@ -22,8 +28,14 @@ async function cargarLotesForSelect() {
 
 async function cargarSalud() {
   try {
-    const res = await fetch(`${window.API_URL}/salud`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${API_URL}/salud?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const salud = await res.json();
@@ -33,7 +45,7 @@ async function cargarSalud() {
       salud.forEach(s => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${s.loteId || 'N/A'}</td>
+          <td>${s.loteId || 'N/A'}</td> 
           <td>${s.tipo || 'N/A'}</td>
           <td>${s.nombre || 'N/A'}</td>
           <td>${s.cantidad || 0}</td>
@@ -53,16 +65,13 @@ async function cargarSalud() {
   }
 }
 
-// --- LÓGICA DEL FORMULARIO DESPLEGABLE ---
-
+// --- LÓGICA DEL FORMULARIO DESPLEGABLE (Sin cambios) ---
 function abrirFormulario() {
   document.getElementById('formContainer').classList.add('is-open');
   document.getElementById('toggleFormBtn').textContent = 'Cancelar';
 }
-
 function cerrarFormulario() {
-  const formContainer = document.getElementById('formContainer');
-  formContainer.classList.remove('is-open');
+  document.getElementById('formContainer').classList.remove('is-open');
   document.getElementById('toggleFormBtn').textContent = 'Registrar Nuevo Evento';
 
   document.getElementById('saludForm').reset();
@@ -70,13 +79,16 @@ function cerrarFormulario() {
   document.getElementById('formTitle').textContent = 'Registrar Evento de Salud';
 }
 
-// --- Funciones CRUD (Modificadas) ---
+// --- Funciones CRUD (BLINDADAS) ---
 
 async function guardarSalud(e) {
   e.preventDefault();
 
   const saludId = document.getElementById('saludId').value;
   const esEdicion = !!saludId;
+  // V 3.0: Obtenemos la granja activa
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
 
   // Lógica de cálculo de fecha de retiro
   const diasRetiro = parseInt(document.getElementById('diasRetiro').value) || 0;
@@ -93,20 +105,22 @@ async function guardarSalud(e) {
     nombre: document.getElementById('nombre').value,
     cantidad: parseFloat(document.getElementById('cantidad').value),
     fecha: document.getElementById('fecha').value,
-    fechaRetiro: fechaRetiroCalculada
+    fechaRetiro: fechaRetiroCalculada,
+    granjaId: granjaId // V 3.0: Añadido
   };
 
   const url = esEdicion
-    ? `${window.API_URL}/salud/${saludId}`
-    : `${window.API_URL}/salud`;
+    ? `${API_URL}/salud/${saludId}`
+    : `${API_URL}/salud`;
   const method = esEdicion ? 'PUT' : 'POST';
 
   try {
+    const token = localStorage.getItem('token');
     const res = await fetch(url, {
       method: method,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`
+        Authorization: `Bearer ${token}`
       },
       body: JSON.stringify(salud)
     });
@@ -114,9 +128,13 @@ async function guardarSalud(e) {
     if (res.ok) {
       cerrarFormulario();
       await cargarSalud();
+      // Si fue mortalidad, recargamos los lotes para ver el stock actualizado
+      if (salud.tipo.toLowerCase() === 'mortalidad') {
+        await cargarLotesForSelect();
+      }
     } else {
-      const errorText = await res.text();
-      alert('Error al guardar: ' + (errorText || 'Desconocido'));
+      const errorText = await res.json();
+      alert('Error al guardar: ' + (errorText.error || 'Desconocido'));
     }
   } catch (error) {
     alert('Error de conexión');
@@ -125,8 +143,14 @@ async function guardarSalud(e) {
 
 async function editarSalud(id) {
   try {
-    const res = await fetch(`${window.API_URL}/salud/${id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${API_URL}/salud/${id}?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('No se pudo cargar el evento');
     const s = await res.json();
@@ -159,22 +183,37 @@ async function editarSalud(id) {
 }
 
 async function eliminarSalud(id) {
-  if (confirm('¿Seguro que quieres eliminar este evento?')) {
+  // NOTA: El backend V 3.0 NO revierte el stock al eliminar mortalidad (por simplicidad)
+  if (confirm('¿Seguro que quieres eliminar este evento? (Esto NO devolverá stock si fue una mortalidad)')) {
     try {
-      await fetch(`${window.API_URL}/salud/${id}`, {
+      const token = localStorage.getItem('token');
+      // V 3.0: Obtenemos la granja activa
+      const granjaId = getSelectedGranjaId();
+      if (!granjaId) return;
+
+      // V 3.0: Añadimos granjaId al fetch
+      await fetch(`${API_URL}/salud/${id}?granjaId=${granjaId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       cargarSalud();
+      // Recargamos lotes por si acaso la lógica de backend cambia
+      cargarLotesForSelect();
     } catch (error) {
       alert('Error al eliminar evento');
     }
   }
 }
 
-// --- Event Listener Principal ---
+// --- Event Listener Principal (BLINDADO) ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const granja = JSON.parse(localStorage.getItem('selectedGranja'));
+
+  // V 3.0: Poner el nombre de la granja en el título
+  if (granja) {
+    document.querySelector('header h1').textContent = `Salud (${granja.nombre})`;
+  }
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
@@ -189,9 +228,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isOpen) {
         cerrarFormulario();
       } else {
-        document.getElementById('formTitle').textContent = 'Registrar Evento de Salud';
         form.reset();
         document.getElementById('saludId').value = '';
+        formTitle.textContent = 'Registrar Evento de Salud';
         abrirFormulario();
       }
     });

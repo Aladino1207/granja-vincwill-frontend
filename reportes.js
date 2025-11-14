@@ -1,27 +1,39 @@
+// --- Lógica de Carga (BLINDADA) ---
 async function cargarLotesForSelect() {
   try {
-    const res = await fetch(`${window.API_URL}/lotes`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${API_URL}/lotes?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
     const select = document.getElementById('loteSelect');
-    if (!select) throw new Error('Elemento loteSelect no encontrado');
     select.innerHTML = '<option value="">Todos los Lotes</option>';
     lotes.forEach(lote => {
       const option = document.createElement('option');
       option.value = lote.id;
-      option.textContent = `${lote.loteId} (Cantidad: ${lote.cantidad})`;
+      option.textContent = `${lote.loteId}`;
       select.appendChild(option);
     });
   } catch (error) {
     console.error('Error al cargar lotes para select:', error);
-    alert('Error al cargar lotes: ' + error.message);
   }
 }
 
+// --- Funciones de Reporte (BLINDADAS) ---
+
 async function generarReporte(e) {
   e.preventDefault();
+  const token = localStorage.getItem('token');
+  // V 3.0: Obtenemos la granja activa
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
+
   const tipoReporte = document.getElementById('tipoReporte').value;
   const loteId = document.getElementById('loteSelect').value || '';
   const fechaInicio = document.getElementById('fechaInicio').value;
@@ -32,38 +44,61 @@ async function generarReporte(e) {
     return;
   }
 
+  // Deshabilitar botón de PDF mientras se carga
+  const pdfBtn = document.getElementById('pdfBtn');
+  pdfBtn.disabled = true;
+  pdfBtn.textContent = 'Generando...';
+
   try {
-    const res = await fetch(`${window.API_URL}/reporte`, {
+    const res = await fetch(`${API_URL}/reporte`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`
+        Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({ tipoReporte, loteId, fechaInicio, fechaFin })
+      // V 3.0: Añadimos granjaId al body
+      body: JSON.stringify({
+        tipoReporte,
+        loteId,
+        fechaInicio,
+        fechaFin,
+        granjaId
+      })
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const data = await res.json();
-    mostrarPrevisualizacion(data);
-    generarPDF(data, tipoReporte);
+
+    mostrarPrevisualizacion(data, tipoReporte);
+
+    // Habilitamos el botón de PDF
+    pdfBtn.disabled = false;
+    pdfBtn.textContent = 'Generar Reporte PDF';
+    // Asignamos el evento con los datos ya cargados
+    pdfBtn.onclick = () => {
+      generarPDF(data, tipoReporte, fechaInicio, fechaFin);
+    };
+
   } catch (error) {
     console.error('Error al generar reporte:', error);
     alert('Error al generar reporte: ' + error.message);
+    pdfBtn.textContent = 'Generar Reporte PDF'; // Restaurar botón
   }
 }
 
-function mostrarPrevisualizacion(data) {
+function mostrarPrevisualizacion(data, tipoReporte) {
   const tbody = document.getElementById('reporteTableBody');
   const thead = document.getElementById('reporteTableHead');
   tbody.innerHTML = '';
   thead.innerHTML = '';
 
-  if (!data || !data.length) {
+  if (!data || data.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5">No hay datos para mostrar</td></tr>';
     return;
   }
 
+  // Usamos el primer objeto para sacar los headers
   const headers = Object.keys(data[0]);
-  thead.innerHTML = `<tr>${headers.map(h => `<th>${h.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</th>`).join('')}</tr>`;
+  thead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
 
   data.forEach(row => {
     const tr = document.createElement('tr');
@@ -72,49 +107,61 @@ function mostrarPrevisualizacion(data) {
   });
 }
 
-function generarPDF(data, tipoReporte) {
+function generarPDF(data, tipoReporte, fechaInicio, fechaFin) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
+  const granja = JSON.parse(localStorage.getItem('selectedGranja'));
 
   // Encabezado
   doc.setFontSize(18);
-  doc.text(`Reporte de ${tipoReporte.charAt(0).toUpperCase() + tipoReporte.slice(1)}`, 10, 10);
+  doc.text(`Reporte de ${tipoReporte.charAt(0).toUpperCase() + tipoReporte.slice(1)}`, 14, 22);
   doc.setFontSize(12);
-  doc.text(`Granja Avícola VincWill - Generado el: ${new Date().toLocaleString()}`, 10, 15);
-  if (data.length) {
-    doc.text(`Período: ${data[0].fecha} a ${data[data.length - 1].fecha}`, 10, 20);
-  }
+  doc.text(`Granja: ${granja.nombre || 'N/A'}`, 14, 30);
+  doc.setFontSize(10);
+  doc.text(`Período: ${fechaInicio} a ${fechaFin}`, 14, 36);
+  doc.text(`Generado el: ${new Date().toLocaleString()}`, 14, 42);
 
   // Tabla
-  if (data && data.length) {
+  if (data && data.length > 0) {
+    const headers = Object.keys(data[0]);
+    const body = data.map(row => Object.values(row));
+
     doc.autoTable({
-      head: [Object.keys(data[0]).map(h => h.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()))],
-      body: data.map(row => Object.values(row)),
-      startY: 30,
-      styles: { overflow: 'linebreak', fontSize: 10, cellPadding: 2 },
-      headStyles: { fillColor: [22, 160, 133], textColor: [255, 255, 255], fontSize: 12 },
-      columnStyles: { text: { cellWidth: 'auto' } }
+      head: [headers],
+      body: body,
+      startY: 50,
+      styles: { overflow: 'linebreak', fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [44, 62, 80], textColor: [255, 255, 255], fontSize: 9 },
     });
   } else {
-    doc.text('No hay datos disponibles para este reporte.', 10, 30);
+    doc.text('No hay datos disponibles para este reporte.', 14, 50);
   }
 
   // Pie de página
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    doc.text(`Página ${i} de ${pageCount}`, 190, 290);
-    doc.text('© 2025 Granja Avícola VincWill', 10, 290);
+    doc.setFontSize(9);
+    doc.text(`Página ${i} de ${pageCount}`, 190, 285, { align: 'right' });
   }
 
   doc.save(`reporte_${tipoReporte}_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
+// --- Event Listener Principal (BLINDADO) ---
 document.addEventListener('DOMContentLoaded', () => {
-  const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-  if (currentUser && currentUser.role !== 'viewer') {
-    document.getElementById('reporteForm').style.display = 'grid';
-    document.getElementById('reporteTable').style.display = 'table';
+  const granja = JSON.parse(localStorage.getItem('selectedGranja'));
+
+  // V 3.0: Poner el nombre de la granja en el título
+  if (granja) {
+    document.querySelector('header h1').textContent = `Reportes (${granja.nombre})`;
   }
-  cargarLotesForSelect();
+
+  // Deshabilitar botón de PDF hasta que se generen datos
+  document.getElementById('pdfBtn').disabled = true;
+
+  // Asignar el evento al formulario principal
+  document.getElementById('reporteForm').onsubmit = generarReporte;
+
+  cargarLotesForSelect(); // Carga lotes de esta granja
 });

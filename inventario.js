@@ -1,8 +1,14 @@
-// --- Lógica de Carga ---
+// --- Lógica de Carga (BLINDADA) ---
 async function cargarInventario() {
   try {
-    const res = await fetch(`${window.API_URL}/inventario`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${API_URL}/inventario?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const inventario = await res.json();
@@ -32,36 +38,37 @@ async function cargarInventario() {
   }
 }
 
-// --- LÓGICA DEL FORMULARIO DESPLEGABLE ---
-
+// --- LÓGICA DEL FORMULARIO DESPLEGABLE (Sin cambios) ---
 function abrirFormulario() {
   document.getElementById('formContainer').classList.add('is-open');
   document.getElementById('toggleFormBtn').textContent = 'Cancelar';
 }
-
 function cerrarFormulario() {
   document.getElementById('formContainer').classList.remove('is-open');
   document.getElementById('toggleFormBtn').textContent = 'Registrar Nuevo Insumo';
-
   document.getElementById('inventarioForm').reset();
   document.getElementById('inventarioId').value = '';
   document.getElementById('formTitle').textContent = 'Registrar Insumo';
 }
 
-// --- Funciones CRUD (Modificadas) ---
+// --- Funciones CRUD (BLINDADAS) ---
 
 async function guardarInventario(e) {
   e.preventDefault();
 
   const inventarioId = document.getElementById('inventarioId').value;
   const esEdicion = !!inventarioId;
+  // V 3.0: Obtenemos la granja activa
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
 
   const inventario = {
     producto: document.getElementById('producto').value,
     categoria: document.getElementById('categoria').value,
     cantidad: parseFloat(document.getElementById('cantidad').value),
     costo: parseFloat(document.getElementById('costo').value),
-    fecha: document.getElementById('fecha').value
+    fecha: document.getElementById('fecha').value,
+    granjaId: granjaId // V 3.0: Añadido
   };
 
   const url = esEdicion
@@ -70,11 +77,12 @@ async function guardarInventario(e) {
   const method = esEdicion ? 'PUT' : 'POST';
 
   try {
+    const token = localStorage.getItem('token');
     const res = await fetch(url, {
       method: method,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`
+        Authorization: `Bearer ${token}`
       },
       body: JSON.stringify(inventario)
     });
@@ -83,8 +91,8 @@ async function guardarInventario(e) {
       cerrarFormulario();
       await cargarInventario();
     } else {
-      const errorText = await res.text();
-      alert('Error al guardar: ' + (errorText || 'Desconocido'));
+      const errorText = await res.json();
+      alert('Error al guardar: ' + (errorText.error || 'Desconocido'));
     }
   } catch (error) {
     alert('Error de conexión');
@@ -93,8 +101,14 @@ async function guardarInventario(e) {
 
 async function editarInventario(id) {
   try {
-    const res = await fetch(`${window.API_URL}/inventario/${id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${API_URL}/inventario/${id}?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('No se pudo cargar el item');
     const item = await res.json();
@@ -118,9 +132,15 @@ async function editarInventario(id) {
 async function eliminarInventario(id) {
   if (confirm('¿Seguro que quieres eliminar este insumo?')) {
     try {
-      await fetch(`${window.API_URL}/inventario/${id}`, {
+      const token = localStorage.getItem('token');
+      // V 3.0: Obtenemos la granja activa
+      const granjaId = getSelectedGranjaId();
+      if (!granjaId) return;
+
+      // V 3.0: Añadimos granjaId al fetch
+      await fetch(`${API_URL}/inventario/${id}?granjaId=${granjaId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       cargarInventario();
     } catch (error) {
@@ -129,9 +149,15 @@ async function eliminarInventario(id) {
   }
 }
 
-// --- Event Listener Principal ---
+// --- Event Listener Principal (BLINDADO) ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const granja = JSON.parse(localStorage.getItem('selectedGranja'));
+
+  // V 3.0: Poner el nombre de la granja en el título
+  if (granja) {
+    document.querySelector('header h1').textContent = `Inventario (${granja.nombre})`;
+  }
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
@@ -146,9 +172,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isOpen) {
         cerrarFormulario();
       } else {
-        document.getElementById('formTitle').textContent = 'Registrar Insumo';
         form.reset();
         document.getElementById('inventarioId').value = '';
+        formTitle.textContent = 'Registrar Insumo';
         abrirFormulario();
       }
     });

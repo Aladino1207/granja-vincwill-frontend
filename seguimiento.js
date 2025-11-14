@@ -1,13 +1,18 @@
-// --- Lógica de Carga ---
+// --- Lógica de Carga (BLINDADA) ---
 async function cargarLotesForSelect() {
   try {
-    const res = await fetch(`${window.API_URL}/lotes`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
     const select = document.getElementById('loteSelect');
-    if (!select) throw new Error('Elemento loteSelect no encontrado');
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
     lotes.forEach(lote => {
       const option = document.createElement('option');
@@ -22,14 +27,20 @@ async function cargarLotesForSelect() {
 
 async function cargarAlimentosParaSelect() {
   try {
-    const res = await fetch(`${window.API_URL}/inventario`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${window.API_URL}/inventario?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const inventario = await res.json();
     const select = document.getElementById('alimentoSelect');
-    if (!select) throw new Error('Elemento alimentoSelect no encontrado');
 
+    // Filtramos solo por categoría "Alimento"
     const alimentos = inventario.filter(item => item.categoria === 'Alimento');
     select.innerHTML = '<option value="">Selecciona un Alimento</option>';
 
@@ -46,8 +57,14 @@ async function cargarAlimentosParaSelect() {
 
 async function cargarSeguimiento() {
   try {
-    const res = await fetch(`${window.API_URL}/seguimiento`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${window.API_URL}/seguimiento?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const seguimiento = await res.json();
@@ -78,29 +95,29 @@ async function cargarSeguimiento() {
   }
 }
 
-// --- LÓGICA DEL FORMULARIO DESPLEGABLE ---
-
+// --- LÓGICA DEL FORMULARIO DESPLEGABLE (Sin cambios) ---
 function abrirFormulario() {
   document.getElementById('formContainer').classList.add('is-open');
   document.getElementById('toggleFormBtn').textContent = 'Cancelar';
 }
-
 function cerrarFormulario() {
   document.getElementById('formContainer').classList.remove('is-open');
   document.getElementById('toggleFormBtn').textContent = 'Registrar Seguimiento';
-
   document.getElementById('seguimientoForm').reset();
   document.getElementById('seguimientoId').value = '';
   document.getElementById('formTitle').textContent = 'Registrar Seguimiento';
 }
 
-// --- Funciones CRUD (Modificadas) ---
+// --- Funciones CRUD (BLINDADAS) ---
 
 async function guardarSeguimiento(e) {
   e.preventDefault();
 
   const seguimientoId = document.getElementById('seguimientoId').value;
   const esEdicion = !!seguimientoId;
+  // V 3.0: Obtenemos la granja activa
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
 
   const seguimiento = {
     loteId: parseInt(document.getElementById('loteSelect').value),
@@ -109,7 +126,8 @@ async function guardarSeguimiento(e) {
     peso: parseFloat(document.getElementById('peso').value),
     consumo: parseFloat(document.getElementById('consumo').value),
     observaciones: document.getElementById('observaciones').value,
-    fecha: document.getElementById('fecha').value
+    fecha: document.getElementById('fecha').value,
+    granjaId: granjaId // V 3.0: Añadido
   };
 
   const url = esEdicion
@@ -118,11 +136,12 @@ async function guardarSeguimiento(e) {
   const method = esEdicion ? 'PUT' : 'POST';
 
   try {
+    const token = localStorage.getItem('token');
     const res = await fetch(url, {
       method: method,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`
+        Authorization: `Bearer ${token}`
       },
       body: JSON.stringify(seguimiento)
     });
@@ -132,8 +151,8 @@ async function guardarSeguimiento(e) {
       await cargarSeguimiento();
       await cargarAlimentosParaSelect(); // Recarga el stock de alimentos
     } else {
-      const errorText = await res.text();
-      alert('Error al guardar: ' + (errorText || 'Desconocido'));
+      const errorText = await res.json();
+      alert('Error al guardar: ' + (errorText.error || 'Desconocido'));
     }
   } catch (error) {
     alert('Error de conexión');
@@ -142,8 +161,14 @@ async function guardarSeguimiento(e) {
 
 async function editarSeguimiento(id) {
   try {
-    const res = await fetch(`${window.API_URL}/seguimiento/${id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${window.API_URL}/seguimiento/${id}?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('No se pudo cargar el registro');
     const s = await res.json();
@@ -167,11 +192,18 @@ async function editarSeguimiento(id) {
 }
 
 async function eliminarSeguimiento(id) {
-  if (confirm('¿Seguro que quieres eliminar este seguimiento?')) {
+  // Nota: El backend V 3.0 NO revierte el stock de alimento al eliminar (por simplicidad)
+  if (confirm('¿Seguro que quieres eliminar este seguimiento? (Esto NO devolverá stock de alimento)')) {
     try {
-      await fetch(`${window.API_URL}/seguimiento/${id}`, {
+      const token = localStorage.getItem('token');
+      // V 3.0: Obtenemos la granja activa
+      const granjaId = getSelectedGranjaId();
+      if (!granjaId) return;
+
+      // V 3.0: Añadimos granjaId al fetch
+      await fetch(`${window.API_URL}/seguimiento/${id}?granjaId=${granjaId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       cargarSeguimiento();
     } catch (error) {
@@ -180,9 +212,15 @@ async function eliminarSeguimiento(id) {
   }
 }
 
-// --- Event Listener Principal ---
+// --- Event Listener Principal (BLINDADO) ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const granja = JSON.parse(localStorage.getItem('selectedGranja'));
+
+  // V 3.0: Poner el nombre de la granja en el título
+  if (granja) {
+    document.querySelector('header h1').textContent = `Seguimiento (${granja.nombre})`;
+  }
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
@@ -197,9 +235,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isOpen) {
         cerrarFormulario();
       } else {
-        document.getElementById('formTitle').textContent = 'Registrar Seguimiento';
         form.reset();
         document.getElementById('seguimientoId').value = '';
+        formTitle.textContent = 'Registrar Seguimiento';
         abrirFormulario();
       }
     });

@@ -1,13 +1,17 @@
-// --- Lógica de Carga ---
+// --- Lógica de Carga (BLINDADA) ---
 async function cargarLotesForSelect() {
   try {
-    const res = await fetch(`${window.API_URL}/lotes`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
     const select = document.getElementById('loteSelect');
-    if (!select) throw new Error('Elemento loteSelect no encontrado');
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
     lotes.forEach(lote => {
       const option = document.createElement('option');
@@ -22,11 +26,15 @@ async function cargarLotesForSelect() {
 
 async function cargarAgua() {
   try {
-    const res = await fetch(`${window.API_URL}/agua`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
 
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${window.API_URL}/agua?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
     const registros = await res.json();
     const tbody = document.getElementById('aguaTableBody');
     tbody.innerHTML = '';
@@ -54,47 +62,48 @@ async function cargarAgua() {
 }
 
 // --- LÓGICA DEL FORMULARIO DESPLEGABLE ---
-
 function abrirFormulario() {
   document.getElementById('formContainer').classList.add('is-open');
   document.getElementById('toggleFormBtn').textContent = 'Cancelar';
 }
-
 function cerrarFormulario() {
   document.getElementById('formContainer').classList.remove('is-open');
   document.getElementById('toggleFormBtn').textContent = 'Registrar Consumo';
-
   document.getElementById('aguaForm').reset();
   document.getElementById('aguaId').value = '';
   document.getElementById('formTitle').textContent = 'Registrar Consumo de Agua';
 }
 
-// --- Funciones CRUD (Modificadas) ---
+// --- Funciones CRUD (BLINDADAS) ---
 
 async function guardarAgua(e) {
   e.preventDefault();
 
   const aguaId = document.getElementById('aguaId').value;
   const esEdicion = !!aguaId;
+  // V 3.0: Obtenemos la granja activa
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
 
   const registro = {
     loteId: parseInt(document.getElementById('loteSelect').value),
     cantidad: parseFloat(document.getElementById('cantidad').value),
-    fecha: document.getElementById('fecha').value
+    fecha: document.getElementById('fecha').value,
+    granjaId: granjaId // V 3.0: Añadido
   };
 
-  // AÑADIMOS LÓGICA DE EDITAR (Requiere endpoint PUT /agua/:id en backend)
   const url = esEdicion
     ? `${window.API_URL}/agua/${aguaId}`
     : `${window.API_URL}/agua`;
   const method = esEdicion ? 'PUT' : 'POST';
 
   try {
+    const token = localStorage.getItem('token');
     const res = await fetch(url, {
       method: method,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`
+        Authorization: `Bearer ${token}`
       },
       body: JSON.stringify(registro)
     });
@@ -103,18 +112,23 @@ async function guardarAgua(e) {
       await cargarAgua();
     } else {
       const error = await res.json();
-      alert('Error al guardar: ' + error.error);
+      alert('Error al guardar: ' + (error.error || 'Desconocido'));
     }
   } catch (error) {
     alert('Error de conexión al guardar');
   }
 }
 
-// AÑADIMOS FUNCIÓN DE EDITAR (Requiere endpoint GET /agua/:id en backend)
 async function editarAgua(id) {
   try {
-    const res = await fetch(`${window.API_URL}/agua/${id}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    const res = await fetch(`${API_URL}/agua/${id}?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('No se pudo cargar el registro');
     const r = await res.json();
@@ -130,17 +144,21 @@ async function editarAgua(id) {
 
   } catch (error) {
     console.error('Error al cargar datos para editar:', error);
-    alert('Error al cargar datos. Asegúrate que el backend tenga GET y PUT para /agua/:id');
   }
 }
-
 
 async function eliminarAgua(id) {
   if (confirm('¿Seguro que quieres eliminar este registro?')) {
     try {
-      const res = await fetch(`${window.API_URL}/agua/${id}`, {
+      const token = localStorage.getItem('token');
+      // V 3.0: Obtenemos la granja activa
+      const granjaId = getSelectedGranjaId();
+      if (!granjaId) return;
+
+      // V 3.0: Añadimos granjaId al fetch
+      const res = await fetch(`${API_URL}/agua/${id}?granjaId=${granjaId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
         cargarAgua();
@@ -153,9 +171,15 @@ async function eliminarAgua(id) {
   }
 }
 
-// --- Event Listener Principal ---
+// --- Event Listener Principal (BLINDADO) ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const granja = JSON.parse(localStorage.getItem('selectedGranja'));
+
+  // V 3.0: Poner el nombre de la granja en el título
+  if (granja) {
+    document.querySelector('header h1').textContent = `Consumo de Agua (${granja.nombre})`;
+  }
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
@@ -170,9 +194,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isOpen) {
         cerrarFormulario();
       } else {
-        document.getElementById('formTitle').textContent = 'Registrar Consumo de Agua';
         form.reset();
         document.getElementById('aguaId').value = '';
+        formTitle.textContent = 'Registrar Consumo de Agua';
         abrirFormulario();
       }
     });

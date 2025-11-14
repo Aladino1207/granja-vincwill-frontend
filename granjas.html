@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seleccionar Granja - VincWill 3.0</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <style>
+        /* Reutilizamos estilos de login.html para centrar */
+        body.login-page main {
+            max-width: 900px; /* Más ancho para mostrar tarjetas */
+        }
+        .granja-grid {
+            display: grid;
+            /* Crea columnas automáticas de 200px, 1fr = 1 fracción del espacio */
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: var(--espaciado-lg);
+        }
+        .granja-card {
+            border: 1px solid var(--color-borde);
+            border-radius: var(--borde-radio);
+            padding: var(--espaciado-lg);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            background-color: #fff;
+        }
+        .granja-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--sombra-caja);
+            border-color: var(--color-primario);
+        }
+        .granja-card h3 {
+            color: var(--color-primario);
+            margin-bottom: var(--espaciado-sm);
+        }
+        .granja-card p {
+            color: var(--color-texto-secundario);
+            font-size: 0.9rem;
+            margin: 0;
+        }
+    </style>
+</head>
+<!-- Usamos la clase 'login-page' de styles.css para centrar el layout -->
+<body class="login-page"> 
+
+    <main class="login-container">
+        <section class="card" style="padding: var(--espaciado-xl);">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="margin: 0;">Selecciona tu Granja</h2>
+                <!-- El botón de logout es vital aquí -->
+                <button onclick="logout()" class="btn btn-peligro btn-sm">Cerrar Sesión</button>
+            </div>
+            
+            <p style="color: #666; margin-bottom: 2rem;">
+                Hola, <span id="userName" style="font-weight: bold;">Usuario</span>. Elige una granja para continuar.
+            </p>
+
+            <div id="loadingMessage">
+                <p>Cargando granjas...</p>
+            </div>
+            
+            <!-- Aquí se dibujarán las tarjetas de las granjas -->
+            <div id="granjaGrid" class="granja-grid">
+                <!-- 
+                <div class="granja-card">
+                    <h3>Granja Principal</h3>
+                    <p>Matriz</p>
+                </div> 
+                -->
+            </div>
+        </section>
+    </main>
+
+    <!-- app.js DEBE cargarse primero para API_URL y logout() -->
+    <script src="app.js"></script> 
+    <script src="granjas.js"></script>
+</body>
+</html>

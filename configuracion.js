@@ -1,14 +1,23 @@
+// --- Configuración General (BLINDADA) ---
 async function cargarConfiguracion() {
   try {
-    const res = await fetch(`${window.API_URL}/config`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    // El backend (index.js) se encarga de 'findOrCreate' si no existe
+    const res = await fetch(`${window.API_URL}/config?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     const config = await res.json();
-    if (config.length > 0) {
-      document.getElementById('notificaciones').value = config[0].notificaciones;
-      document.getElementById('idioma').value = config[0].idioma;
-      document.getElementById('nombreGranja').value = config[0].nombreGranja;
-    }
+
+    // Rellenamos el formulario de config
+    document.getElementById('notificaciones').value = config.notificaciones;
+    document.getElementById('idioma').value = config.idioma;
+    document.getElementById('nombreGranja').value = config.nombreGranja;
+
   } catch (error) {
     console.error('Error al cargar config:', error);
   }
@@ -16,33 +25,54 @@ async function cargarConfiguracion() {
 
 async function guardarConfiguracion(e) {
   e.preventDefault();
-  // Enviamos vacunasGallinas vacío porque ya no usamos el sistema viejo
+  const token = localStorage.getItem('token');
+  // V 3.0: Obtenemos la granja activa
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
+
   const config = {
     notificaciones: document.getElementById('notificaciones').value,
     idioma: document.getElementById('idioma').value,
     nombreGranja: document.getElementById('nombreGranja').value,
-    vacunasGallinas: ''
+    granjaId: granjaId // V 3.0: Añadido
   };
   try {
+    // El backend (index.js) sabe que este POST es un "guardar o actualizar"
     const res = await fetch(`${window.API_URL}/config`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`
+        Authorization: `Bearer ${token}`
       },
       body: JSON.stringify(config)
     });
-    if (res.ok) alert('Ajustes generales guardados');
+    if (res.ok) {
+      alert('Ajustes guardados');
+      // Actualizar el nombre de la granja en el header
+      document.querySelector('header h1').textContent = `Configuración (${config.nombreGranja})`;
+      // Actualizar el nombre en localStorage para que el sidebar se actualice al recargar
+      const granjaData = JSON.parse(localStorage.getItem('selectedGranja'));
+      if (granjaData) {
+        granjaData.nombre = config.nombreGranja;
+        localStorage.setItem('selectedGranja', JSON.stringify(granjaData));
+      }
+    }
   } catch (error) {
     alert('Error de conexión');
   }
 }
 
-// --- NUEVA: Lógica de Agenda Manual ---
+// --- Lógica de Agenda (BLINDADA) ---
 async function cargarAgenda() {
   try {
-    const res = await fetch(`${window.API_URL}/agenda`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch (endpoint /agenda)
+    const res = await fetch(`${window.API_URL}/agenda?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     const eventos = await res.json();
     const tbody = document.getElementById('tablaAgendaBody');
@@ -55,7 +85,7 @@ async function cargarAgenda() {
 
     eventos.forEach(ev => {
       const tr = document.createElement('tr');
-      // Formateamos la fecha para que se vea amigable
+      // Usamos timeZone: 'UTC' para evitar corrimiento de fechas
       const fechaFormat = new Date(ev.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' });
 
       tr.innerHTML = `
@@ -72,9 +102,15 @@ async function cargarAgenda() {
 
 async function guardarEvento(e) {
   e.preventDefault();
+  const token = localStorage.getItem('token');
+  // V 3.0: Obtenemos la granja activa
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
+
   const nuevoEvento = {
     descripcion: document.getElementById('descEvento').value,
-    fecha: document.getElementById('fechaEvento').value
+    fecha: document.getElementById('fechaEvento').value,
+    granjaId: granjaId // V 3.0: Añadido
   };
 
   try {
@@ -82,15 +118,15 @@ async function guardarEvento(e) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`
+        Authorization: `Bearer ${token}`
       },
       body: JSON.stringify(nuevoEvento)
     });
     if (res.ok) {
       document.getElementById('agendaForm').reset();
-      cargarAgenda(); // Recarga la lista inmediatamente
+      cargarAgenda(); // Recarga la lista
     } else {
-      alert('Error al guardar el evento');
+      alert('Error al guardar evento');
     }
   } catch (error) {
     console.error(error);
@@ -99,19 +135,34 @@ async function guardarEvento(e) {
 
 async function eliminarEvento(id) {
   if (confirm('¿Borrar esta actividad de la agenda?')) {
-    await fetch(`${window.API_URL}/agenda/${id}`, {
+    const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // V 3.0: Añadimos granjaId al fetch
+    await fetch(`${window.API_URL}/agenda/${id}?granjaId=${granjaId}`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      headers: { Authorization: `Bearer ${token}` }
     });
     cargarAgenda();
   }
 }
 
-// --- Inicialización ---
+// --- Inicialización (BLINDADA) ---
 document.addEventListener('DOMContentLoaded', () => {
-  cargarConfiguracion();
-  cargarAgenda(); // <--- Carga tus tareas
+  const granja = JSON.parse(localStorage.getItem('selectedGranja'));
 
+  // V 3.0: Poner el nombre de la granja en el título
+  if (granja) {
+    document.querySelector('header h1').textContent = `Configuración (${granja.nombre})`;
+  }
+
+  // Cargar datos
+  cargarConfiguracion();
+  cargarAgenda();
+
+  // Vincular formularios
   document.getElementById('configForm').onsubmit = guardarConfiguracion;
-  document.getElementById('agendaForm').onsubmit = guardarEvento; // <--- Vincula el nuevo form
+  document.getElementById('agendaForm').onsubmit = guardarEvento;
 });
