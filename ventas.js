@@ -2,25 +2,21 @@
 async function cargarLotesForSelect() {
   try {
     const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    // V 3.0: Añadimos granjaId al fetch
-    const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, {
+    const res = await fetch(`${API_URL}/lotes?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
     const select = document.getElementById('loteSelect');
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
 
-    // Filtramos solo lotes disponibles
     lotes.filter(lote => lote.estado === 'disponible').forEach(lote => {
       const option = document.createElement('option');
       option.value = lote.id;
       option.textContent = `${lote.loteId} (Stock: ${lote.cantidad})`;
-      option.dataset.cantidad = lote.cantidad; // Guardamos la cantidad
+      option.dataset.cantidad = lote.cantidad;
       select.appendChild(option);
     });
   } catch (error) {
@@ -28,15 +24,39 @@ async function cargarLotesForSelect() {
   }
 }
 
-async function cargarVentas() {
+// --- Cargar Clientes ---
+async function cargarClientesForSelect() {
   try {
     const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    // V 3.0: Añadimos granjaId al fetch
-    const res = await fetch(`${window.API_URL}/ventas?granjaId=${granjaId}`, {
+    const res = await fetch(`${API_URL}/clientes?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const clientes = await res.json();
+    const select = document.getElementById('clienteSelect');
+    select.innerHTML = '<option value="">Selecciona un Cliente</option>';
+
+    clientes.forEach(cliente => {
+      const option = document.createElement('option');
+      option.value = cliente.id;
+      option.textContent = `${cliente.nombre} (${cliente.identificacion})`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error al cargar clientes para select:', error);
+  }
+}
+
+async function cargarVentas() {
+  try {
+    const token = localStorage.getItem('token');
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    // Gracias al parche de index.js, esto ahora trae Lote.loteId y Cliente.nombre
+    const res = await fetch(`${API_URL}/ventas?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -48,20 +68,17 @@ async function cargarVentas() {
     if (Array.isArray(ventas) && ventas.length > 0) {
       ventas.forEach(venta => {
         const tr = document.createElement('tr');
-        // Usamos el 'venta.Lote.loteId' que el backend nos da
         tr.innerHTML = `
-          <td>${venta.Lote ? venta.Lote.loteId : 'Lote Borrado'}</td>
+          <td>${venta.Lote ? venta.Lote.loteId : 'N/A'}</td>
           <td>${venta.cantidadVendida}</td>
           <td>${venta.peso.toFixed(2)}</td>
           <td>${venta.precio.toFixed(2)}</td>
           <td>${new Date(venta.fecha).toLocaleDateString()}</td>
-          <td>${venta.cliente || 'Sin cliente'}</td>
+          <td>${venta.Cliente ? venta.Cliente.nombre : 'N/A'}</td>
           <td>
             <button onclick="eliminarVenta(${venta.id})" class="btn btn-sm btn-peligro">Revertir</button>
           </td>
         `;
-        // Nota: Editar una venta es complejo por las transacciones de stock.
-        // Es más seguro solo "Revertir" (Eliminar).
       });
     } else {
       tbody.innerHTML = '<tr><td colspan="7">No hay ventas registradas</td></tr>';
@@ -95,30 +112,30 @@ async function guardarVenta(e) {
     return;
   }
 
-  // V 3.0: Obtenemos la granja activa
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
-  const loteSelect = document.getElementById('loteSelect');
-  const loteId = loteSelect.value;
-  if (!loteId) {
-    alert('Por favor selecciona un lote.');
+  const loteId = document.getElementById('loteSelect').value;
+  const clienteId = document.getElementById('clienteSelect').value; // <-- CAMBIO V 3.1
+
+  if (!loteId || !clienteId) {
+    alert('Por favor selecciona un Lote y un Cliente.');
     return;
   }
 
   const venta = {
     loteId: parseInt(loteId),
+    clienteId: parseInt(clienteId), // <-- CAMBIO V 3.1
     cantidadVendida: parseInt(document.getElementById('cantidadVendida').value),
     peso: parseFloat(document.getElementById('peso').value),
     precio: parseFloat(document.getElementById('precio').value),
     fecha: document.getElementById('fecha').value,
-    cliente: document.getElementById('cliente').value || 'Sin cliente',
-    granjaId: granjaId // V 3.0: Añadido
+    granjaId: granjaId
   };
 
   try {
     const token = localStorage.getItem('token');
-    const res = await fetch(`${window.API_URL}/ventas`, {
+    const res = await fetch(`${API_URL}/ventas`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -145,8 +162,6 @@ async function guardarVenta(e) {
 }
 
 async function editarVenta(id) {
-  // La edición de ventas es muy compleja por las transacciones de stock.
-  // Es más seguro eliminar (revertir) y crear una nueva.
   alert('Función no implementada. Por favor, "Revierta" la venta y regístrela de nuevo.');
 }
 
@@ -154,18 +169,16 @@ async function eliminarVenta(id) {
   if (confirm('¿Seguro que quieres REVERTIR esta venta? Esto devolverá el stock al lote.')) {
     try {
       const token = localStorage.getItem('token');
-      // V 3.0: Obtenemos la granja activa
       const granjaId = getSelectedGranjaId();
       if (!granjaId) return;
 
-      // V 3.0: Añadimos granjaId al fetch
       const res = await fetch(`${API_URL}/ventas/${id}?granjaId=${granjaId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
         cargarVentas();
-        cargarLotesForSelect(); // Actualizar stock en el select
+        cargarLotesForSelect(); // Actualizar stock
       } else {
         const errorText = await res.json();
         alert('Error al revertir venta: ' + (errorText.error || 'Desconocido'));
@@ -181,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
 
-  // V 3.0: Poner el nombre de la granja en el título
   if (granja) {
     document.querySelector('header h1').textContent = `Ventas (${granja.nombre})`;
   }
@@ -191,7 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('ventaForm');
   const formContainer = document.getElementById('formContainer');
 
-  // Evento para autocompletar la cantidad al seleccionar lote
   const loteSelect = document.getElementById('loteSelect');
   if (loteSelect) {
     loteSelect.addEventListener('change', (e) => {
@@ -199,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const cantidadInput = document.getElementById('cantidadVendida');
       if (selectedOption && selectedOption.dataset.cantidad) {
         cantidadInput.value = selectedOption.dataset.cantidad;
-        cantidadInput.max = selectedOption.dataset.cantidad; // Opcional: validación HTML
+        cantidadInput.max = selectedOption.dataset.cantidad;
       } else {
         cantidadInput.value = '';
         cantidadInput.max = '';
@@ -230,5 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   cargarLotesForSelect();
+  cargarClientesForSelect();
   cargarVentas();
 });
