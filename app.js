@@ -393,6 +393,61 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // --- HEADER Y MENÚ DE USUARIO ---
+  const userBtn = document.getElementById('userMenuBtn');
+  const dropdown = document.getElementById('userDropdown');
+  const changeBranchBtn = document.getElementById('changeBranchBtn');
+
+  const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const currentGranja = JSON.parse(localStorage.getItem('selectedGranja'));
+
+  if (userBtn && currentUser) {
+    // 1. Configurar datos del usuario en el menú
+    const nombre = currentUser.name || 'Usuario';
+    const inicial = nombre.charAt(0).toUpperCase();
+    const nombreGranja = currentGranja ? currentGranja.nombre : 'Sin Asignar';
+
+    // Actualizar círculos e info
+    document.getElementById('userInitials').textContent = inicial;
+    document.getElementById('dropdownInitials').textContent = inicial;
+    document.getElementById('dropdownName').textContent = nombre;
+    document.getElementById('dropdownBranch').textContent = nombreGranja;
+
+    // Actualizar título de la página (si existe el elemento)
+    const pageTitleEl = document.getElementById('pageTitle');
+    if (pageTitleEl) {
+      // Mantenemos el texto original (ej: "Ventas") y agregamos la granja si no es Dashboard
+      // (Opcional, depende de tu gusto. Aquí dejamos el texto original del HTML y el JS solo añade contexto si quieres)
+      const originalTitle = pageTitleEl.textContent;
+      if (currentGranja && !originalTitle.includes('Dashboard')) {
+        // pageTitleEl.textContent = `${originalTitle} (${currentGranja.nombre})`; // Descomenta si quieres reemplazar el título
+      }
+    }
+
+    // 2. Toggle del Menú (Abrir/Cerrar)
+    userBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Evita que el clic cierre el menú inmediatamente
+      dropdown.classList.toggle('is-active');
+    });
+
+    // 3. Cerrar menú al hacer clic fuera
+    document.addEventListener('click', (e) => {
+      if (!userBtn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.remove('is-active');
+      }
+    });
+
+    // 4. Lógica "Cambiar Almacén"
+    if (changeBranchBtn) {
+      changeBranchBtn.addEventListener('click', () => {
+        // Borramos la selección de granja, pero MANTENEMOS el token y el usuario
+        localStorage.removeItem('selectedGranja');
+        // Redirigimos a la selección
+        window.location.href = 'granjas.html';
+      });
+    }
+  }
+
   // Lógica de Vistas (Login, Granjas, Dashboard)
   if (path !== 'login.html') {
     checkAccess(); // Se ejecuta en TODAS las páginas (excepto login)

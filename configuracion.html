@@ -9,8 +9,39 @@
 
 <body>
     <header>
-        <h1>Configuración</h1>
-        <button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
+        <h1 id="pageTitle">Dashboard</h1>
+
+        <div class="user-profile-container">
+            <div id="userMenuBtn" class="user-avatar-btn" title="Menú de Usuario">
+                <span id="userInitials">U</span>
+            </div>
+
+            <div id="userDropdown" class="user-dropdown-menu">
+
+                <div class="dropdown-header">
+                    <div class="dropdown-avatar-large">
+                        <span id="dropdownInitials">U</span>
+                    </div>
+                    <div class="dropdown-user-info">
+                        <h4 id="dropdownName">Cargando...</h4>
+                        <p id="dropdownBranch">Cargando...</p>
+                    </div>
+                </div>
+
+                <ul class="dropdown-actions">
+                    <li>
+                        <button id="changeBranchBtn" class="dropdown-item">
+                            🔄 Cambiar Almacén
+                        </button>
+                    </li>
+                    <li>
+                        <button onclick="logout()" class="dropdown-item logout-item">
+                            🚪 Cerrar Sesión
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </header>
     <aside class="sidebar">
         <nav>

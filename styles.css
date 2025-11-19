@@ -910,3 +910,153 @@ main.dashboard-layout-vincwill {
     transform: translateY(0);
   }
 }
+
+/* [Añadir al final de styles.css] */
+
+/* --- 14. Menú de Usuario (Header Dropdown) --- */
+
+/* Contenedor principal en el header */
+.user-profile-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* El Círculo (Avatar) */
+.user-avatar-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--color-secundario);
+  color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+  border: 2px solid white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.user-avatar-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* El Menú Desplegable (Oculto por defecto) */
+.user-dropdown-menu {
+  display: none;
+  /* Oculto */
+  position: absolute;
+  top: 55px;
+  /* Justo debajo del header */
+  right: 0;
+  width: 260px;
+  background-color: white;
+  border-radius: var(--borde-radio);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--color-borde);
+  z-index: 1000;
+  overflow: hidden;
+  animation: dropdown-slide 0.2s ease-out;
+}
+
+/* Clase para mostrarlo */
+.user-dropdown-menu.is-active {
+  display: block;
+}
+
+/* Cabecera del menú (Info del usuario) */
+.dropdown-header {
+  padding: var(--espaciado-md);
+  background-color: #f8f9fa;
+  border-bottom: 1px solid var(--color-borde);
+  display: flex;
+  align-items: center;
+  gap: var(--espaciado-md);
+}
+
+/* Avatar grande dentro del menú */
+.dropdown-avatar-large {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: var(--color-primario);
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dropdown-user-info h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-texto-principal);
+}
+
+.dropdown-user-info p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-texto-secundario);
+}
+
+/* Lista de acciones */
+.dropdown-actions {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dropdown-actions li {
+  border-bottom: 1px solid #eee;
+}
+
+.dropdown-actions li:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: var(--espaciado-md);
+  color: var(--color-texto-principal);
+  text-decoration: none;
+  transition: background 0.2s;
+  font-size: 0.95rem;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background-color: #f1f2f6;
+  text-decoration: none;
+}
+
+/* Estilo especial para cerrar sesión */
+.dropdown-item.logout-item {
+  color: var(--color-peligro);
+}
+
+.dropdown-item.logout-item:hover {
+  background-color: #fff5f5;
+}
+
+@keyframes dropdown-slide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
