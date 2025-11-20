@@ -1,20 +1,15 @@
 window.API_URL = 'https://granja-vincwill-backend.onrender.com';
 
 // --- 1. UTILIDADES GLOBALES ---
-
 function getSelectedGranjaId() {
   try {
     const granja = JSON.parse(localStorage.getItem('selectedGranja'));
-    if (granja && granja.id) {
-      return granja.id;
-    }
-  } catch (e) {
-    console.error("Error al parsear granja seleccionada:", e);
-  }
-  // Si estamos en paginas publicas no hacemos logout forzoso inmediatamente
+    if (granja && granja.id) return granja.id;
+  } catch (e) { console.error(e); }
+
   const path = window.location.pathname.split('/').pop();
   if (path !== 'login.html' && path !== 'granjas.html') {
-    console.warn('No hay granja seleccionada, redirigiendo...');
+    // Si no hay granja, forzamos la selección
     window.location.href = 'granjas.html';
   }
   return null;
@@ -24,18 +19,14 @@ async function handleJsonResponse(res) {
   if (!res.ok) {
     if (res.status === 401) logout();
     const text = await res.text();
-    console.error('Fetch error:', res.status, text);
     throw new Error(`HTTP ${res.status}: ${text}`);
   }
   const contentType = res.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
-    return null;
-  }
+  if (!contentType || !contentType.includes('application/json')) return null;
   return await res.json();
 }
 
 // --- 2. AUTENTICACIÓN ---
-
 async function login(e) {
   e.preventDefault();
   const email = document.getElementById('email').value.trim();
@@ -43,32 +34,29 @@ async function login(e) {
   const errorMessage = document.getElementById('errorMessage');
 
   if (!email || !password) {
-    errorMessage.textContent = 'Por favor, ingresa email y contraseña.';
+    if (errorMessage) errorMessage.textContent = 'Datos incompletos.';
     return;
   }
   try {
     const res = await fetch(`${API_URL}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
     const text = await res.text();
     if (!res.ok) {
-      const errorData = text ? JSON.parse(text).error || text : 'Error desconocido';
-      errorMessage.textContent = `Error en login: ${errorData}`;
+      const errorData = text ? JSON.parse(text).error || text : 'Error';
+      if (errorMessage) errorMessage.textContent = `Error: ${errorData}`;
       return;
     }
     const data = JSON.parse(text);
     localStorage.setItem('token', data.token);
     localStorage.setItem('currentUser', JSON.stringify(data.user));
-    errorMessage.textContent = '';
 
     // Redirigir a selección de granja
     window.location.href = 'granjas.html';
-
   } catch (error) {
-    errorMessage.textContent = 'Error de conexión al servidor.';
-    console.error('Login error:', error);
+    if (errorMessage) errorMessage.textContent = 'Error de conexión.';
+    console.error(error);
   }
 }
 
@@ -87,63 +75,46 @@ async function checkAccess() {
 
   if (path === 'login.html') return;
 
-  if (!token || !currentUser) {
-    logout();
-    return;
-  }
+  // 1. Sin sesión -> Login
+  if (!token || !currentUser) { logout(); return; }
 
-  // Si no tiene granja, debe ir a seleccionarla (excepto si ya está ahí)
+  // 2. Sin granja -> Selector (salvo que ya estemos ahí)
   if (!selectedGranja) {
     if (path === 'granjas.html') return;
     window.location.href = 'granjas.html';
     return;
   }
 
-  // Si tiene granja y trata de ir a login o selección, lo mandamos al dashboard
+  // 3. Con todo -> Dashboard (si intenta ir a login o selector)
   if (path === 'login.html' || path === 'granjas.html') {
     window.location.href = 'index.html';
     return;
   }
 
-  // Verificación de validez del token
+  // 4. Verificar Token
   try {
     const res = await fetch(`${API_URL}/mis-granjas`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) { logout(); return; }
-  } catch (error) {
-    logout();
-    return;
-  }
+  } catch (error) { logout(); return; }
 
-  // Permisos de Viewer
+  // 5. Permisos de Viewer
   if (currentUser.role === 'viewer' && path !== 'index.html') {
-    const mainEl = document.querySelector('main');
-    if (mainEl) {
-      mainEl.innerHTML = `
-          <section class="card">
-            <h2>Acceso Denegado</h2>
-            <p>No tienes permisos para ver esta página.</p>
-            <a href="index.html">Volver al Dashboard</a>
-          </section>`;
-    }
-    document.querySelectorAll('.form-desplegable-container, #toggleFormBtn').forEach(el => {
-      el.style.display = 'none';
-    });
+    const main = document.querySelector('main');
+    if (main) main.innerHTML = `<section class="card"><h2>Acceso Denegado</h2><a href="index.html">Volver</a></section>`;
   }
 }
 
-// --- 3. LÓGICA DE UI (HEADER Y SIDEBAR) ---
+// --- 3. LÓGICA DE UI (HEADER, SIDEBAR Y MÓVIL) ---
 
 function initializeUserProfile() {
   const userBtn = document.getElementById('userMenuBtn');
   const dropdown = document.getElementById('userDropdown');
   const changeBranchBtn = document.getElementById('changeBranchBtn');
-
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const currentGranja = JSON.parse(localStorage.getItem('selectedGranja'));
 
   if (!userBtn || !currentUser) return;
 
-  // Poblar datos
   const nombre = currentUser.name || 'Usuario';
   const inicial = nombre.charAt(0).toUpperCase();
   const nombreGranja = currentGranja ? currentGranja.nombre : 'Sin Asignar';
@@ -169,7 +140,7 @@ function initializeUserProfile() {
   // Botón Cambiar Almacén
   if (changeBranchBtn) {
     changeBranchBtn.addEventListener('click', () => {
-      localStorage.removeItem('selectedGranja'); // Borramos solo la granja
+      localStorage.removeItem('selectedGranja');
       window.location.href = 'granjas.html';
     });
   }
@@ -181,9 +152,7 @@ function initializeSidebar() {
     title.addEventListener('click', () => {
       const targetId = title.dataset.target;
       const targetContainer = document.querySelector(targetId);
-      if (targetContainer) {
-        targetContainer.classList.toggle('is-collapsed');
-      }
+      if (targetContainer) targetContainer.classList.toggle('is-collapsed');
     });
   });
 
@@ -191,32 +160,50 @@ function initializeSidebar() {
   const path = window.location.pathname.split('/').pop();
   try {
     let activeLink;
-    if (path === '' || path === 'index.html') {
-      activeLink = document.querySelector(`.sidebar nav a[href="index.html"]`);
-    } else {
-      activeLink = document.querySelector(`.sidebar nav a[href="${path}"]`);
-    }
+    if (path === '' || path === 'index.html') activeLink = document.querySelector(`.sidebar nav a[href="index.html"]`);
+    else activeLink = document.querySelector(`.sidebar nav a[href="${path}"]`);
 
     if (activeLink) {
       activeLink.classList.add('active');
       const parentContainer = activeLink.closest('.nav-links-container');
-      // Asegurar que la categoría del link activo esté desplegada
-      if (parentContainer) {
-        parentContainer.classList.remove('is-collapsed');
-        // Opcional: Colapsar los otros
-      }
+      if (parentContainer) parentContainer.classList.remove('is-collapsed');
     }
-  } catch (e) {
-    // Ignorar error si no encuentra el link
+  } catch (e) { }
+}
+
+function setupMobileMenu() {
+  const header = document.querySelector('header');
+  if (!header) return;
+
+  if (!document.getElementById('mobileMenuBtn')) {
+    const btn = document.createElement('button');
+    btn.id = 'mobileMenuBtn';
+    btn.className = 'mobile-menu-btn';
+    btn.innerHTML = '☰';
+    header.insertBefore(btn, header.firstChild);
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const sidebar = document.querySelector('.sidebar');
+      if (sidebar) sidebar.classList.toggle('is-mobile-open');
+    });
+
+    document.addEventListener('click', (e) => {
+      const sidebar = document.querySelector('.sidebar');
+      const btn = document.getElementById('mobileMenuBtn');
+      if (sidebar && sidebar.classList.contains('is-mobile-open')) {
+        if (!sidebar.contains(e.target) && !btn.contains(e.target)) {
+          sidebar.classList.remove('is-mobile-open');
+        }
+      }
+    });
   }
 }
 
-// --- 4. LÓGICA DEL DASHBOARD (GRÁFICOS Y DATOS) ---
-
+// --- 4. DASHBOARD ---
 async function actualizarDashboard() {
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
-
   try {
     const [lotes, salud, costos, seguimiento, ventas, agua] = await Promise.all([
       fetch(`${API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
@@ -227,23 +214,16 @@ async function actualizarDashboard() {
       fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
     ]);
 
-    let totalAvesInicial = 0;
-    let totalMuertes = 0;
-    let ultimosPesos = [];
-
+    let totalAvesInicial = 0, totalMuertes = 0, ultimosPesos = [];
     if (lotes) {
       lotes.forEach(lote => {
         totalAvesInicial += lote.cantidadInicial || lote.cantidad;
         const muertesLote = salud ? salud.filter(s => s.loteId === lote.id && s.tipo.toLowerCase() === 'mortalidad').reduce((sum, s) => sum + s.cantidad, 0) : 0;
         totalMuertes += muertesLote;
-
         const seguimientosLote = seguimiento ? seguimiento.filter(s => s.loteId === lote.id).sort((a, b) => b.semana - a.semana) : [];
-        if (seguimientosLote.length > 0) {
-          ultimosPesos.push(seguimientosLote[0].peso);
-        }
+        if (seguimientosLote.length > 0) ultimosPesos.push(seguimientosLote[0].peso);
       });
     }
-
     const totalVivos = lotes ? lotes.filter(l => l.estado === 'disponible').reduce((sum, l) => sum + l.cantidad, 0) : 0;
     const pesoPromedioActual = ultimosPesos.length ? (ultimosPesos.reduce((a, b) => a + b, 0) / ultimosPesos.length).toFixed(2) : 0;
     const mortalidadPromedio = (totalAvesInicial > 0) ? ((totalMuertes / totalAvesInicial) * 100).toFixed(2) : 0;
@@ -254,15 +234,11 @@ async function actualizarDashboard() {
         const lote = lotes.find(l => l.id === reg.loteId);
         if (lote && reg.peso > lote.pesoInicial) {
           const pesoGanado = reg.peso - lote.pesoInicial;
-          if (pesoGanado > 0) {
-            const conversion = reg.consumo / pesoGanado;
-            conversiones.push(conversion);
-          }
+          if (pesoGanado > 0) conversiones.push(reg.consumo / pesoGanado);
         }
       });
     }
     const promedio = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2) : '0';
-
     const totalCostos = costos ? costos.reduce((sum, c) => sum + c.monto, 0) : 0;
     const totalIngresos = ventas ? ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0) : 0;
     const rentabilidad = totalIngresos - totalCostos;
@@ -276,10 +252,7 @@ async function actualizarDashboard() {
       document.getElementById('ingresosTotales').textContent = `$${totalIngresos.toFixed(2)}`;
       document.getElementById('rentabilidad').textContent = `$${rentabilidad.toFixed(2)}`;
     }
-
-  } catch (error) {
-    console.error('Error al actualizar dashboard:', error);
-  }
+  } catch (error) { console.error('Error dashboard', error); }
 }
 
 async function mostrarCalendario() {
@@ -290,67 +263,23 @@ async function mostrarCalendario() {
       fetch(`${API_URL}/agenda?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
       fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
     ]);
-
     const agendaData = await handleJsonResponse(agendaRes);
     const saludData = await handleJsonResponse(saludRes);
     const eventosMapa = [];
-
-    if (agendaData) {
-      agendaData.forEach(ev => {
-        eventosMapa.push({
-          date: ev.fecha,
-          title: `AGENDA: ${ev.descripcion}`,
-          tipo: 'pendiente'
-        });
-      });
-    }
-    if (saludData) {
-      saludData.forEach(s => {
-        if (s.fechaRetiro) {
-          eventosMapa.push({
-            date: s.fechaRetiro.split('T')[0],
-            title: `BIOSEGURIDAD: Fin Retiro ${s.nombre} (Lote ${s.loteId})`,
-            tipo: 'retiro'
-          });
-        }
-      });
-    }
+    if (agendaData) agendaData.forEach(ev => eventosMapa.push({ date: ev.fecha, title: `AGENDA: ${ev.descripcion}`, tipo: 'pendiente' }));
+    if (saludData) saludData.forEach(s => { if (s.fechaRetiro) eventosMapa.push({ date: s.fechaRetiro.split('T')[0], title: `BIOSEGURIDAD: Fin Retiro ${s.nombre}`, tipo: 'retiro' }); });
 
     if (window.flatpickr) {
       flatpickr("#calendario-container", {
-        inline: true,
-        locale: "es",
+        inline: true, locale: "es",
         enable: [{ from: "today", to: "today" }, ...eventosMapa.map(e => e.date)],
-        onDayCreate: function (dObj, dStr, fp, dayElem) {
-          const fechaStr = dayElem.dateObj.toISOString().split('T')[0];
-          const eventosDelDia = eventosMapa.filter(e => e.date === fechaStr);
-          if (eventosDelDia.length > 0) {
-            if (eventosDelDia.some(e => e.tipo === 'retiro')) dayElem.classList.add('evento-retiro');
-            else dayElem.classList.add('evento-pendiente');
-            dayElem.title = eventosDelDia.map(e => e.title).join('\n');
-          }
-        },
-        onChange: function (selectedDates, dateStr, instance) {
+        onChange: function (selectedDates, dateStr) {
           const eventosHoy = eventosMapa.filter(e => e.date === dateStr);
-          if (eventosHoy.length > 0) {
-            const mensaje = eventosHoy.map(e => `• ${e.title}`).join('\n');
-            alert(`📅 Actividades para el ${dateStr}:\n\n${mensaje}`);
-          }
+          if (eventosHoy.length > 0) alert(`📅 ${dateStr}:\n\n${eventosHoy.map(e => `• ${e.title}`).join('\n')}`);
         }
       });
     }
-    // Inyectar estilos
-    if (!document.getElementById('estilos-calendario-vincwill')) {
-      const style = document.createElement('style');
-      style.id = 'estilos-calendario-vincwill';
-      style.innerHTML = `
-        .evento-retiro { background-color: #e74c3c !important; color: white !important; border: 1px solid #c0392b !important; }
-        .evento-pendiente { background-color: #f39c12 !important; color: white !important; font-weight: bold; }
-        .flatpickr-day.evento-pendiente:hover { background-color: #d35400 !important; }
-      `;
-      document.head.appendChild(style);
-    }
-  } catch (error) { console.error('Error al mostrar calendario:', error); }
+  } catch (error) { console.error(error); }
 }
 
 async function mostrarGraficoAgua() {
@@ -360,29 +289,15 @@ async function mostrarGraficoAgua() {
     const res = await fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
     const aguaData = await handleJsonResponse(res);
     if (!aguaData) return;
-
-    const hoy = new Date();
-    const dataPorDia = {};
+    const hoy = new Date(); const dataPorDia = {};
     for (let i = 6; i >= 0; i--) {
-      const fecha = new Date(hoy);
-      fecha.setDate(hoy.getDate() - i);
-      dataPorDia[fecha.toISOString().split('T')[0]] = 0;
+      const f = new Date(hoy); f.setDate(hoy.getDate() - i);
+      dataPorDia[f.toISOString().split('T')[0]] = 0;
     }
-    aguaData.forEach(r => {
-      const fechaStr = r.fecha.split('T')[0];
-      if (dataPorDia[fechaStr] !== undefined) dataPorDia[fechaStr] += r.cantidad;
-    });
-    const labels = Object.keys(dataPorDia).map(d => new Date(d).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }));
-    const data = Object.values(dataPorDia);
+    aguaData.forEach(r => { const f = r.fecha.split('T')[0]; if (dataPorDia[f] !== undefined) dataPorDia[f] += r.cantidad; });
     const ctx = document.getElementById('aguaChart');
-    if (ctx) {
-      new Chart(ctx.getContext('2d'), {
-        type: 'bar',
-        data: { labels, datasets: [{ label: 'Consumo de Agua (Litros)', data: data, backgroundColor: '#3498db' }] },
-        options: { scales: { y: { beginAtZero: true } } }
-      });
-    }
-  } catch (error) { console.error('Error en gráfico de agua:', error); }
+    if (ctx) new Chart(ctx.getContext('2d'), { type: 'bar', data: { labels: Object.keys(dataPorDia), datasets: [{ label: 'Agua (L)', data: Object.values(dataPorDia), backgroundColor: '#3498db' }] } });
+  } catch (e) { }
 }
 
 function mostrarGraficosDashboard() {
@@ -499,40 +414,33 @@ function mostrarAlertasProduccion() {
 document.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname.split('/').pop();
 
-  // A. SI ESTAMOS EN LOGIN, VINCULAR Y SALIR
   if (path === 'login.html') {
     const loginForm = document.getElementById('loginForm');
-    if (loginForm) {
-      loginForm.onsubmit = login;
-    }
-    return; // Detener ejecución aquí para no cargar lógica de UI
+    if (loginForm) loginForm.onsubmit = login;
+    return;
   }
 
-  // B. PARA TODAS LAS DEMÁS PÁGINAS
-
-  // 1. Verificar acceso (Redirige si es necesario)
   checkAccess();
 
-  // 2. Inicializar UI (Header y Sidebar)
-  // Solo si no estamos en la página de selección de granjas (que no tiene sidebar/header completo)
   if (path !== 'granjas.html') {
     initializeUserProfile();
     initializeSidebar();
+    setupMobileMenu();
   }
 
-  // 3. Lógica específica del Dashboard
   if (path === 'index.html') {
     const granja = JSON.parse(localStorage.getItem('selectedGranja'));
-    if (granja) {
-      const titleEl = document.querySelector('header h1');
-      if (titleEl) titleEl.textContent = `Dashboard (${granja.nombre})`;
-    }
+    if (granja) document.querySelector('header h1').textContent = `Dashboard (${granja.nombre})`;
+
+    // Carga de datos
     actualizarDashboard();
     mostrarCalendario();
+    mostrarGraficoAgua();
+
+    // Carga de gráficos
     mostrarGraficosDashboard();
     mostrarCostosPieChart();
     mostrarIngresosCostosBarChart();
-    mostrarGraficoAgua();
     mostrarAlertasProduccion();
   }
 });
