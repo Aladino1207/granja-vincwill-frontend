@@ -6,77 +6,43 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestión de Lotes - Granja VincWill</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 
 <body>
   <header>
-    <h1 id="pageTitle">Dashboard</h1>
-
-    <div class="user-profile-container">
-      <div id="userMenuBtn" class="user-avatar-btn" title="Menú de Usuario">
-        <span id="userInitials">U</span>
-      </div>
-
-      <div id="userDropdown" class="user-dropdown-menu">
-
-        <div class="dropdown-header">
-          <div class="dropdown-avatar-large">
-            <span id="dropdownInitials">U</span>
-          </div>
-          <div class="dropdown-user-info">
-            <h4 id="dropdownName">Cargando...</h4>
-            <p id="dropdownBranch">Cargando...</p>
-          </div>
-        </div>
-
-        <ul class="dropdown-actions">
-          <li>
-            <button id="changeBranchBtn" class="dropdown-item">
-              🔄 Cambiar Almacén
-            </button>
-          </li>
-          <li>
-            <button onclick="logout()" class="dropdown-item logout-item">
-              🚪 Cerrar Sesión
-            </button>
-          </li>
-        </ul>
-      </div>
-    </div>
+    <h1>Gestión de Lotes</h1>
+    <button onclick="logout(); return false;" class="header-logout-btn">Cerrar Sesión</button>
   </header>
   <aside class="sidebar">
+    <!-- (Tu <nav> estándar aquí) -->
     <nav>
       <div class="nav-group nav-group-main">
-        <div class="nav-links-container">
-          <a href="index.html" class="nav-link">Dashboard</a>
-        </div>
+        <div class="nav-links-container"><a href="index.html" class="nav-link">Dashboard</a></div>
       </div>
-
       <div class="nav-group">
         <h4 class="nav-category-title" data-target="#operaciones-links">Operaciones</h4>
         <div class="nav-links-container" id="operaciones-links">
-          <a href="lotes.html" class="nav-link">Lotes</a>
+          <a href="lotes.html" class="nav-link active">Lotes</a>
           <a href="salud.html" class="nav-link">Salud</a>
           <a href="agua.html" class="nav-link">Agua</a>
           <a href="seguimiento.html" class="nav-link">Seguimiento</a>
           <a href="inventarios.html" class="nav-link">Inventario</a>
         </div>
       </div>
-
       <div class="nav-group">
         <h4 class="nav-category-title" data-target="#finanzas-links">Finanzas</h4>
         <div class="nav-links-container" id="finanzas-links">
           <a href="clientes.html" class="nav-link">Clientes</a>
-          <a href="proveedores.html" class="nav-link">Proveedores</a>
           <a href="ventas.html" class="nav-link">Ventas</a>
           <a href="costos.html" class="nav-link">Costos</a>
           <a href="reportes.html" class="nav-link">Reportes</a>
         </div>
       </div>
-
       <div class="nav-group">
         <h4 class="nav-category-title" data-target="#admin-links">Administración</h4>
         <div class="nav-links-container" id="admin-links">
+          <a href="proveedores.html" class="nav-link">Proveedores</a>
           <a href="usuarios.html" class="nav-link">Usuarios y Granjas</a>
           <a href="configuracion.html" class="nav-link">Configuración</a>
         </div>
@@ -85,6 +51,7 @@
   </aside>
   <main class="main-content">
 
+    <!-- Contenedor Desplegable -->
     <div id="formContainer" class="form-desplegable-container">
       <section class="card">
         <h2 id="formTitle">Agregar Nuevo Lote</h2>
@@ -93,16 +60,28 @@
 
           <div class="form-group">
             <label for="loteId">ID del Lote (Ej: LOTE-001)</label>
-            <input type="text" id="loteId" class="form-control" placeholder="ID del Lote" required>
+            <input type="text" id="loteId" class="form-control" placeholder="Identificador único" required>
+          </div>
+
+          <!-- NUEVO: Buscador de Proveedor -->
+          <div class="form-group">
+            <label for="proveedorSearch">Proveedor de Pollitos</label>
+            <div class="searchable-dropdown" id="proveedorDropdown">
+              <input type="text" id="proveedorSearch" class="form-control" placeholder="Buscar Proveedor...">
+              <input type="hidden" id="proveedorId" value="">
+              <button type="button" id="openQuickAddProveedor" class="btn-add-quick" title="Crear Nuevo">+</button>
+              <div class="search-results" id="proveedorResults"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="cantidad">Cantidad Inicial</label>
+            <input type="number" id="cantidad" class="form-control" placeholder="Nº de aves" required>
           </div>
           <div class="form-group">
-            <label for="cantidad">Cantidad</label>
-            <input type="number" id="cantidad" class="form-control" placeholder="Cantidad" required>
-          </div>
-          <div class="form-group">
-            <label for="pesoInicial">Peso Inicial (kg)</label>
-            <input type="number" step="0.01" id="pesoInicial" class="form-control" placeholder="Peso Inicial (kg)"
-              required>
+            <label for="pesoInicial">Peso Promedio (kg)</label>
+            <input type="number" step="0.001" id="pesoInicial" class="form-control" placeholder="Ej: 0.042" required>
+            <small style="color: #7f8c8d; font-size: 0.8rem;">Promedio por ave al ingreso</small>
           </div>
           <div class="form-group">
             <label for="fechaIngreso">Fecha de Ingreso</label>
@@ -117,7 +96,7 @@
           </div>
 
           <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
-            <button type="submit" class="btn btn-primario">Guardar</button>
+            <button type="submit" class="btn btn-primario">Guardar Lote</button>
             <button type="button" id="cancelBtn" class="btn btn-peligro"
               style="background-color: #7f8c8d;">Cancelar</button>
           </div>
@@ -125,6 +104,7 @@
       </section>
     </div>
 
+    <!-- Lista -->
     <section class="card">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2>Lista de Lotes</h2>
@@ -135,10 +115,11 @@
         <table id="loteTable" class="tabla-moderna">
           <thead>
             <tr>
-              <th>ID del Lote</th>
+              <th>ID</th>
+              <th>Proveedor</th> <!-- NUEVA COLUMNA -->
               <th>Cantidad</th>
-              <th>Peso Inicial (kg)</th>
-              <th>Fecha de Ingreso</th>
+              <th>Peso Inicial</th>
+              <th>Fecha Ingreso</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
@@ -152,6 +133,35 @@
       <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
     </footer>
   </main>
+
+  <!-- Modal de Creación Rápida de Proveedor (Reutilizado) -->
+  <div id="quickAddModal" class="modal-wrapper">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Crear Nuevo Proveedor</h2>
+        <span class="modal-close-btn" id="closeQuickAddModal">&times;</span>
+      </div>
+      <form id="quickAddForm" class="form-grid form-grid-2-col">
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label for="quick_nombreCompania">Nombre de la Compañía</label>
+          <input type="text" id="quick_nombreCompania" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="quick_ruc">RUC</label>
+          <input type="text" id="quick_ruc" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="quick_telefono">Teléfono</label>
+          <input type="tel" id="quick_telefono" class="form-control">
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <p id="quickAddError" style="color: red; display: none;"></p>
+          <button type="submit" class="btn btn-primario">Crear y Seleccionar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="app.js"></script>
   <script src="lotes.js"></script>
 </body>

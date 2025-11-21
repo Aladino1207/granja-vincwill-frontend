@@ -1,12 +1,13 @@
+// --- Variable global para proveedores ---
+let listaProveedores = [];
+
 // --- Lógica de Carga (BLINDADA) ---
 async function cargarLotes() {
   try {
     const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
     const granjaId = getSelectedGranjaId();
-    if (!granjaId) return; // Si no hay granja, no hacemos nada
+    if (!granjaId) return;
 
-    // V 3.0: Añadimos granjaId al fetch
     const res = await fetch(`${API_URL}/lotes?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -17,16 +18,17 @@ async function cargarLotes() {
     tbody.innerHTML = '';
 
     if (lotes.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6">No hay lotes registrados en esta granja.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7">No hay lotes registrados.</td></tr>';
       return;
     }
 
     lotes.forEach(lote => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${lote.loteId}</td>
+        <td><strong>${lote.loteId}</strong></td>
+        <td>${lote.Proveedor ? lote.Proveedor.nombreCompania : '<em>No especificado</em>'}</td>
         <td>${lote.cantidad}</td>
-        <td>${lote.pesoInicial}</td>
+        <td>${lote.pesoInicial} kg</td>
         <td>${new Date(lote.fechaIngreso).toLocaleDateString()}</td>
         <td>${lote.estado}</td>
         <td>
@@ -41,7 +43,20 @@ async function cargarLotes() {
   }
 }
 
-// --- LÓGICA DEL FORMULARIO DESPLEGABLE (Sin cambios) ---
+// --- Cargar Proveedores (Global) ---
+async function cargarProveedores() {
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/proveedores`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Error al cargar proveedores');
+    listaProveedores = await res.json();
+  } catch (error) { console.error(error); }
+}
+
+
+// --- LÓGICA DEL FORMULARIO DESPLEGABLE ---
 function abrirFormulario() {
   document.getElementById('formContainer').classList.add('is-open');
   document.getElementById('toggleFormBtn').textContent = 'Cancelar';
@@ -52,19 +67,18 @@ function cerrarFormulario() {
   document.getElementById('toggleFormBtn').textContent = 'Agregar Nuevo Lote';
 
   document.getElementById('loteForm').reset();
-  document.getElementById('loteDbId').value = ''; // Usamos loteDbId para el ID numérico
+  document.getElementById('loteDbId').value = '';
+  document.getElementById('proveedorId').value = ''; // Limpiar ID oculto
   document.getElementById('formTitle').textContent = 'Agregar Nuevo Lote';
 }
 
-// --- Funciones CRUD (BLINDADAS) ---
+// --- Funciones CRUD ---
 
 async function guardarLote(e) {
   e.preventDefault();
 
   const loteDbId = document.getElementById('loteDbId').value;
   const esEdicion = !!loteDbId;
-
-  // V 3.0: Obtenemos la granja activa
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
@@ -74,17 +88,17 @@ async function guardarLote(e) {
     pesoInicial: parseFloat(document.getElementById('pesoInicial').value),
     fechaIngreso: document.getElementById('fechaIngreso').value,
     estado: document.getElementById('estado').value,
-    granjaId: granjaId // V 3.0: Añadimos granjaId al body
+    proveedorId: document.getElementById('proveedorId').value ? parseInt(document.getElementById('proveedorId').value) : null, // NUEVO
+    granjaId: granjaId
   };
 
-  // V 3.0: Añadimos cantidadInicial si es un lote nuevo
   if (!esEdicion) {
     lote.cantidadInicial = lote.cantidad;
   }
 
   const url = esEdicion
-    ? `${API_URL}/lotes/${loteDbId}` // PUT
-    : `${API_URL}/lotes`; // POST
+    ? `${API_URL}/lotes/${loteDbId}`
+    : `${API_URL}/lotes`;
   const method = esEdicion ? 'PUT' : 'POST';
 
   try {
@@ -95,7 +109,7 @@ async function guardarLote(e) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify(lote) // Enviamos el objeto con granjaId
+      body: JSON.stringify(lote)
     });
     if (res.ok) {
       cerrarFormulario();
@@ -112,11 +126,9 @@ async function guardarLote(e) {
 async function editarLote(id) {
   try {
     const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    // V 3.0: Añadimos granjaId al fetch
     const res = await fetch(`${API_URL}/lotes/${id}?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -124,31 +136,37 @@ async function editarLote(id) {
     const lote = await res.json();
 
     document.getElementById('formTitle').textContent = 'Editar Lote';
-    document.getElementById('loteDbId').value = lote.id; // ID numérico de la DB
+    document.getElementById('loteDbId').value = lote.id;
     document.getElementById('loteId').value = lote.loteId;
     document.getElementById('cantidad').value = lote.cantidad;
     document.getElementById('pesoInicial').value = lote.pesoInicial;
     document.getElementById('fechaIngreso').value = lote.fechaIngreso.split('T')[0];
     document.getElementById('estado').value = lote.estado;
 
+    // Poblar proveedor
+    if (lote.proveedorId) {
+      const prov = listaProveedores.find(p => p.id === lote.proveedorId);
+      if (prov) {
+        document.getElementById('proveedorSearch').value = `${prov.nombreCompania} (${prov.ruc})`;
+        document.getElementById('proveedorId').value = prov.id;
+      }
+    }
+
     abrirFormulario();
     window.scrollTo(0, 0);
 
   } catch (error) {
     console.error('Error al cargar datos para editar:', error);
-    alert('Error al cargar datos del lote.');
   }
 }
 
 async function eliminarLote(id) {
-  if (confirm('¿Seguro que quieres eliminar este lote? Esto eliminará TODOS sus seguimientos, costos, ventas, etc.')) {
+  if (confirm('¿Seguro que quieres eliminar este lote?')) {
     try {
       const token = localStorage.getItem('token');
-      // V 3.0: Obtenemos la granja activa
       const granjaId = getSelectedGranjaId();
       if (!granjaId) return;
 
-      // V 3.0: Añadimos granjaId al fetch (DELETE usa query params)
       await fetch(`${API_URL}/lotes/${id}?granjaId=${granjaId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
@@ -160,15 +178,100 @@ async function eliminarLote(id) {
   }
 }
 
-// --- Event Listener Principal (MODIFICADO) ---
+// --- LÓGICA DE BÚSQUEDA DE PROVEEDOR ---
+function setupProveedorSearch() {
+  const searchInput = document.getElementById('proveedorSearch');
+  const resultsContainer = document.getElementById('proveedorResults');
+  const dropdown = document.getElementById('proveedorDropdown');
+  const hiddenInput = document.getElementById('proveedorId');
+
+  searchInput.addEventListener('input', () => {
+    const query = searchInput.value.toLowerCase();
+    if (query.length < 1) {
+      resultsContainer.innerHTML = '';
+      dropdown.classList.remove('is-open');
+      return;
+    }
+    const filtrados = listaProveedores.filter(p => p.nombreCompania.toLowerCase().includes(query));
+    resultsContainer.innerHTML = '';
+
+    if (filtrados.length > 0) {
+      filtrados.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'search-item';
+        item.innerHTML = `<strong>${p.nombreCompania}</strong>`;
+        item.onclick = () => {
+          searchInput.value = p.nombreCompania;
+          hiddenInput.value = p.id;
+          dropdown.classList.remove('is-open');
+        };
+        resultsContainer.appendChild(item);
+      });
+      dropdown.classList.add('is-open');
+    } else {
+      dropdown.classList.remove('is-open');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!dropdown.contains(e.target)) dropdown.classList.remove('is-open');
+  });
+
+  // Limpiar ID si borra texto
+  searchInput.addEventListener('change', () => {
+    if (searchInput.value === '') hiddenInput.value = '';
+  });
+}
+
+// --- LÓGICA DEL MODAL DE CREACIÓN RÁPIDA ---
+function setupQuickAddModal() {
+  const modal = document.getElementById('quickAddModal');
+  const openBtn = document.getElementById('openQuickAddProveedor');
+  const closeBtn = document.getElementById('closeQuickAddModal');
+  const form = document.getElementById('quickAddForm');
+
+  if (!openBtn) return; // Si no existe el botón (ej. en otra vista), salimos
+
+  openBtn.addEventListener('click', () => modal.classList.add('is-open'));
+  closeBtn.addEventListener('click', () => modal.classList.remove('is-open'));
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('is-open'); });
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const nuevoProv = {
+      nombreCompania: document.getElementById('quick_nombreCompania').value,
+      ruc: document.getElementById('quick_ruc').value,
+      telefono: document.getElementById('quick_telefono').value
+    };
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/proveedores`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(nuevoProv)
+      });
+      if (res.ok) {
+        const creado = await res.json();
+        modal.classList.remove('is-open');
+        form.reset();
+        await cargarProveedores(); // Refrescar lista
+        // Auto-seleccionar
+        document.getElementById('proveedorSearch').value = creado.nombreCompania;
+        document.getElementById('proveedorId').value = creado.id;
+      } else {
+        alert('Error al crear proveedor');
+      }
+    } catch (e) { console.error(e); }
+  };
+}
+
+
+// --- Event Listener Principal ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
 
-  // V 3.0: Poner el nombre de la granja en el título
-  if (granja) {
-    document.querySelector('header h1').textContent = `Lotes (${granja.nombre})`;
-  }
+  if (granja) document.querySelector('header h1').textContent = `Lotes (${granja.nombre})`;
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
@@ -183,9 +286,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isOpen) {
         cerrarFormulario();
       } else {
-        document.getElementById('formTitle').textContent = 'Agregar Nuevo Lote';
         form.reset();
         document.getElementById('loteDbId').value = '';
+        document.getElementById('formTitle').textContent = 'Agregar Nuevo Lote';
         abrirFormulario();
       }
     });
@@ -193,9 +296,14 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelBtn.addEventListener('click', cerrarFormulario);
     form.onsubmit = guardarLote;
 
+    // Inicializar componentes nuevos
+    setupProveedorSearch();
+    setupQuickAddModal();
+
   } else {
     toggleBtn.style.display = 'none';
   }
 
-  cargarLotes(); // Carga solo los lotes de la granja activa
+  cargarLotes();
+  cargarProveedores(); // Cargar lista al inicio
 });
