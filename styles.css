@@ -326,6 +326,10 @@ h2 {
   /* Empuja la tarjeta de abajo */
 }
 
+.form-desplegable-container .card {
+  margin: 5px; /* Pequeño margen para que la sombra no se corte */
+}
+
 .modal-wrapper {
   display: none;
   position: fixed;
