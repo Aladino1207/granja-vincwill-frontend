@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,62 +8,65 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
+
 <body>
   <header>
     <h1>Gestión de Lotes</h1>
-    
+
     <!-- Menú de Usuario (V 3.1) -->
     <div class="user-profile-container">
-        <div id="userMenuBtn" class="user-avatar-btn" title="Menú de Usuario">
-            <span id="userInitials">U</span>
+      <div id="userMenuBtn" class="user-avatar-btn" title="Menú de Usuario">
+        <span id="userInitials">U</span>
+      </div>
+      <div id="userDropdown" class="user-dropdown-menu">
+        <div class="dropdown-header">
+          <div class="dropdown-avatar-large"><span id="dropdownInitials">U</span></div>
+          <div class="dropdown-user-info">
+            <h4 id="dropdownName">Cargando...</h4>
+            <p id="dropdownBranch">Cargando...</p>
+          </div>
         </div>
-        <div id="userDropdown" class="user-dropdown-menu">
-            <div class="dropdown-header">
-                <div class="dropdown-avatar-large"><span id="dropdownInitials">U</span></div>
-                <div class="dropdown-user-info">
-                    <h4 id="dropdownName">Cargando...</h4>
-                    <p id="dropdownBranch">Cargando...</p>
-                </div>
-            </div>
-            <ul class="dropdown-actions">
-                <li><button id="changeBranchBtn" class="dropdown-item">🔄 Cambiar Almacén</button></li>
-                <li><button onclick="logout()" class="dropdown-item logout-item">🚪 Cerrar Sesión</button></li>
-            </ul>
-        </div>
+        <ul class="dropdown-actions">
+          <li><button id="changeBranchBtn" class="dropdown-item">🔄 Cambiar Almacén</button></li>
+          <li><button onclick="logout()" class="dropdown-item logout-item">🚪 Cerrar Sesión</button></li>
+        </ul>
+      </div>
     </div>
   </header>
 
   <aside class="sidebar">
-      <nav>
-          <div class="nav-group nav-group-main"><div class="nav-links-container"><a href="index.html" class="nav-link">Dashboard</a></div></div>
-          <div class="nav-group">
-              <h4 class="nav-category-title" data-target="#operaciones-links">Operaciones</h4>
-              <div class="nav-links-container" id="operaciones-links">
-                  <a href="lotes.html" class="nav-link active">Lotes</a>
-                  <a href="salud.html" class="nav-link">Salud</a>
-                  <a href="agua.html" class="nav-link">Agua</a>
-                  <a href="seguimiento.html" class="nav-link">Seguimiento</a>
-                  <a href="inventarios.html" class="nav-link">Inventario</a>
-              </div>
-          </div>
-          <div class="nav-group">
-              <h4 class="nav-category-title" data-target="#finanzas-links">Finanzas</h4>
-              <div class="nav-links-container" id="finanzas-links">
-                  <a href="clientes.html" class="nav-link">Clientes</a>
-                  <a href="ventas.html" class="nav-link">Ventas</a>
-                  <a href="costos.html" class="nav-link">Costos</a>
-                  <a href="reportes.html" class="nav-link">Reportes</a>
-              </div>
-          </div>
-          <div class="nav-group">
-              <h4 class="nav-category-title" data-target="#admin-links">Administración</h4>
-              <div class="nav-links-container" id="admin-links">
-                  <a href="proveedores.html" class="nav-link">Proveedores</a>
-                  <a href="usuarios.html" class="nav-link">Usuarios y Granjas</a>
-                  <a href="configuracion.html" class="nav-link">Configuración</a>
-              </div>
-          </div>
-      </nav>
+    <nav>
+      <div class="nav-group nav-group-main">
+        <div class="nav-links-container"><a href="index.html" class="nav-link">Dashboard</a></div>
+      </div>
+      <div class="nav-group">
+        <h4 class="nav-category-title" data-target="#operaciones-links">Operaciones</h4>
+        <div class="nav-links-container" id="operaciones-links">
+          <a href="lotes.html" class="nav-link active">Lotes</a>
+          <a href="salud.html" class="nav-link">Salud</a>
+          <a href="agua.html" class="nav-link">Agua</a>
+          <a href="seguimiento.html" class="nav-link">Seguimiento</a>
+          <a href="inventarios.html" class="nav-link">Inventario</a>
+        </div>
+      </div>
+      <div class="nav-group">
+        <h4 class="nav-category-title" data-target="#finanzas-links">Finanzas</h4>
+        <div class="nav-links-container" id="finanzas-links">
+          <a href="clientes.html" class="nav-link">Clientes</a>
+          <a href="ventas.html" class="nav-link">Ventas</a>
+          <a href="costos.html" class="nav-link">Costos</a>
+          <a href="reportes.html" class="nav-link">Reportes</a>
+        </div>
+      </div>
+      <div class="nav-group">
+        <h4 class="nav-category-title" data-target="#admin-links">Administración</h4>
+        <div class="nav-links-container" id="admin-links">
+          <a href="proveedores.html" class="nav-link">Proveedores</a>
+          <a href="usuarios.html" class="nav-link">Usuarios y Granjas</a>
+          <a href="configuracion.html" class="nav-link">Configuración</a>
+        </div>
+      </div>
+    </nav>
   </aside>
 
   <main class="main-content">
@@ -72,8 +76,9 @@
       <section class="card">
         <h2 id="formTitle">Agregar Nuevo Lote</h2>
         <form id="loteForm" class="form-grid form-grid-3-col">
+          <!-- ID Oculto para edición -->
           <input type="hidden" id="loteDbId" value="">
-          
+
           <!-- Fila 1: Identificación Básica -->
           <div class="form-group">
             <label for="loteId">ID del Lote (Ej: LOTE-001)</label>
@@ -84,10 +89,11 @@
           <div class="form-group">
             <label for="proveedorSearch">Proveedor de Pollitos</label>
             <div class="searchable-dropdown" id="proveedorDropdown">
-                <input type="text" id="proveedorSearch" class="form-control" placeholder="Buscar Proveedor...">
-                <input type="hidden" id="proveedorId" value="">
-                <button type="button" id="openQuickAddProveedor" class="btn-add-quick" title="Crear Nuevo">+</button>
-                <div class="search-results" id="proveedorResults"></div>
+              <input type="text" id="proveedorSearch" class="form-control" placeholder="Buscar Proveedor...">
+              <!-- ID Oculto para el proveedor seleccionado -->
+              <input type="hidden" id="proveedorId" value="">
+              <button type="button" id="openQuickAddProveedor" class="btn-add-quick" title="Crear Nuevo">+</button>
+              <div class="search-results" id="proveedorResults"></div>
             </div>
           </div>
 
@@ -97,8 +103,9 @@
           </div>
 
           <!-- SECCIÓN MACHOS -->
-          <div class="form-group" style="grid-column: 1 / -1; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
-              <h4 style="margin: 0; color: var(--color-secundario); font-size: 1rem;">♂ Detalle Machos</h4>
+          <div class="form-group"
+            style="grid-column: 1 / -1; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+            <h4 style="margin: 0; color: var(--color-secundario); font-size: 1rem;">♂ Detalle Machos</h4>
           </div>
           <div class="form-group">
             <label for="cantidadMachos">Cantidad Machos</label>
@@ -106,15 +113,17 @@
           </div>
           <div class="form-group">
             <label for="pesoPromedioMachos">Peso Promedio Machos (kg)</label>
-            <input type="number" step="0.001" id="pesoPromedioMachos" class="form-control input-calculo" placeholder="Ej: 0.045">
+            <input type="number" step="0.001" id="pesoPromedioMachos" class="form-control input-calculo"
+              placeholder="Ej: 0.045">
           </div>
           <div class="form-group">
-              <!-- Espacio vacío para alinear grid de 3 columnas -->
+            <!-- Espacio vacío para alinear grid de 3 columnas -->
           </div>
 
           <!-- SECCIÓN HEMBRAS -->
-          <div class="form-group" style="grid-column: 1 / -1; margin-top: 5px; border-top: 1px solid #eee; padding-top: 10px;">
-              <h4 style="margin: 0; color: #e91e63; font-size: 1rem;">♀ Detalle Hembras</h4>
+          <div class="form-group"
+            style="grid-column: 1 / -1; margin-top: 5px; border-top: 1px solid #eee; padding-top: 10px;">
+            <h4 style="margin: 0; color: #e91e63; font-size: 1rem;">♀ Detalle Hembras</h4>
           </div>
           <div class="form-group">
             <label for="cantidadHembras">Cantidad Hembras</label>
@@ -122,34 +131,38 @@
           </div>
           <div class="form-group">
             <label for="pesoPromedioHembras">Peso Promedio Hembras (kg)</label>
-            <input type="number" step="0.001" id="pesoPromedioHembras" class="form-control input-calculo" placeholder="Ej: 0.040">
+            <input type="number" step="0.001" id="pesoPromedioHembras" class="form-control input-calculo"
+              placeholder="Ej: 0.040">
           </div>
 
           <!-- TOTALES AUTOMÁTICOS (Calculados por JS) -->
-          <div class="form-group" style="grid-column: 1 / -1; margin-top: 15px; background: #f1f8ff; padding: 15px; border-radius: 8px; border-left: 4px solid var(--color-secundario);">
-             <div style="display: flex; gap: 2rem; justify-content: flex-start; align-items: center;">
-                 <div>
-                     <span style="font-size: 0.9rem; color: #555;">Total Aves:</span><br>
-                     <strong id="displayTotalCantidad" style="font-size: 1.4rem; color: var(--color-primario);">0</strong>
-                 </div>
-                 <div style="border-left: 1px solid #ddd; padding-left: 2rem;">
-                     <span style="font-size: 0.9rem; color: #555;">Peso Promedio Inicial:</span><br>
-                     <strong id="displayPesoPromedio" style="font-size: 1.4rem; color: var(--color-primario);">0.000 kg</strong>
-                 </div>
-             </div>
+          <div class="form-group"
+            style="grid-column: 1 / -1; margin-top: 15px; background: #f1f8ff; padding: 15px; border-radius: 8px; border-left: 4px solid var(--color-secundario);">
+            <div style="display: flex; gap: 2rem; justify-content: flex-start; align-items: center;">
+              <div>
+                <span style="font-size: 0.9rem; color: #555;">Total Aves:</span><br>
+                <strong id="displayTotalCantidad" style="font-size: 1.4rem; color: var(--color-primario);">0</strong>
+              </div>
+              <div style="border-left: 1px solid #ddd; padding-left: 2rem;">
+                <span style="font-size: 0.9rem; color: #555;">Peso Promedio Inicial:</span><br>
+                <strong id="displayPesoPromedio" style="font-size: 1.4rem; color: var(--color-primario);">0.000
+                  kg</strong>
+              </div>
+            </div>
           </div>
 
-          <div class="form-group" style="display: none;"> 
+          <div class="form-group" style="display: none;">
             <!-- Estado por defecto oculto -->
             <select id="estado" class="form-control">
               <option value="disponible" selected>Disponible</option>
               <option value="vendido">Vendido</option>
             </select>
           </div>
-          
+
           <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem; margin-top: 1rem;">
             <button type="submit" class="btn btn-primario">Guardar Lote</button>
-            <button type="button" id="cancelBtn" class="btn btn-peligro" style="background-color: #7f8c8d;">Cancelar</button>
+            <button type="button" id="cancelBtn" class="btn btn-peligro"
+              style="background-color: #7f8c8d;">Cancelar</button>
           </div>
         </form>
       </section>
@@ -161,7 +174,7 @@
         <h2>Lista de Lotes</h2>
         <button id="toggleFormBtn" class="btn btn-primario">Agregar Nuevo Lote</button>
       </div>
-      
+
       <div class="tabla-responsive-wrapper">
         <table id="loteTable" class="tabla-moderna">
           <thead>
@@ -180,41 +193,42 @@
         </table>
       </div>
     </section>
-    
+
     <footer>
       <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
     </footer>
   </main>
 
-  <!-- Modal de Creación Rápida de Proveedor (Reutilizado) -->
+  <!-- Modal de Creación Rápida de Proveedor -->
   <div id="quickAddModal" class="modal-wrapper">
     <div class="modal-content">
-        <div class="modal-header">
-            <h2>Crear Nuevo Proveedor</h2>
-            <span class="modal-close-btn" id="closeQuickAddModal">&times;</span>
+      <div class="modal-header">
+        <h2>Crear Nuevo Proveedor</h2>
+        <span class="modal-close-btn" id="closeQuickAddModal">&times;</span>
+      </div>
+      <form id="quickAddForm" class="form-grid form-grid-2-col">
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label for="quick_nombreCompania">Nombre de la Compañía</label>
+          <input type="text" id="quick_nombreCompania" class="form-control" required>
         </div>
-        <form id="quickAddForm" class="form-grid form-grid-2-col">
-            <div class="form-group" style="grid-column: 1 / -1;">
-              <label for="quick_nombreCompania">Nombre de la Compañía</label>
-              <input type="text" id="quick_nombreCompania" class="form-control" required>
-            </div>
-            <div class="form-group">
-              <label for="quick_ruc">RUC</label>
-              <input type="text" id="quick_ruc" class="form-control" required>
-            </div>
-            <div class="form-group">
-              <label for="quick_telefono">Teléfono</label>
-              <input type="tel" id="quick_telefono" class="form-control">
-            </div>
-            <div class="form-group" style="grid-column: 1 / -1;">
-                <p id="quickAddError" style="color: red; display: none;"></p>
-                <button type="submit" class="btn btn-primario">Crear y Seleccionar</button>
-            </div>
-        </form>
+        <div class="form-group">
+          <label for="quick_ruc">RUC</label>
+          <input type="text" id="quick_ruc" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="quick_telefono">Teléfono</label>
+          <input type="tel" id="quick_telefono" class="form-control">
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <p id="quickAddError" style="color: red; display: none;"></p>
+          <button type="submit" class="btn btn-primario">Crear y Seleccionar</button>
+        </div>
+      </form>
     </div>
   </div>
 
   <script src="app.js"></script>
   <script src="lotes.js"></script>
 </body>
+
 </html>

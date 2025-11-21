@@ -1,4 +1,3 @@
-// --- Variable global para proveedores ---
 let listaProveedores = [];
 
 // --- Lógica de Carga (BLINDADA) ---
@@ -8,17 +7,18 @@ async function cargarLotes() {
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    const res = await fetch(`${API_URL}/lotes?granjaId=${granjaId}`, {
+    const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
     const tbody = document.getElementById('loteTableBody');
+    if (!tbody) return; // Protección
     tbody.innerHTML = '';
 
     if (lotes.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7">No hay lotes registrados.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8">No hay lotes registrados.</td></tr>';
       return;
     }
 
@@ -27,8 +27,9 @@ async function cargarLotes() {
       tr.innerHTML = `
         <td><strong>${lote.loteId}</strong></td>
         <td>${lote.Proveedor ? lote.Proveedor.nombreCompania : '<em>No especificado</em>'}</td>
-        <td>${lote.cantidad}</td>
-        <td>${lote.pesoInicial} kg</td>
+        <td>♂ ${lote.cantidadMachos || 0} / ♀ ${lote.cantidadHembras || 0}</td>
+        <td><strong>${lote.cantidad}</strong></td>
+        <td>${lote.pesoInicial ? lote.pesoInicial.toFixed(3) : '0.000'} kg</td>
         <td>${new Date(lote.fechaIngreso).toLocaleDateString()}</td>
         <td>${lote.estado}</td>
         <td>
@@ -47,58 +48,116 @@ async function cargarLotes() {
 async function cargarProveedores() {
   try {
     const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/proveedores`, {
+    const res = await fetch(`${window.API_URL}/proveedores`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error('Error al cargar proveedores');
-    listaProveedores = await res.json();
+    if (res.ok) listaProveedores = await res.json();
   } catch (error) { console.error(error); }
 }
 
-
-// --- LÓGICA DEL FORMULARIO DESPLEGABLE ---
+// --- Lógica de Formularios ---
 function abrirFormulario() {
-  document.getElementById('formContainer').classList.add('is-open');
-  document.getElementById('toggleFormBtn').textContent = 'Cancelar';
+  const container = document.getElementById('formContainer');
+  if (container) container.classList.add('is-open');
+  const btn = document.getElementById('toggleFormBtn');
+  if (btn) btn.textContent = 'Cancelar';
 }
 
 function cerrarFormulario() {
-  document.getElementById('formContainer').classList.remove('is-open');
-  document.getElementById('toggleFormBtn').textContent = 'Agregar Nuevo Lote';
+  const container = document.getElementById('formContainer');
+  if (container) container.classList.remove('is-open');
+
+  const btn = document.getElementById('toggleFormBtn');
+  if (btn) btn.textContent = 'Agregar Nuevo Lote';
 
   document.getElementById('loteForm').reset();
   document.getElementById('loteDbId').value = '';
-  document.getElementById('proveedorId').value = ''; // Limpiar ID oculto
+  document.getElementById('proveedorId').value = '';
   document.getElementById('formTitle').textContent = 'Agregar Nuevo Lote';
+
+  // Resetear displays
+  const dispTotal = document.getElementById('displayTotalCantidad');
+  if (dispTotal) dispTotal.textContent = '0';
+  const dispPeso = document.getElementById('displayPesoPromedio');
+  if (dispPeso) dispPeso.textContent = '0.000 kg';
 }
 
-// --- Funciones CRUD ---
+// --- CÁLCULOS AUTOMÁTICOS (V 3.3) ---
+function calcularTotales() {
+  const machos = parseInt(document.getElementById('cantidadMachos').value) || 0;
+  const pesoMachos = parseFloat(document.getElementById('pesoPromedioMachos').value) || 0;
+  const hembras = parseInt(document.getElementById('cantidadHembras').value) || 0;
+  const pesoHembras = parseFloat(document.getElementById('pesoPromedioHembras').value) || 0;
+
+  const totalAves = machos + hembras;
+  let pesoPromedioTotal = 0;
+
+  if (totalAves > 0) {
+    // Cálculo de promedio ponderado
+    const pesoTotalMasa = (machos * pesoMachos) + (hembras * pesoHembras);
+    pesoPromedioTotal = pesoTotalMasa / totalAves;
+  }
+
+  // Actualizar UI
+  const dispTotal = document.getElementById('displayTotalCantidad');
+  if (dispTotal) dispTotal.textContent = totalAves;
+  const dispPeso = document.getElementById('displayPesoPromedio');
+  if (dispPeso) dispPeso.textContent = `${pesoPromedioTotal.toFixed(3)} kg`;
+
+  return { totalAves, pesoPromedioTotal };
+}
+
+
+// --- CRUD ---
 
 async function guardarLote(e) {
   e.preventDefault();
+
+  // Recalcular por seguridad antes de guardar
+  const { totalAves, pesoPromedioTotal } = calcularTotales();
+
+  if (totalAves <= 0) {
+    alert("Debes ingresar al menos un macho o una hembra.");
+    return;
+  }
 
   const loteDbId = document.getElementById('loteDbId').value;
   const esEdicion = !!loteDbId;
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
+  // Obtenemos los valores con chequeo de nulos (para evitar el error)
+  const provIdEl = document.getElementById('proveedorId');
+  const provId = provIdEl ? provIdEl.value : '';
+
   const lote = {
     loteId: document.getElementById('loteId').value,
-    cantidad: parseInt(document.getElementById('cantidad').value),
-    pesoInicial: parseFloat(document.getElementById('pesoInicial').value),
+    // Proveedor (Opcional)
+    proveedorId: provId ? parseInt(provId) : null,
+
+    // Datos detallados
+    cantidadMachos: parseInt(document.getElementById('cantidadMachos').value) || 0,
+    pesoPromedioMachos: parseFloat(document.getElementById('pesoPromedioMachos').value) || 0,
+    cantidadHembras: parseInt(document.getElementById('cantidadHembras').value) || 0,
+    pesoPromedioHembras: parseFloat(document.getElementById('pesoPromedioHembras').value) || 0,
+
+    // Campos calculados automáticos (totales)
+    cantidad: totalAves,
+    pesoInicial: pesoPromedioTotal,
+
     fechaIngreso: document.getElementById('fechaIngreso').value,
     estado: document.getElementById('estado').value,
-    proveedorId: document.getElementById('proveedorId').value ? parseInt(document.getElementById('proveedorId').value) : null, // NUEVO
     granjaId: granjaId
   };
 
+  // Si es nuevo, guardamos la cantidad inicial como referencia histórica
   if (!esEdicion) {
-    lote.cantidadInicial = lote.cantidad;
+    lote.cantidadInicial = totalAves;
   }
 
   const url = esEdicion
-    ? `${API_URL}/lotes/${loteDbId}`
-    : `${API_URL}/lotes`;
+    ? `${window.API_URL}/lotes/${loteDbId}`
+    : `${window.API_URL}/lotes`;
   const method = esEdicion ? 'PUT' : 'POST';
 
   try {
@@ -111,6 +170,7 @@ async function guardarLote(e) {
       },
       body: JSON.stringify(lote)
     });
+
     if (res.ok) {
       cerrarFormulario();
       await cargarLotes();
@@ -120,6 +180,7 @@ async function guardarLote(e) {
     }
   } catch (error) {
     alert('Error de conexión');
+    console.error(error);
   }
 }
 
@@ -129,7 +190,7 @@ async function editarLote(id) {
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    const res = await fetch(`${API_URL}/lotes/${id}?granjaId=${granjaId}`, {
+    const res = await fetch(`${window.API_URL}/lotes/${id}?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('No se pudo cargar el lote');
@@ -138,36 +199,46 @@ async function editarLote(id) {
     document.getElementById('formTitle').textContent = 'Editar Lote';
     document.getElementById('loteDbId').value = lote.id;
     document.getElementById('loteId').value = lote.loteId;
-    document.getElementById('cantidad').value = lote.cantidad;
-    document.getElementById('pesoInicial').value = lote.pesoInicial;
     document.getElementById('fechaIngreso').value = lote.fechaIngreso.split('T')[0];
     document.getElementById('estado').value = lote.estado;
 
-    // Poblar proveedor
-    if (lote.proveedorId) {
-      const prov = listaProveedores.find(p => p.id === lote.proveedorId);
-      if (prov) {
-        document.getElementById('proveedorSearch').value = `${prov.nombreCompania} (${prov.ruc})`;
-        document.getElementById('proveedorId').value = prov.id;
-      }
+    // Poblar datos de sexado
+    document.getElementById('cantidadMachos').value = lote.cantidadMachos || 0;
+    document.getElementById('pesoPromedioMachos').value = lote.pesoPromedioMachos || 0;
+    document.getElementById('cantidadHembras').value = lote.cantidadHembras || 0;
+    document.getElementById('pesoPromedioHembras').value = lote.pesoPromedioHembras || 0;
+
+    // Poblar proveedor en el buscador
+    if (lote.proveedorId && lote.Proveedor) {
+      const provInput = document.getElementById('proveedorSearch');
+      const provIdInput = document.getElementById('proveedorId');
+      if (provInput) provInput.value = lote.Proveedor.nombreCompania;
+      if (provIdInput) provIdInput.value = lote.proveedorId;
+    } else {
+      const provInput = document.getElementById('proveedorSearch');
+      const provIdInput = document.getElementById('proveedorId');
+      if (provInput) provInput.value = '';
+      if (provIdInput) provIdInput.value = '';
     }
 
+    calcularTotales(); // Actualizar displays visuales
     abrirFormulario();
     window.scrollTo(0, 0);
 
   } catch (error) {
     console.error('Error al cargar datos para editar:', error);
+    alert('Error al cargar datos del lote.');
   }
 }
 
 async function eliminarLote(id) {
-  if (confirm('¿Seguro que quieres eliminar este lote?')) {
+  if (confirm('¿Seguro que quieres eliminar este lote? Esto borrará todo su historial.')) {
     try {
       const token = localStorage.getItem('token');
       const granjaId = getSelectedGranjaId();
       if (!granjaId) return;
 
-      await fetch(`${API_URL}/lotes/${id}?granjaId=${granjaId}`, {
+      await fetch(`${window.API_URL}/lotes/${id}?granjaId=${granjaId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -185,13 +256,19 @@ function setupProveedorSearch() {
   const dropdown = document.getElementById('proveedorDropdown');
   const hiddenInput = document.getElementById('proveedorId');
 
+  if (!searchInput || !resultsContainer || !dropdown) return; // Protección
+
   searchInput.addEventListener('input', () => {
     const query = searchInput.value.toLowerCase();
+    // Limpiar ID si el usuario cambia el texto
+    hiddenInput.value = '';
+
     if (query.length < 1) {
       resultsContainer.innerHTML = '';
       dropdown.classList.remove('is-open');
       return;
     }
+
     const filtrados = listaProveedores.filter(p => p.nombreCompania.toLowerCase().includes(query));
     resultsContainer.innerHTML = '';
 
@@ -214,12 +291,9 @@ function setupProveedorSearch() {
   });
 
   document.addEventListener('click', (e) => {
-    if (!dropdown.contains(e.target)) dropdown.classList.remove('is-open');
-  });
-
-  // Limpiar ID si borra texto
-  searchInput.addEventListener('change', () => {
-    if (searchInput.value === '') hiddenInput.value = '';
+    if (!dropdown.contains(e.target)) {
+      dropdown.classList.remove('is-open');
+    }
   });
 }
 
@@ -230,48 +304,57 @@ function setupQuickAddModal() {
   const closeBtn = document.getElementById('closeQuickAddModal');
   const form = document.getElementById('quickAddForm');
 
-  if (!openBtn) return; // Si no existe el botón (ej. en otra vista), salimos
+  if (openBtn) openBtn.addEventListener('click', () => modal.classList.add('is-open'));
+  if (closeBtn) closeBtn.addEventListener('click', () => modal.classList.remove('is-open'));
+  if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('is-open'); });
 
-  openBtn.addEventListener('click', () => modal.classList.add('is-open'));
-  closeBtn.addEventListener('click', () => modal.classList.remove('is-open'));
-  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('is-open'); });
+  if (form) {
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const nuevoProv = {
+        nombreCompania: document.getElementById('quick_nombreCompania').value,
+        ruc: document.getElementById('quick_ruc').value,
+        telefono: document.getElementById('quick_telefono').value
+      };
+      try {
+        const token = localStorage.getItem('token');
+        // Usamos el endpoint global de admin
+        const res = await fetch(`${window.API_URL}/proveedores`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(nuevoProv)
+        });
 
-  form.onsubmit = async (e) => {
-    e.preventDefault();
-    const nuevoProv = {
-      nombreCompania: document.getElementById('quick_nombreCompania').value,
-      ruc: document.getElementById('quick_ruc').value,
-      telefono: document.getElementById('quick_telefono').value
+        if (res.ok) {
+          const creado = await res.json();
+          modal.classList.remove('is-open');
+          form.reset();
+
+          await cargarProveedores(); // Refrescar lista global
+
+          // Auto-seleccionar en el formulario principal
+          document.getElementById('proveedorSearch').value = creado.nombreCompania;
+          document.getElementById('proveedorId').value = creado.id;
+        } else {
+          alert('Error al crear proveedor');
+        }
+      } catch (e) { console.error(e); }
     };
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/proveedores`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(nuevoProv)
-      });
-      if (res.ok) {
-        const creado = await res.json();
-        modal.classList.remove('is-open');
-        form.reset();
-        await cargarProveedores(); // Refrescar lista
-        // Auto-seleccionar
-        document.getElementById('proveedorSearch').value = creado.nombreCompania;
-        document.getElementById('proveedorId').value = creado.id;
-      } else {
-        alert('Error al crear proveedor');
-      }
-    } catch (e) { console.error(e); }
-  };
+  }
 }
 
-
-// --- Event Listener Principal ---
+// --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
 
-  if (granja) document.querySelector('header h1').textContent = `Lotes (${granja.nombre})`;
+  if (granja) {
+    const headerEl = document.querySelector('header h1');
+    if (headerEl) headerEl.textContent = `Lotes (${granja.nombre})`;
+  }
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
@@ -279,29 +362,35 @@ document.addEventListener('DOMContentLoaded', () => {
   const formContainer = document.getElementById('formContainer');
 
   if (currentUser && currentUser.role !== 'viewer') {
-    toggleBtn.style.display = 'block';
+    if (toggleBtn) {
+      toggleBtn.style.display = 'block';
+      toggleBtn.addEventListener('click', () => {
+        const isOpen = formContainer.classList.contains('is-open');
+        if (isOpen) {
+          cerrarFormulario();
+        } else {
+          form.reset();
+          document.getElementById('loteDbId').value = '';
+          document.getElementById('formTitle').textContent = 'Agregar Nuevo Lote';
+          abrirFormulario();
+        }
+      });
+    }
 
-    toggleBtn.addEventListener('click', () => {
-      const isOpen = formContainer.classList.contains('is-open');
-      if (isOpen) {
-        cerrarFormulario();
-      } else {
-        form.reset();
-        document.getElementById('loteDbId').value = '';
-        document.getElementById('formTitle').textContent = 'Agregar Nuevo Lote';
-        abrirFormulario();
-      }
-    });
-
-    cancelBtn.addEventListener('click', cerrarFormulario);
-    form.onsubmit = guardarLote;
+    if (cancelBtn) cancelBtn.addEventListener('click', cerrarFormulario);
+    if (form) form.onsubmit = guardarLote;
 
     // Inicializar componentes nuevos
     setupProveedorSearch();
     setupQuickAddModal();
 
+    // Listeners para cálculo automático en tiempo real
+    document.querySelectorAll('.input-calculo').forEach(input => {
+      input.addEventListener('input', calcularTotales);
+    });
+
   } else {
-    toggleBtn.style.display = 'none';
+    if (toggleBtn) toggleBtn.style.display = 'none';
   }
 
   cargarLotes();
