@@ -233,8 +233,6 @@ function generarPDF(data, tipo) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initializeUserProfile();
-  initializeSidebar();
   cargarLotesForSelect();
 
   const form = document.getElementById('reporteForm');
