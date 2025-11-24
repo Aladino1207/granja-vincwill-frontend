@@ -3,54 +3,42 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Costos de Producción por Lote</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 
 <body>
     <header>
-        <h1 id="pageTitle">Dashboard</h1>
+        <h1>Costos</h1>
 
+        <!-- Menú de Usuario -->
         <div class="user-profile-container">
             <div id="userMenuBtn" class="user-avatar-btn" title="Menú de Usuario">
                 <span id="userInitials">U</span>
             </div>
-
             <div id="userDropdown" class="user-dropdown-menu">
-
                 <div class="dropdown-header">
-                    <div class="dropdown-avatar-large">
-                        <span id="dropdownInitials">U</span>
-                    </div>
+                    <div class="dropdown-avatar-large"><span id="dropdownInitials">U</span></div>
                     <div class="dropdown-user-info">
                         <h4 id="dropdownName">Cargando...</h4>
                         <p id="dropdownBranch">Cargando...</p>
                     </div>
                 </div>
-
                 <ul class="dropdown-actions">
-                    <li>
-                        <button id="changeBranchBtn" class="dropdown-item">
-                            🔄 Cambiar Almacén
-                        </button>
-                    </li>
-                    <li>
-                        <button onclick="logout()" class="dropdown-item logout-item">
-                            🚪 Cerrar Sesión
-                        </button>
-                    </li>
+                    <li><button id="changeBranchBtn" class="dropdown-item">🔄 Cambiar Almacén</button></li>
+                    <li><button onclick="logout()" class="dropdown-item logout-item">🚪 Cerrar Sesión</button></li>
                 </ul>
             </div>
         </div>
     </header>
+
     <aside class="sidebar">
         <nav>
             <div class="nav-group nav-group-main">
-                <div class="nav-links-container">
-                    <a href="index.html" class="nav-link">Dashboard</a>
-                </div>
+                <div class="nav-links-container"><a href="index.html" class="nav-link">Dashboard</a></div>
             </div>
-
             <div class="nav-group">
                 <h4 class="nav-category-title" data-target="#operaciones-links">Operaciones</h4>
                 <div class="nav-links-container" id="operaciones-links">
@@ -61,21 +49,19 @@
                     <a href="inventarios.html" class="nav-link">Inventario</a>
                 </div>
             </div>
-
             <div class="nav-group">
                 <h4 class="nav-category-title" data-target="#finanzas-links">Finanzas</h4>
                 <div class="nav-links-container" id="finanzas-links">
                     <a href="clientes.html" class="nav-link">Clientes</a>
-                    <a href="proveedores.html" class="nav-link">Proveedores</a>
                     <a href="ventas.html" class="nav-link">Ventas</a>
-                    <a href="costos.html" class="nav-link">Costos</a>
+                    <a href="costos.html" class="nav-link active">Costos</a>
                     <a href="reportes.html" class="nav-link">Reportes</a>
                 </div>
             </div>
-
             <div class="nav-group">
                 <h4 class="nav-category-title" data-target="#admin-links">Administración</h4>
                 <div class="nav-links-container" id="admin-links">
+                    <a href="proveedores.html" class="nav-link">Proveedores</a>
                     <a href="usuarios.html" class="nav-link">Usuarios y Granjas</a>
                     <a href="configuracion.html" class="nav-link">Configuración</a>
                 </div>
@@ -85,42 +71,57 @@
 
     <main class="main-content">
 
+        <!-- Contenedor Desplegable del Formulario -->
         <div id="formContainer" class="form-desplegable-container">
             <section class="card">
-                <h2 id="formTitle">Registrar Costo</h2>
+                <h2 id="formTitle">Registrar Gasto Operativo</h2>
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                    <i style="color: var(--color-secundario);">ℹ</i> Nota: El costo de <strong>Alimento</strong> se
+                    registra automáticamente desde el módulo de <em>Seguimiento</em>.
+                </p>
                 <form id="costoForm" class="form-grid form-grid-3-col">
                     <input type="hidden" id="costoId" value="">
 
                     <div class="form-group">
-                        <label for="loteSelect">Lote</label>
+                        <label for="loteSelect">Lote (Opcional)</label>
                         <select id="loteSelect" class="form-control"></select>
+                        <small style="color: #999; font-size: 0.8rem;">Dejar vacío para gastos generales de la
+                            granja.</small>
                     </div>
+
                     <div class="form-group">
                         <label for="categoria">Categoría</label>
-                        <select id="categoria" class="form-control">
-                            <option value="Alimento">Alimento</option>
-                            <option value="Vacuna">Vacuna</option>
+                        <select id="categoria" class="form-control" required>
+                            <!-- OPCIÓN 'Alimento' ELIMINADA PARA EVITAR DUPLICADOS -->
                             <option value="Mano de Obra">Mano de Obra</option>
-                            <option value="Material">Material</option>
+                            <option value="Vacuna">Vacuna / Medicina</option>
+                            <option value="Servicios Básicos">Servicios Básicos (Luz/Agua)</option>
+                            <option value="Mantenimiento">Mantenimiento</option>
+                            <option value="Material">Materiales</option>
+                            <option value="Transporte">Transporte</option>
                             <option value="Otro">Otro</option>
                         </select>
                     </div>
+
                     <div class="form-group">
                         <label for="monto">Monto (USD)</label>
                         <input type="number" id="monto" class="form-control" min="0" step="0.01"
                             placeholder="Ej: 120.50" required>
                     </div>
+
                     <div class="form-group" style="grid-column: 1 / 3;">
                         <label for="descripcion">Descripción</label>
-                        <input type="text" id="descripcion" class="form-control" required>
+                        <input type="text" id="descripcion" class="form-control"
+                            placeholder="Ej: Pago quincena galponero" required>
                     </div>
+
                     <div class="form-group">
                         <label for="fecha">Fecha</label>
                         <input type="date" id="fecha" class="form-control" required>
                     </div>
 
                     <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
-                        <button type="submit" class="btn btn-primario">Guardar</button>
+                        <button type="submit" class="btn btn-primario">Guardar Gasto</button>
                         <button type="button" id="cancelBtn" class="btn btn-peligro"
                             style="background-color: #7f8c8d;">Cancelar</button>
                     </div>
@@ -128,10 +129,11 @@
             </section>
         </div>
 
+        <!-- Card de la Lista -->
         <section class="card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2>Historial de Costos</h2>
-                <button id="toggleFormBtn" class="btn btn-primario">Registrar Nuevo Costo</button>
+                <button id="toggleFormBtn" class="btn btn-primario">Registrar Nuevo Gasto</button>
             </div>
 
             <div class="tabla-responsive-wrapper">
