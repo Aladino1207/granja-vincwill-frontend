@@ -87,13 +87,14 @@
     <main class="main-content">
         <div id="formContainer" class="form-desplegable-container">
             <section class="card">
-                <h2 id="formTitle">Registrar Insumo</h2>
+                <h2 id="formTitle">Registrar Compra de Insumo</h2>
                 <form id="inventarioForm" class="form-grid form-grid-3-col">
                     <input type="hidden" id="inventarioId" value="">
 
                     <div class="form-group">
-                        <label for="producto">Producto</label>
-                        <input type="text" id="producto" class="form-control" required>
+                        <label for="producto">Nombre del Producto</label>
+                        <input type="text" id="producto" class="form-control" placeholder="Ej: Balanceado Inicial"
+                            required>
                     </div>
 
                     <div class="form-group">
@@ -106,35 +107,37 @@
                         </select>
                     </div>
 
+                    <!-- Buscador Proveedor -->
                     <div class="form-group">
-                        <label for="proveedorSearch">Proveedor (Opcional)</label>
+                        <label for="proveedorSearch">Proveedor</label>
                         <div class="searchable-dropdown" id="proveedorDropdown">
                             <input type="text" id="proveedorSearch" class="form-control"
-                                placeholder="Buscar RUC o Nombre...">
+                                placeholder="Buscar Proveedor...">
                             <input type="hidden" id="proveedorId" value="">
                             <button type="button" id="openQuickAddProveedor" class="btn-add-quick">+</button>
-                            <div class="search-results" id="proveedorResults">
-                            </div>
+                            <div class="search-results" id="proveedorResults"></div>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label for="cantidad">Cantidad (kg/unidades)</label>
-                        <input type="number" id="cantidad" class="form-control" min="1" required>
+                        <label for="cantidad">Cantidad Total (kg/unid)</label>
+                        <input type="number" id="cantidad" class="form-control" min="1" placeholder="Ej: 1320" required>
+                    </div>
+
+                    <!-- CAMBIO V 3.4: Pedimos TOTAL, no unitario -->
+                    <div class="form-group">
+                        <label for="costoTotal">Costo Total de la Factura ($)</label>
+                        <input type="number" id="costoTotal" class="form-control" min="0" step="0.01"
+                            placeholder="Ej: 1500.00" required>
                     </div>
 
                     <div class="form-group">
-                        <label for="costo">Costo Unitario (USD)</label>
-                        <input type="number" id="costo" class="form-control" min="0" step="0.01" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="fecha">Fecha de Ingreso</label>
+                        <label for="fecha">Fecha de Compra</label>
                         <input type="date" id="fecha" class="form-control" required>
                     </div>
 
                     <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
-                        <button type="submit" class="btn btn-primario">Guardar</button>
+                        <button type="submit" class="btn btn-primario">Guardar Insumo</button>
                         <button type="button" id="cancelBtn" class="btn btn-peligro"
                             style="background-color: #7f8c8d;">Cancelar</button>
                     </div>

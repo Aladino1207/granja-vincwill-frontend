@@ -80,13 +80,20 @@ async function guardarInventario(e) {
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
+  // Obtenemos valores
+  const cantidad = parseFloat(document.getElementById('cantidad').value);
+  const costoTotal = parseFloat(document.getElementById('costoTotal').value);
+
+  // Validación básica
+  if (cantidad <= 0) { alert("La cantidad debe ser mayor a 0"); return; }
+
   const inventario = {
     producto: document.getElementById('producto').value,
     categoria: document.getElementById('categoria').value,
-    cantidad: parseFloat(document.getElementById('cantidad').value),
-    costo: parseFloat(document.getElementById('costo').value),
+    cantidad: cantidad,
+    costoTotal: costoTotal, // Enviamos el total, el backend calculará el unitario
     fecha: document.getElementById('fecha').value,
-    proveedorId: document.getElementById('proveedorId').value ? parseInt(document.getElementById('proveedorId').value) : null, // V 3.1
+    proveedorId: document.getElementById('proveedorId').value ? parseInt(document.getElementById('proveedorId').value) : null,
     granjaId: granjaId
   };
 
@@ -99,10 +106,7 @@ async function guardarInventario(e) {
     const token = localStorage.getItem('token');
     const res = await fetch(url, {
       method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(inventario)
     });
 
@@ -111,7 +115,7 @@ async function guardarInventario(e) {
       await cargarInventario();
     } else {
       const errorText = await res.json();
-      alert('Error al guardar: ' + (errorText.error || 'Desconocido'));
+      alert('Error: ' + (errorText.error || 'Desconocido'));
     }
   } catch (error) {
     alert('Error de conexión');
