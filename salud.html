@@ -86,7 +86,6 @@
   </aside>
 
   <main class="main-content">
-
     <div id="formContainer" class="form-desplegable-container">
       <section class="card">
         <h2 id="formTitle">Registrar Evento de Salud</h2>
@@ -99,32 +98,48 @@
               <option value="">Selecciona un Lote</option>
             </select>
           </div>
+
+          <!-- CAMBIO: Tipo es un Select -->
           <div class="form-group">
             <label for="tipo">Tipo de Evento</label>
             <select id="tipo" class="form-control" required>
-              <option value="">Selecciona un tipo...</option>
+              <option value="">Seleccionar...</option>
               <option value="Mortalidad">Mortalidad</option>
-              <option value="Vacuna">Vacunación</option>
+              <option value="Vacunación">Vacunación</option>
               <option value="Tratamiento">Tratamiento</option>
               <option value="Otro">Otro</option>
             </select>
           </div>
-          <div class="form-group">
-            <label for="nombre">Nombre (Tratamiento/Vacuna)</label>
-            <input type="text" id="nombre" class="form-control" required>
+
+          <!-- CAMBIO: Select de Vacuna (Oculto por defecto) -->
+          <div class="form-group" id="vacunaGroup" style="display: none;">
+            <label for="vacunaSelect">Producto del Inventario</label>
+            <select id="vacunaSelect" class="form-control">
+              <option value="">Selecciona Vacuna/Medicina</option>
+            </select>
+            <small style="color: #667;">Se descontará del stock.</small>
           </div>
+
           <div class="form-group">
-            <label for="diasRetiro">Días de Retiro (si aplica)</label>
-            <input type="number" id="diasRetiro" class="form-control" min="0" value="0">
+            <label for="nombre">Nombre / Detalle</label>
+            <input type="text" id="nombre" class="form-control" placeholder="Ej: Muerte súbita o Newcastle" required>
           </div>
+
           <div class="form-group">
             <label for="cantidad">Cantidad (Aves/Dosis)</label>
             <input type="number" id="cantidad" class="form-control" required>
           </div>
+
+          <div class="form-group">
+            <label for="diasRetiro">Días de Retiro (si aplica)</label>
+            <input type="number" id="diasRetiro" class="form-control" min="0" value="0">
+          </div>
+
           <div class="form-group">
             <label for="fecha">Fecha</label>
             <input type="date" id="fecha" class="form-control" required>
           </div>
+
           <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
             <button type="submit" class="btn btn-primario">Guardar</button>
             <button type="button" id="cancelBtn" class="btn btn-peligro"
@@ -144,10 +159,11 @@
         <table id="saludTable" class="tabla-moderna">
           <thead>
             <tr>
-              <th>ID del Lote</th>
+              <th>Lote</th>
               <th>Tipo</th>
               <th>Nombre</th>
-              <th>Cantidad</th>
+              <th>Insumo Usado</th> <!-- Nueva Columna -->
+              <th>Cant.</th>
               <th>Fecha</th>
               <th>Acciones</th>
             </tr>
@@ -158,7 +174,7 @@
     </section>
 
     <footer>
-      <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
+      <p>© 2025 Granja Avícola VincWill.</p>
     </footer>
   </main>
 
