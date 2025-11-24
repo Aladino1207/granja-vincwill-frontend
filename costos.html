@@ -75,30 +75,39 @@
         <div id="formContainer" class="form-desplegable-container">
             <section class="card">
                 <h2 id="formTitle">Registrar Gasto Operativo</h2>
-                <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
-                    <i style="color: var(--color-secundario);">ℹ</i> Nota: El costo de <strong>Alimento</strong> se
-                    registra automáticamente desde el módulo de <em>Seguimiento</em>.
-                </p>
+
+                <!-- NOTA INFORMATIVA ACTUALIZADA -->
+                <div
+                    style="background-color: #e8f4fd; border-left: 4px solid #2196f3; padding: 10px; margin-bottom: 15px; border-radius: 4px;">
+                    <p style="color: #0d47a1; font-size: 0.9rem; margin: 0;">
+                        <i style="font-style: normal;">ℹ️</i> <strong>Nota Importante:</strong><br>
+                        • Los costos de <strong>Alimento</strong> se registran automáticamente desde
+                        <em>Seguimiento</em>.<br>
+                        • Los costos de <strong>Vacunas/Medicinas</strong> se registran automáticamente desde
+                        <em>Salud</em>.<br>
+                        Use este formulario solo para gastos operativos (Luz, Agua, Mano de Obra, Mantenimiento, etc.).
+                    </p>
+                </div>
+
                 <form id="costoForm" class="form-grid form-grid-3-col">
                     <input type="hidden" id="costoId" value="">
 
                     <div class="form-group">
                         <label for="loteSelect">Lote (Opcional)</label>
                         <select id="loteSelect" class="form-control"></select>
-                        <small style="color: #999; font-size: 0.8rem;">Dejar vacío para gastos generales de la
-                            granja.</small>
+                        <small style="color: #999; font-size: 0.8rem;">Dejar vacío para gastos generales.</small>
                     </div>
 
                     <div class="form-group">
                         <label for="categoria">Categoría</label>
                         <select id="categoria" class="form-control" required>
-                            <!-- OPCIÓN 'Alimento' ELIMINADA PARA EVITAR DUPLICADOS -->
+                            <!-- OPCIONES DE INVENTARIO ELIMINADAS -->
                             <option value="Mano de Obra">Mano de Obra</option>
-                            <option value="Vacuna">Vacuna / Medicina</option>
-                            <option value="Servicios Básicos">Servicios Básicos (Luz/Agua)</option>
-                            <option value="Mantenimiento">Mantenimiento</option>
-                            <option value="Material">Materiales</option>
-                            <option value="Transporte">Transporte</option>
+                            <option value="Servicios Básicos">Servicios Básicos (Luz/Agua/Gas)</option>
+                            <option value="Mantenimiento">Mantenimiento / Reparaciones</option>
+                            <option value="Material">Materiales / Equipos</option>
+                            <option value="Transporte">Transporte / Fletes</option>
+                            <option value="Administrativo">Gastos Administrativos</option>
                             <option value="Otro">Otro</option>
                         </select>
                     </div>
