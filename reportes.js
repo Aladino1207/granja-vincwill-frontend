@@ -6,18 +6,22 @@ async function cargarLotesForSelect() {
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    // V 3.0: Añadimos granjaId al fetch
-    const res = await fetch(`${API_URL}/lotes?granjaId=${granjaId}`, {
+    // CORRECCIÓN: Añadimos granjaId al fetch
+    const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
     const select = document.getElementById('loteSelect');
+    if (!select) return;
+
     select.innerHTML = '<option value="">Todos los Lotes</option>';
     lotes.forEach(lote => {
       const option = document.createElement('option');
       option.value = lote.id;
-      option.textContent = `${lote.loteId}`;
+      // Mostramos Lote ID y si está vendido o disponible
+      option.textContent = `${lote.loteId} (${lote.estado})`;
       select.appendChild(option);
     });
   } catch (error) {
@@ -30,7 +34,6 @@ async function cargarLotesForSelect() {
 async function generarReporte(e) {
   e.preventDefault();
   const token = localStorage.getItem('token');
-  // V 3.0: Obtenemos la granja activa
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
@@ -45,18 +48,19 @@ async function generarReporte(e) {
   }
 
   // Deshabilitar botón de PDF mientras se carga
-  const pdfBtn = document.getElementById('pdfBtn');
+  const pdfBtn = document.querySelector('button[type="submit"]'); // O el ID si tiene
+  const originalText = pdfBtn.textContent;
   pdfBtn.disabled = true;
   pdfBtn.textContent = 'Generando...';
 
   try {
-    const res = await fetch(`${API_URL}/reporte`, {
+    const res = await fetch(`${window.API_URL}/reporte`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
-      // V 3.0: Añadimos granjaId al body
+      // CORRECCIÓN: Enviamos granjaId en el body
       body: JSON.stringify({
         tipoReporte,
         loteId,
@@ -65,44 +69,62 @@ async function generarReporte(e) {
         granjaId
       })
     });
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || `HTTP error! status: ${res.status}`);
+    }
+
     const data = await res.json();
 
     mostrarPrevisualizacion(data, tipoReporte);
 
-    // Habilitamos el botón de PDF
-    pdfBtn.disabled = false;
-    pdfBtn.textContent = 'Generar Reporte PDF';
-    // Asignamos el evento con los datos ya cargados
-    pdfBtn.onclick = () => {
+    // Si tienes un botón específico para descargar PDF aparte:
+    // const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+    // if(downloadPdfBtn) { ... } 
+
+    // Por simplicidad, en tu versión actual el botón de generar hace todo o muestra la tabla.
+    // Si quieres descarga automática:
+    if (data.length > 0 && confirm("Reporte generado. ¿Deseas descargar el PDF ahora?")) {
       generarPDF(data, tipoReporte, fechaInicio, fechaFin);
-    };
+    }
 
   } catch (error) {
     console.error('Error al generar reporte:', error);
     alert('Error al generar reporte: ' + error.message);
-    pdfBtn.textContent = 'Generar Reporte PDF'; // Restaurar botón
+  } finally {
+    pdfBtn.disabled = false;
+    pdfBtn.textContent = originalText;
   }
 }
 
 function mostrarPrevisualizacion(data, tipoReporte) {
   const tbody = document.getElementById('reporteTableBody');
   const thead = document.getElementById('reporteTableHead');
+  if (!tbody || !thead) return;
+
   tbody.innerHTML = '';
   thead.innerHTML = '';
 
   if (!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5">No hay datos para mostrar</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No hay datos para los criterios seleccionados.</td></tr>';
     return;
   }
 
-  // Usamos el primer objeto para sacar los headers
+  // Generar cabeceras dinámicamente basadas en el primer objeto
   const headers = Object.keys(data[0]);
   thead.innerHTML = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
 
   data.forEach(row => {
     const tr = document.createElement('tr');
-    tr.innerHTML = headers.map(h => `<td>${row[h] || 'N/A'}</td>`).join('');
+    tr.innerHTML = headers.map(h => {
+      let val = row[h];
+      // Formato simple para dinero si parece dinero
+      if (typeof val === 'number' && (h.includes('Monto') || h.includes('Costo') || h.includes('Precio'))) {
+        val = `$${val.toFixed(2)}`;
+      }
+      return `<td>${val || '-'}</td>`;
+    }).join('');
     tbody.appendChild(tr);
   });
 }
@@ -114,12 +136,14 @@ function generarPDF(data, tipoReporte, fechaInicio, fechaFin) {
 
   // Encabezado
   doc.setFontSize(18);
-  doc.text(`Reporte de ${tipoReporte.charAt(0).toUpperCase() + tipoReporte.slice(1)}`, 14, 22);
-  doc.setFontSize(12);
-  doc.text(`Granja: ${granja.nombre || 'N/A'}`, 14, 30);
-  doc.setFontSize(10);
-  doc.text(`Período: ${fechaInicio} a ${fechaFin}`, 14, 36);
-  doc.text(`Generado el: ${new Date().toLocaleString()}`, 14, 42);
+  doc.setTextColor(44, 62, 80);
+  doc.text(`Reporte: ${tipoReporte.toUpperCase()}`, 14, 22);
+
+  doc.setFontSize(11);
+  doc.setTextColor(100);
+  doc.text(`Granja: ${granja.nombre || 'Principal'}`, 14, 30);
+  doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 36);
+  doc.text(`Periodo: ${fechaInicio} al ${fechaFin}`, 14, 42);
 
   // Tabla
   if (data && data.length > 0) {
@@ -130,38 +154,37 @@ function generarPDF(data, tipoReporte, fechaInicio, fechaFin) {
       head: [headers],
       body: body,
       startY: 50,
-      styles: { overflow: 'linebreak', fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [44, 62, 80], textColor: [255, 255, 255], fontSize: 9 },
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [52, 152, 219], textColor: 255, fontStyle: 'bold' },
+      footStyles: { fillColor: [44, 62, 80], textColor: 255, fontStyle: 'bold' } // Si hubiera pie
     });
   } else {
-    doc.text('No hay datos disponibles para este reporte.', 14, 50);
+    doc.text('No hay datos disponibles.', 14, 60);
   }
 
-  // Pie de página
+  // Numeración de páginas
   const pageCount = doc.internal.getNumberOfPages();
+  doc.setFontSize(8);
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    doc.setFontSize(9);
-    doc.text(`Página ${i} de ${pageCount}`, 190, 285, { align: 'right' });
+    doc.text(`Página ${i} de ${pageCount}`, 195, 285, { align: 'right' });
   }
 
-  doc.save(`reporte_${tipoReporte}_${new Date().toISOString().split('T')[0]}.pdf`);
+  doc.save(`Reporte_${tipoReporte}_${fechaInicio}.pdf`);
 }
 
-// --- Event Listener Principal (BLINDADO) ---
+// --- Inicialización ---
 document.addEventListener('DOMContentLoaded', () => {
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
-
-  // V 3.0: Poner el nombre de la granja en el título
   if (granja) {
-    document.querySelector('header h1').textContent = `Reportes (${granja.nombre})`;
+    const title = document.querySelector('header h1');
+    if (title) title.textContent = `Reportes (${granja.nombre})`;
   }
 
-  // Deshabilitar botón de PDF hasta que se generen datos
-  document.getElementById('pdfBtn').disabled = true;
+  // Asignar el evento al formulario
+  const form = document.getElementById('reporteForm');
+  if (form) form.onsubmit = generarReporte;
 
-  // Asignar el evento al formulario principal
-  document.getElementById('reporteForm').onsubmit = generarReporte;
-
-  cargarLotesForSelect(); // Carga lotes de esta granja
+  cargarLotesForSelect();
 });

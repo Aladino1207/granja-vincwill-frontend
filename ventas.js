@@ -1,7 +1,8 @@
-// --- V 3.1: Variable global para la lista de clientes ---
+// --- Variables Globales ---
 let listaClientes = [];
 
 // --- Lógica de Carga (BLINDADA) ---
+
 async function cargarLotesForSelect() {
   try {
     const token = localStorage.getItem('token');
@@ -13,8 +14,11 @@ async function cargarLotesForSelect() {
     });
     const lotes = await res.json();
     const select = document.getElementById('loteSelect');
+    if(!select) return;
+    
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
-
+    
+    // Solo mostramos lotes disponibles para vender, o todos si prefieres
     lotes.filter(lote => lote.estado === 'disponible').forEach(lote => {
       const option = document.createElement('option');
       option.value = lote.id;
@@ -23,11 +27,10 @@ async function cargarLotesForSelect() {
       select.appendChild(option);
     });
   } catch (error) {
-    console.error('Error al cargar lotes para select:', error);
+    console.error('Error al cargar lotes:', error);
   }
 }
 
-// --- NUEVO V 3.1: Cargar Clientes para la búsqueda ---
 async function cargarClientes() {
   try {
     const token = localStorage.getItem('token');
@@ -37,34 +40,14 @@ async function cargarClientes() {
     const res = await fetch(`${window.API_URL}/clientes?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    listaClientes = await res.json();
+    if (res.ok) {
+        listaClientes = await res.json();
+        // Si tienes un select simple (backup), lo llenamos también
+        // const select = document.getElementById('clienteSelect');
+        // if(select) { ... llenar ... }
+    }
   } catch (error) {
-    console.error('Error al cargar clientes para select:', error);
-  }
-}
-
-// --- Cargar Clientes ---
-async function cargarClientesForSelect() {
-  try {
-    const token = localStorage.getItem('token');
-    const granjaId = getSelectedGranjaId();
-    if (!granjaId) return;
-
-    const res = await fetch(`${API_URL}/clientes?granjaId=${granjaId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const clientes = await res.json();
-    const select = document.getElementById('clienteSelect');
-    select.innerHTML = '<option value="">Selecciona un Cliente</option>';
-
-    clientes.forEach(cliente => {
-      const option = document.createElement('option');
-      option.value = cliente.id;
-      option.textContent = `${cliente.nombre} (${cliente.identificacion})`;
-      select.appendChild(option);
-    });
-  } catch (error) {
-    console.error('Error al cargar clientes para select:', error);
+    console.error('Error al cargar clientes:', error);
   }
 }
 
@@ -74,22 +57,27 @@ async function cargarVentas() {
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    // Gracias al parche de index.js, esto ahora trae Lote.loteId y Cliente.nombre
+    // CORRECCIÓN: Añadido granjaId al fetch
     const res = await fetch(`${window.API_URL}/ventas?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-
+    
     const ventas = await res.json();
     const tbody = document.getElementById('ventaTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
-
+    
     if (Array.isArray(ventas) && ventas.length > 0) {
       ventas.forEach(venta => {
         const tr = document.createElement('tr');
+        // Usamos las relaciones incluidas por el backend
+        const nombreLote = venta.Lote ? venta.Lote.loteId : 'N/A';
+        const nombreCliente = venta.Cliente ? venta.Cliente.nombre : 'N/A';
+        
         tr.innerHTML = `
-          <td>${venta.Lote ? venta.Lote.loteId : 'N/A'}</td>
-          <td>${venta.Cliente ? venta.Cliente.nombre : 'N/A'}</td>
+          <td>${nombreLote}</td>
+          <td>${nombreCliente}</td>
           <td>${venta.cantidadVendida}</td>
           <td>${venta.peso.toFixed(2)}</td>
           <td>${venta.precio.toFixed(2)}</td>
@@ -98,9 +86,10 @@ async function cargarVentas() {
             <button onclick="eliminarVenta(${venta.id})" class="btn btn-sm btn-peligro">Revertir</button>
           </td>
         `;
+        tbody.appendChild(tr);
       });
     } else {
-      tbody.innerHTML = '<tr><td colspan="7">No hay ventas registradas</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7">No hay ventas registradas.</td></tr>';
     }
   } catch (error) {
     console.error('Error al cargar ventas:', error);
@@ -117,40 +106,44 @@ function cerrarFormulario() {
   document.getElementById('toggleFormBtn').textContent = 'Registrar Nueva Venta';
   document.getElementById('ventaForm').reset();
   document.getElementById('ventaId').value = '';
-  document.getElementById('clienteId').value = '';
+  document.getElementById('clienteId').value = ''; // Limpiar ID oculto
+  // Limpiar el input visual del buscador
+  const searchInput = document.getElementById('clienteSearch');
+  if(searchInput) searchInput.value = '';
+  
   document.getElementById('formTitle').textContent = 'Registrar Venta';
 }
 
-// --- Funciones CRUD (BLINDADAS) ---
+// --- Funciones CRUD ---
 
 async function guardarVenta(e) {
   e.preventDefault();
-
+  
   const ventaId = document.getElementById('ventaId').value;
   if (ventaId) {
-    alert('La edición de ventas no está soportada. Por favor, revierta la venta y créela de nuevo.');
-    return;
+      alert('Edición no soportada. Revierta la venta y créela de nuevo.');
+      return;
   }
-
+  
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
   const loteId = document.getElementById('loteSelect').value;
-  const clienteId = document.getElementById('clienteId').value; // <-- V 3.1: Obtenido del input oculto
+  const clienteId = document.getElementById('clienteId').value; // Usamos el ID del buscador
 
   if (!loteId || !clienteId) {
-    alert('Por favor selecciona un Lote y un Cliente válido.');
+    alert('Por favor selecciona un Lote y un Cliente válido (de la lista).');
     return;
   }
 
   const venta = {
     loteId: parseInt(loteId),
-    clienteId: parseInt(clienteId), // <-- V 3.1
+    clienteId: parseInt(clienteId),
     cantidadVendida: parseInt(document.getElementById('cantidadVendida').value),
     peso: parseFloat(document.getElementById('peso').value),
     precio: parseFloat(document.getElementById('precio').value),
     fecha: document.getElementById('fecha').value,
-    granjaId: granjaId
+    granjaId: granjaId // CORRECCIÓN: Enviamos el ID de la granja
   };
 
   try {
@@ -164,25 +157,20 @@ async function guardarVenta(e) {
       body: JSON.stringify(venta)
     });
 
-    const responseText = await res.text();
-
     if (!res.ok) {
-      const errorData = responseText ? JSON.parse(responseText).error || responseText : 'Error desconocido';
-      alert('Error al guardar venta: ' + errorData);
+      const errorText = await res.json();
+      alert('Error al guardar: ' + (errorText.error || 'Desconocido'));
       return;
     }
-
+    
     cerrarFormulario();
     await cargarVentas();
-    await cargarLotesForSelect(); // Recargamos lotes para actualizar stock
-
+    await cargarLotesForSelect(); // Actualizar stock
+    
   } catch (error) {
     console.error('Error de conexión:', error);
+    alert('Error de conexión');
   }
-}
-
-async function editarVenta(id) {
-  alert('Función no implementada. Por favor, "Revierta" la venta y regístrela de nuevo.');
 }
 
 async function eliminarVenta(id) {
@@ -196,12 +184,13 @@ async function eliminarVenta(id) {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
+      
       if (res.ok) {
         cargarVentas();
         cargarLotesForSelect();
       } else {
-        const errorText = await res.json();
-        alert('Error al revertir venta: ' + (errorText.error || 'Desconocido'));
+        const err = await res.json();
+        alert('Error: ' + (err.error || 'Desconocido'));
       }
     } catch (error) {
       console.error('Error al revertir venta:', error);
@@ -209,138 +198,107 @@ async function eliminarVenta(id) {
   }
 }
 
-// --- V 3.1: LÓGICA DEL COMBOBOX CON BÚSQUEDA (CLIENTE) ---
-
+// --- LÓGICA DE BÚSQUEDA DE CLIENTE (V 3.1) ---
 function setupClienteSearch() {
-  const searchInput = document.getElementById('clienteSearch');
-  const resultsContainer = document.getElementById('clienteResults');
-  const dropdown = document.getElementById('clienteDropdown');
-  const hiddenInput = document.getElementById('clienteId');
+    const searchInput = document.getElementById('clienteSearch');
+    const resultsContainer = document.getElementById('clienteResults');
+    const dropdown = document.getElementById('clienteDropdown');
+    const hiddenInput = document.getElementById('clienteId');
 
-  // 1. Mostrar resultados al escribir
-  searchInput.addEventListener('input', () => {
-    const query = searchInput.value.toLowerCase();
-    hiddenInput.value = ''; // Limpiar ID si el usuario escribe
+    if(!searchInput || !resultsContainer) return;
 
-    if (query.length < 2) {
-      resultsContainer.innerHTML = '';
-      dropdown.classList.remove('is-open');
-      return;
-    }
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.toLowerCase();
+        hiddenInput.value = ''; // Reset ID si escribe
+        
+        if (query.length < 1) {
+            resultsContainer.innerHTML = '';
+            dropdown.classList.remove('is-open');
+            return;
+        }
+        
+        const filtrados = listaClientes.filter(c => 
+            c.nombre.toLowerCase().includes(query) || 
+            c.identificacion.includes(query)
+        );
+        
+        resultsContainer.innerHTML = '';
+        if (filtrados.length > 0) {
+            filtrados.forEach(c => {
+                const item = document.createElement('div');
+                item.className = 'search-item';
+                item.innerHTML = `<strong>${c.nombre}</strong> <span>(${c.identificacion})</span>`;
+                item.onclick = () => {
+                    searchInput.value = c.nombre;
+                    hiddenInput.value = c.id;
+                    dropdown.classList.remove('is-open');
+                };
+                resultsContainer.appendChild(item);
+            });
+            dropdown.classList.add('is-open');
+        } else {
+            dropdown.classList.remove('is-open');
+        }
+    });
 
-    const filtrados = listaClientes.filter(c =>
-      c.nombre.toLowerCase().includes(query) ||
-      c.identificacion.includes(query)
-    );
+    document.addEventListener('click', (e) => {
+        if (!dropdown.contains(e.target)) dropdown.classList.remove('is-open');
+    });
+}
 
-    resultsContainer.innerHTML = '';
-    if (filtrados.length > 0) {
-      filtrados.forEach(c => {
-        const item = document.createElement('div');
-        item.className = 'search-item';
-        item.innerHTML = `<strong>${c.nombre}</strong> <span>(${c.tipoIdentificacion}: ${c.identificacion})</span>`;
-        item.onclick = () => {
-          seleccionarCliente(c);
+// --- LÓGICA MODAL RÁPIDO CLIENTE ---
+function setupQuickAddModal() {
+    const modal = document.getElementById('quickAddModal');
+    const openBtn = document.getElementById('openQuickAddCliente');
+    const closeBtn = document.getElementById('closeQuickAddModal');
+    const form = document.getElementById('quickAddForm');
+
+    if(openBtn) openBtn.addEventListener('click', () => modal.classList.add('is-open'));
+    if(closeBtn) closeBtn.addEventListener('click', () => modal.classList.remove('is-open'));
+    
+    if(form) {
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const granjaId = getSelectedGranjaId();
+            const nuevoCliente = {
+                nombre: document.getElementById('quick_nombre').value,
+                tipoIdentificacion: document.getElementById('quick_tipoIdentificacion').value,
+                identificacion: document.getElementById('quick_identificacion').value,
+                granjaId: granjaId
+            };
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${window.API_URL}/clientes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify(nuevoCliente)
+                });
+
+                if (res.ok) {
+                    const creado = await res.json();
+                    modal.classList.remove('is-open');
+                    form.reset();
+                    await cargarClientes(); // Refrescar lista
+                    // Autoseleccionar
+                    document.getElementById('clienteSearch').value = creado.nombre;
+                    document.getElementById('clienteId').value = creado.id;
+                } else {
+                    alert('Error al crear cliente');
+                }
+            } catch(e) { console.error(e); }
         };
-        resultsContainer.appendChild(item);
-      });
-      dropdown.classList.add('is-open');
-    } else {
-      dropdown.classList.remove('is-open');
     }
-  });
-
-  // 2. Función para seleccionar un cliente
-  function seleccionarCliente(cliente) {
-    searchInput.value = `${cliente.nombre} (${cliente.identificacion})`;
-    hiddenInput.value = cliente.id;
-    dropdown.classList.remove('is-open');
-  }
-
-  // 3. Cerrar si se hace clic fuera
-  document.addEventListener('click', (e) => {
-    if (!dropdown.contains(e.target)) {
-      dropdown.classList.remove('is-open');
-    }
-  });
 }
 
-// --- V 3.1: LÓGICA DEL MODAL DE CREACIÓN RÁPIDA (CLIENTE) ---
-
-function setupQuickAddClienteModal() {
-  const modal = document.getElementById('quickAddModal');
-  const openBtn = document.getElementById('openQuickAddCliente');
-  const closeBtn = document.getElementById('closeQuickAddModal');
-  const form = document.getElementById('quickAddForm');
-  const errorMsg = document.getElementById('quickAddError');
-
-  openBtn.addEventListener('click', () => {
-    modal.classList.add('is-open');
-    form.reset();
-  });
-  closeBtn.addEventListener('click', () => {
-    modal.classList.remove('is-open');
-  });
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.classList.remove('is-open');
-  });
-
-  form.onsubmit = async (e) => {
-    e.preventDefault();
-    errorMsg.style.display = 'none';
-    const granjaId = getSelectedGranjaId();
-    if (!granjaId) return;
-
-    const nuevoCliente = {
-      nombre: document.getElementById('quick_nombre').value,
-      tipoIdentificacion: document.getElementById('quick_tipoIdentificacion').value,
-      identificacion: document.getElementById('quick_identificacion').value,
-      granjaId: granjaId // Se asigna a la granja activa
-    };
-
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${window.API_URL}/clientes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(nuevoCliente)
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Error del servidor');
-      }
-
-      const clienteCreado = await res.json();
-
-      // 1. Cerrar el modal
-      modal.classList.remove('is-open');
-      form.reset();
-
-      // 2. Actualizar la lista global de clientes
-      await cargarClientes();
-
-      // 3. Autoseleccionar el cliente recién creado
-      document.getElementById('clienteSearch').value = `${clienteCreado.nombre} (${clienteCreado.identificacion})`;
-      document.getElementById('clienteId').value = clienteCreado.id;
-
-    } catch (error) {
-      errorMsg.textContent = `Error: ${error.message}`;
-      errorMsg.style.display = 'block';
-    }
-  };
-}
-
-// --- Event Listener Principal (BLINDADO) ---
+// --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
-
+  
   if (granja) {
-    document.querySelector('header h1').textContent = `Ventas (${granja.nombre})`;
+      const header = document.querySelector('header h1');
+      if(header) header.textContent = `Ventas (${granja.nombre})`;
   }
 
   const toggleBtn = document.getElementById('toggleFormBtn');
@@ -348,34 +306,45 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('ventaForm');
   const formContainer = document.getElementById('formContainer');
 
-  if (currentUser && currentUser.role !== 'viewer') {
-    toggleBtn.style.display = 'block';
-
-    toggleBtn.addEventListener('click', () => {
-      const isOpen = formContainer.classList.contains('is-open');
-      if (isOpen) {
-        cerrarFormulario();
-      } else {
-        form.reset();
-        document.getElementById('ventaId').value = '';
-        document.getElementById('clienteId').value = '';
-        formTitle.textContent = 'Registrar Venta';
-        abrirFormulario();
+  // Lógica para autocompletar cantidad máxima
+  const loteSelect = document.getElementById('loteSelect');
+  if (loteSelect) {
+    loteSelect.addEventListener('change', (e) => {
+      const selectedOption = e.target.options[e.target.selectedIndex];
+      const cantidadInput = document.getElementById('cantidadVendida');
+      if (selectedOption && selectedOption.dataset.cantidad) {
+         cantidadInput.placeholder = `Máx: ${selectedOption.dataset.cantidad}`;
+         // Opcional: cantidadInput.value = selectedOption.dataset.cantidad;
       }
     });
-
-    cancelBtn.addEventListener('click', cerrarFormulario);
-    form.onsubmit = guardarVenta;
-
-    // V 3.1: Inicializar búsqueda y modal
-    setupClienteSearch();
-    setupQuickAddClienteModal();
-
-  } else {
-    toggleBtn.style.display = 'none';
   }
 
+  if (currentUser && currentUser.role !== 'viewer') {
+    if(toggleBtn) {
+        toggleBtn.style.display = 'block';
+        toggleBtn.addEventListener('click', () => {
+          const isOpen = formContainer.classList.contains('is-open');
+          if (isOpen) {
+            cerrarFormulario();
+          } else {
+            form.reset();
+            document.getElementById('ventaId').value = '';
+            document.getElementById('formTitle').textContent = 'Registrar Venta';
+            abrirFormulario();
+          }
+        });
+    }
+    if(cancelBtn) cancelBtn.addEventListener('click', cerrarFormulario);
+    if(form) form.onsubmit = guardarVenta;
+    
+    setupClienteSearch();
+    setupQuickAddModal();
+
+  } else {
+    if(toggleBtn) toggleBtn.style.display = 'none';
+  }
+  
   cargarLotesForSelect();
-  cargarClientes(); // <-- NUEVO V 3.1
+  cargarClientes();
   cargarVentas();
 });
