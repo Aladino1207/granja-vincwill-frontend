@@ -84,57 +84,64 @@
     </aside>
     <main class="main-content">
         <section class="card">
-            <h2>Generar Reporte</h2>
-            <form id="reporteForm" class="form-grid form-grid-2-col" onsubmit="generarReporte(event); return false;">
+            <h2>Generar Reporte Estratégico</h2>
 
-                <div class="form-group">
-                    <label for="tipoReporte">Tipo de Reporte</label>
-                    <select id="tipoReporte" class="form-control">
-                        <option value="produccion">Producción</option>
-                        <option value="costos">Costos</option>
-                        <option value="ventas">Ventas</option>
-                        <option value="sanitario">Sanitario</option>
-                        <option value="seguimiento">Seguimiento</option>
+            <form id="reporteForm" class="form-grid form-grid-2-col">
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label for="tipoReporte">Selecciona el Tipo de Análisis</label>
+                    <select id="tipoReporte" class="form-control" required>
+                        <option value="" disabled selected>-- Seleccione --</option>
+                        <option value="liquidacion">Liquidación de Lote (Rentabilidad Final)</option>
+                        <option value="costos">Listado de Costos</option>
+                        <option value="ventas">Listado de Ventas</option>
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label for="loteSelect">Lote (opcional)</label>
+                <div class="form-group" id="groupLote">
+                    <label for="loteSelect">Seleccionar Lote</label>
                     <select id="loteSelect" class="form-control"></select>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="groupFechaInicio">
                     <label for="fechaInicio">Fecha Inicio</label>
                     <input type="date" id="fechaInicio" class="form-control">
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" id="groupFechaFin">
                     <label for="fechaFin">Fecha Fin</label>
                     <input type="date" id="fechaFin" class="form-control">
                 </div>
 
                 <div class="form-group" style="grid-column: 1 / -1;">
-                    <button type="submit" class="btn btn-primario">Generar Reporte PDF</button>
+                    <button type="submit" class="btn btn-primario" id="btnGenerar">Generar Informe</button>
                 </div>
             </form>
-        </section>
 
-        <section class="card">
-            <h2>Previsualización del Reporte</h2>
-            <div class="tabla-responsive-wrapper">
-                <table id="reporteTable" class="tabla-moderna">
-                    <thead>
-                        <tr id="reporteTableHead"></tr>
-                    </thead>
-                    <tbody id="reporteTableBody"></tbody>
-                </table>
+            <!-- Área de Previsualización -->
+            <div id="previewArea" style="margin-top: 2rem; display: none;">
+                <hr>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3>Vista Previa de Resultados</h3>
+                    <button id="btnDescargarPDF" class="btn btn-peligro">Descargar PDF Oficial</button>
+                </div>
+                <div class="tabla-responsive-wrapper">
+                    <table id="reporteTable" class="tabla-moderna">
+                        <thead>
+                            <tr id="reporteTableHead"></tr>
+                        </thead>
+                        <tbody id="reporteTableBody"></tbody>
+                    </table>
+                </div>
+                <!-- Contenedor especial para el resumen de liquidación -->
+                <div id="liquidacionResumen"
+                    style="display: none; background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-top: 1rem;">
+                    <!-- Se llena con JS -->
+                </div>
             </div>
         </section>
-
-        <footer>
-            <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
-        </footer>
     </main>
+
+    <!-- Librerías para PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.13/jspdf.plugin.autotable.min.js"></script>
     <script src="app.js"></script>
