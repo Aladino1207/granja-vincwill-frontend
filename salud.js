@@ -5,19 +5,34 @@ async function cargarLotesForSelect() {
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, {
+    const res = await fetch(`${window.API_URL}/inventario?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    const lotes = await res.json();
-    const select = document.getElementById('loteId');
-    select.innerHTML = '<option value="">Selecciona un Lote</option>';
-    lotes.forEach(lote => {
+
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const items = await res.json();
+
+    const select = document.getElementById('vacunaSelect');
+    if (!select) return; // Protección por si no existe el elemento
+
+    select.innerHTML = '<option value="">Selecciona Vacuna/Medicina</option>';
+
+    const filtrados = items.filter(i =>
+      i.categoria === 'Vacuna' || i.categoria === 'Medicina' || i.categoria === 'Otro'
+    );
+
+    filtrados.forEach(item => {
       const option = document.createElement('option');
-      option.value = lote.id;
-      option.textContent = `${lote.loteId} (Stock: ${lote.cantidad})`;
+      option.value = item.id;
+      const unidad = item.unidadMedida || 'Unidades';
+      option.textContent = `${item.producto} (Stock: ${item.cantidad} ${unidad})`;
+
+      option.dataset.nombre = item.producto; // Útil para autocompletar el campo de nombre
       select.appendChild(option);
     });
-  } catch (error) { console.error(error); }
+  } catch (error) {
+    console.error('Error al cargar vacunas para select:', error);
+  }
 }
 
 async function cargarVacunasForSelect() {

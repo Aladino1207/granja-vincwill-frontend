@@ -8,33 +8,42 @@ async function cargarInventario() {
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    // V 3.1: El backend ahora incluye el Proveedor
     const res = await fetch(`${window.API_URL}/inventario?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const inventario = await res.json();
     const tbody = document.getElementById('tablaInventario');
+    if (!tbody) return;
     tbody.innerHTML = '';
-    if (Array.isArray(inventario) && inventario.length > 0) {
-      inventario.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${item.producto || 'N/A'}</td>
-          <td>${item.Proveedor ? item.Proveedor.nombreCompania : 'N/A'}</td> <td>${item.categoria || 'N/A'}</td>
-          <td>${item.cantidad || 0}</td>
-          <td>${item.costo ? item.costo.toFixed(2) : 0}</td>
-          <td>${item.fecha ? new Date(item.fecha).toLocaleDateString() : 'N/A'}</td>
-          <td>
-            <button onclick="editarInventario(${item.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
-            <button onclick="eliminarInventario(${item.id})" class="btn btn-sm btn-peligro">Eliminar</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    } else {
-      tbody.innerHTML = '<tr><td colspan="7">No hay inventario registrado</td></tr>'; // Colspan es 7 ahora
+
+    if (inventario.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7">No hay inventario registrado.</td></tr>';
+      return;
     }
+
+    inventario.forEach(item => {
+      const tr = document.createElement('tr');
+      const totalEstimado = (item.cantidad * item.costo).toFixed(2);
+      // Mostramos la unidad de medida
+      const unidad = item.unidadMedida || 'Unidades';
+
+      tr.innerHTML = `
+        <td><strong>${item.producto}</strong></td>
+        <td>${item.Proveedor ? item.Proveedor.nombreCompania : '-'}</td>
+        <td><span class="badge">${item.categoria}</span></td>
+        <td><strong>${item.cantidad} ${unidad}</strong></td> <!-- AQUÍ -->
+        <td>$${item.costo.toFixed(4)} / ${unidad}</td>
+        <td>$${totalEstimado}</td>
+        <td>${new Date(item.fecha).toLocaleDateString()}</td>
+        <td>
+          <button onclick="editarInventario(${item.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
+          <button onclick="eliminarInventario(${item.id})" class="btn btn-sm btn-peligro">Eliminar</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
   } catch (error) {
     console.error('Error al cargar inventario:', error);
   }
@@ -80,20 +89,25 @@ async function guardarInventario(e) {
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
-  // Obtenemos valores
   const cantidad = parseFloat(document.getElementById('cantidad').value);
   const costoTotal = parseFloat(document.getElementById('costoTotal').value);
+  const provId = document.getElementById('proveedorId').value;
 
-  // Validación básica
-  if (cantidad <= 0) { alert("La cantidad debe ser mayor a 0"); return; }
+  if (cantidad <= 0) { alert("Cantidad > 0"); return; }
+
+  // Cálculo del unitario
+  const costoUnitario = costoTotal / cantidad;
 
   const inventario = {
     producto: document.getElementById('producto').value,
     categoria: document.getElementById('categoria').value,
+    // V 3.4: Enviamos la unidad seleccionada
+    unidadMedida: document.getElementById('unidadMedida').value,
     cantidad: cantidad,
-    costoTotal: costoTotal, // Enviamos el total, el backend calculará el unitario
+    costo: costoUnitario,
+    costoTotal: costoTotal,
     fecha: document.getElementById('fecha').value,
-    proveedorId: document.getElementById('proveedorId').value ? parseInt(document.getElementById('proveedorId').value) : null,
+    proveedorId: provId ? parseInt(provId) : null,
     granjaId: granjaId
   };
 
@@ -117,9 +131,7 @@ async function guardarInventario(e) {
       const errorText = await res.json();
       alert('Error: ' + (errorText.error || 'Desconocido'));
     }
-  } catch (error) {
-    alert('Error de conexión');
-  }
+  } catch (error) { alert('Error de conexión'); }
 }
 
 async function editarInventario(id) {
@@ -131,7 +143,7 @@ async function editarInventario(id) {
     const res = await fetch(`${window.API_URL}/inventario/${id}?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error('No se pudo cargar el item');
+    if (!res.ok) throw new Error('Error al cargar');
     const item = await res.json();
 
     document.getElementById('formTitle').textContent = 'Editar Insumo';
@@ -139,14 +151,22 @@ async function editarInventario(id) {
     document.getElementById('producto').value = item.producto || '';
     document.getElementById('categoria').value = item.categoria || '';
     document.getElementById('cantidad').value = item.cantidad || '';
-    document.getElementById('costo').value = item.costo || '';
+
+    // Cargar unidad de medida
+    if (document.getElementById('unidadMedida')) {
+      document.getElementById('unidadMedida').value = item.unidadMedida || 'Unidades';
+    }
+
+    // Recalcular el costo total para mostrarlo (ya que guardamos el unitario)
+    const totalCalc = (item.cantidad * item.costo).toFixed(2);
+    document.getElementById('costoTotal').value = totalCalc;
+
     document.getElementById('fecha').value = item.fecha ? item.fecha.split('T')[0] : '';
 
-    // V 3.1: Rellenar el campo de proveedor
     if (item.proveedorId) {
       const proveedor = listaProveedores.find(p => p.id === item.proveedorId);
       if (proveedor) {
-        document.getElementById('proveedorSearch').value = `${proveedor.nombreCompania} (${proveedor.ruc})`;
+        document.getElementById('proveedorSearch').value = proveedor.nombreCompania;
         document.getElementById('proveedorId').value = proveedor.id;
       }
     }
@@ -154,9 +174,7 @@ async function editarInventario(id) {
     abrirFormulario();
     window.scrollTo(0, 0);
 
-  } catch (error) {
-    console.error('Error al cargar datos para editar:', error);
-  }
+  } catch (error) { console.error(error); }
 }
 
 async function eliminarInventario(id) {

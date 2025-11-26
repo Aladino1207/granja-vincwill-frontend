@@ -93,7 +93,7 @@
 
                     <div class="form-group">
                         <label for="producto">Nombre del Producto</label>
-                        <input type="text" id="producto" class="form-control" placeholder="Ej: Balanceado Inicial"
+                        <input type="text" id="producto" class="form-control" placeholder="Ej: Vacuna Newcastle Líquida"
                             required>
                     </div>
 
@@ -102,6 +102,7 @@
                         <select id="categoria" class="form-control">
                             <option value="Alimento">Alimento</option>
                             <option value="Vacuna">Vacuna</option>
+                            <option value="Medicina">Medicina</option> <!-- Agregué Medicina -->
                             <option value="Cama">Cama</option>
                             <option value="Otro">Otro</option>
                         </select>
@@ -119,16 +120,33 @@
                         </div>
                     </div>
 
+                    <!-- NUEVO: Selector de Unidad -->
                     <div class="form-group">
-                        <label for="cantidad">Cantidad Total (kg/unid)</label>
-                        <input type="number" id="cantidad" class="form-control" min="1" placeholder="Ej: 1320" required>
+                        <label for="unidadMedida">Unidad de Medida</label>
+                        <select id="unidadMedida" class="form-control" required>
+                            <option value="Unidades">Unidades (Generico)</option>
+                            <option value="kg">Kilogramos (kg)</option>
+                            <option value="lb">Libras (lb)</option>
+                            <option value="qq">Quintales (qq)</option>
+                            <option value="L">Litros (L)</option>
+                            <option value="ml">Mililitros (ml)</option>
+                            <option value="Dosis">Dosis</option>
+                            <option value="Sacos">Sacos</option>
+                            <option value="Canecas">Canecas</option>
+                        </select>
                     </div>
 
-                    <!-- CAMBIO V 3.4: Pedimos TOTAL, no unitario -->
                     <div class="form-group">
-                        <label for="costoTotal">Costo Total de la Factura ($)</label>
+                        <label for="cantidad">Cantidad Total</label>
+                        <input type="number" id="cantidad" class="form-control" min="0.01" step="0.01"
+                            placeholder="Ej: 40 (Si son 2 canecas de 20L)" required>
+                        <small style="color: #e67e22;">* Ingrese la cantidad en la unidad seleccionada arriba.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="costoTotal">Costo Total Factura ($)</label>
                         <input type="number" id="costoTotal" class="form-control" min="0" step="0.01"
-                            placeholder="Ej: 1500.00" required>
+                            placeholder="Ej: 150.00" required>
                     </div>
 
                     <div class="form-group">
