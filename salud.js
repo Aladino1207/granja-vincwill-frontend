@@ -90,15 +90,17 @@ async function cargarSalud() {
 
     if (Array.isArray(salud) && salud.length > 0) {
       salud.forEach(s => {
-        const tr = document.createElement('tr');
+        const fechaVisual = s.fecha ? new Date(s.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' }) : 'N/A';
+
         tr.innerHTML = `
           <td>${s.loteId || 'N/A'}</td> 
           <td>${s.tipo || 'N/A'}</td>
           <td>${s.nombre || 'N/A'}</td>
           <td>${s.Vacuna ? s.Vacuna.producto : '-'}</td>
           <td>${s.cantidad}</td>
-          <td>${s.fecha ? new Date(s.fecha).toLocaleDateString() : 'N/A'}</td>
+          <td>${fechaVisual}</td> <!-- Fecha corregida -->
           <td>
+            <button onclick="editarSalud(${s.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
             <button onclick="eliminarSalud(${s.id})" class="btn btn-sm btn-peligro">Eliminar</button>
           </td>
         `;

@@ -24,19 +24,28 @@ async function cargarLotes() {
 
     lotes.forEach(lote => {
       const tr = document.createElement('tr');
+
+      // TRUCO: Usar 'timeZone: UTC' para que no reste horas
+      const fechaVisual = new Date(lote.fechaIngreso).toLocaleDateString('es-ES', { timeZone: 'UTC' });
+
       tr.innerHTML = `
-        <td><strong>${lote.loteId}</strong></td>
-        <td>${lote.Proveedor ? lote.Proveedor.nombreCompania : '<em>No especificado</em>'}</td>
-        <td>♂ ${lote.cantidadMachos || 0} / ♀ ${lote.cantidadHembras || 0}</td>
-        <td><strong>${lote.cantidad}</strong></td>
-        <td>${lote.pesoInicial ? lote.pesoInicial.toFixed(3) : '0.000'} kg</td>
-        <td>${new Date(lote.fechaIngreso).toLocaleDateString()}</td>
-        <td>${lote.estado}</td>
-        <td>
-          <button onclick="editarLote(${lote.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
-          <button onclick="eliminarLote(${lote.id})" class="btn btn-sm btn-peligro">Eliminar</button>
-        </td>
-      `;
+    <td><strong>${lote.loteId}</strong></td>
+    <td>${lote.Proveedor ? lote.Proveedor.nombreCompania : '<em>No especificado</em>'}</td>
+    <td>
+        <div style="font-size: 0.85rem;">
+            <span style="color: var(--color-secundario);">♂ ${lote.cantidadMachos || 0}</span> / 
+            <span style="color: #e91e63;">♀ ${lote.cantidadHembras || 0}</span>
+        </div>
+    </td>
+    <td><strong>${lote.cantidad}</strong></td>
+    <td>${lote.pesoInicial ? lote.pesoInicial.toFixed(3) : '0.000'} kg</td>
+    <td>${fechaVisual}</td> <!-- USA LA FECHA CORREGIDA AQUÍ -->
+    <td><span class="badge-${lote.estado}">${lote.estado}</span></td>
+    <td>
+      <button onclick="editarLote(${lote.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
+      <button onclick="eliminarLote(${lote.id})" class="btn btn-sm btn-peligro">Eliminar</button>
+    </td>
+  `;
       tbody.appendChild(tr);
     });
   } catch (error) {

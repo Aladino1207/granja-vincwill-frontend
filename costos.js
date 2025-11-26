@@ -49,20 +49,22 @@ async function cargarCostos() {
     if (Array.isArray(costos) && costos.length > 0) {
       costos.forEach(costo => {
         const tr = document.createElement('tr');
-        // Manejo seguro de nulos para loteId
         const nombreLote = (costo.Lote && costo.Lote.loteId) ? costo.Lote.loteId : (costo.loteId ? 'Lote ' + costo.loteId : 'Gasto General');
 
+        // Corrección de Fecha
+        const fechaVisual = costo.fecha ? new Date(costo.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' }) : 'N/A';
+
         tr.innerHTML = `
-          <td>${nombreLote}</td>
-          <td>${costo.categoria || 'N/A'}</td>
-          <td>${costo.descripcion || 'N/A'}</td>
-          <td>${costo.monto ? costo.monto.toFixed(2) : '0.00'}</td>
-          <td>${costo.fecha ? new Date(costo.fecha).toLocaleDateString() : 'N/A'}</td>
-          <td>
-            <button onclick="editarCosto(${costo.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
-            <button onclick="eliminarCosto(${costo.id})" class="btn btn-sm btn-peligro">Eliminar</button>
-          </td>
-        `;
+      <td>${nombreLote}</td>
+      <td>${costo.categoria || 'N/A'}</td>
+      <td>${costo.descripcion || 'N/A'}</td>
+      <td>$${costo.monto ? costo.monto.toFixed(2) : '0.00'}</td>
+      <td>${fechaVisual}</td> <!-- FECHA CORREGIDA -->
+      <td>
+        <button onclick="editarCosto(${costo.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
+        <button onclick="eliminarCosto(${costo.id})" class="btn btn-sm btn-peligro">Eliminar</button>
+      </td>
+    `;
         tbody.appendChild(tr);
       });
     } else {

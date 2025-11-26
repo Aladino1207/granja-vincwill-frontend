@@ -26,22 +26,24 @@ async function cargarInventario() {
     inventario.forEach(item => {
       const tr = document.createElement('tr');
       const totalEstimado = (item.cantidad * item.costo).toFixed(2);
-      // Mostramos la unidad de medida
       const unidad = item.unidadMedida || 'Unidades';
 
+      // Corrección de Fecha
+      const fechaVisual = new Date(item.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' });
+
       tr.innerHTML = `
-        <td><strong>${item.producto}</strong></td>
-        <td>${item.Proveedor ? item.Proveedor.nombreCompania : '-'}</td>
-        <td><span class="badge">${item.categoria}</span></td>
-        <td><strong>${item.cantidad} ${unidad}</strong></td> <!-- AQUÍ -->
-        <td>$${item.costo.toFixed(4)} / ${unidad}</td>
-        <td>$${totalEstimado}</td>
-        <td>${new Date(item.fecha).toLocaleDateString()}</td>
-        <td>
-          <button onclick="editarInventario(${item.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
-          <button onclick="eliminarInventario(${item.id})" class="btn btn-sm btn-peligro">Eliminar</button>
-        </td>
-      `;
+    <td><strong>${item.producto}</strong></td>
+    <td>${item.Proveedor ? item.Proveedor.nombreCompania : '<em>Genérico</em>'}</td>
+    <td><span class="badge">${item.categoria}</span></td>
+    <td><strong>${item.cantidad} ${unidad}</strong></td>
+    <td>$${item.costo.toFixed(4)} / ${unidad}</td>
+    <td>$${totalEstimado}</td>
+    <td>${fechaVisual}</td> <!-- FECHA CORREGIDA -->
+    <td>
+      <button onclick="editarInventario(${item.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
+      <button onclick="eliminarInventario(${item.id})" class="btn btn-sm btn-peligro">Eliminar</button>
+    </td>
+  `;
       tbody.appendChild(tr);
     });
   } catch (error) {

@@ -56,20 +56,24 @@ async function cargarVentas() {
     if (Array.isArray(ventas) && ventas.length > 0) {
       ventas.forEach(venta => {
         const tr = document.createElement('tr');
-        const total = (venta.peso * venta.precio).toFixed(2);
+
+        // Corrección de Fecha
+        const fechaVisual = new Date(venta.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' });
+
+        // ... resto de variables ...
 
         tr.innerHTML = `
-          <td>${venta.Lote ? venta.Lote.loteId : 'N/A'}</td>
-          <td>${venta.Cliente ? venta.Cliente.nombre : 'N/A'}</td>
-          <td>${venta.cantidadVendida}</td>
-          <td>${venta.peso.toFixed(2)}</td>
-          <td>$${venta.precio.toFixed(2)}</td>
-          <td><strong>$${total}</strong></td>
-          <td>${new Date(venta.fecha).toLocaleDateString()}</td>
-          <td>
-            <button onclick="eliminarVenta(${venta.id})" class="btn btn-sm btn-peligro">Revertir</button>
-          </td>
-        `;
+      <td>${nombreLote}</td>
+      <td>${nombreCliente}</td>
+      <td>${venta.cantidadVendida}</td>
+      <td>${venta.peso.toFixed(2)}</td>
+      <td>$${venta.precio.toFixed(2)}</td>
+      <td><strong>$${total}</strong></td>
+      <td>${fechaVisual}</td> <!-- FECHA CORREGIDA -->
+      <td>
+        <button onclick="eliminarVenta(${venta.id})" class="btn btn-sm btn-peligro">Revertir</button>
+      </td>
+    `;
         tbody.appendChild(tr);
       });
     } else {
