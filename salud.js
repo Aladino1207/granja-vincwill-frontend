@@ -2,36 +2,32 @@
 async function cargarLotesForSelect() {
   try {
     const token = localStorage.getItem('token');
+    // V 3.0: Obtenemos la granja activa
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    const res = await fetch(`${window.API_URL}/inventario?granjaId=${granjaId}`, {
+    // CORRECCIÓN: Usamos window.API_URL
+    const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    const items = await res.json();
+    const lotes = await res.json();
 
-    const select = document.getElementById('vacunaSelect');
-    if (!select) return; // Protección por si no existe el elemento
+    const select = document.getElementById('loteId'); // ID del select en salud.html
+    if (!select) return; // Protección
 
-    select.innerHTML = '<option value="">Selecciona Vacuna/Medicina</option>';
+    select.innerHTML = '<option value="">Selecciona un Lote</option>';
 
-    const filtrados = items.filter(i =>
-      i.categoria === 'Vacuna' || i.categoria === 'Medicina' || i.categoria === 'Otro'
-    );
-
-    filtrados.forEach(item => {
+    // Filtramos para mostrar solo lotes activos, o todos si prefieres
+    lotes.forEach(lote => {
       const option = document.createElement('option');
-      option.value = item.id;
-      const unidad = item.unidadMedida || 'Unidades';
-      option.textContent = `${item.producto} (Stock: ${item.cantidad} ${unidad})`;
-
-      option.dataset.nombre = item.producto; // Útil para autocompletar el campo de nombre
+      option.value = lote.id;
+      option.textContent = `${lote.loteId} (Stock: ${lote.cantidad})`;
       select.appendChild(option);
     });
   } catch (error) {
-    console.error('Error al cargar vacunas para select:', error);
+    console.error('Error al cargar lotes para select:', error);
   }
 }
 
@@ -41,15 +37,20 @@ async function cargarVacunasForSelect() {
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
+    // CORRECCIÓN: Usamos window.API_URL
     const res = await fetch(`${window.API_URL}/inventario?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const items = await res.json();
+
     const select = document.getElementById('vacunaSelect');
+    if (!select) return;
+
     select.innerHTML = '<option value="">Selecciona Vacuna/Medicina</option>';
 
-    // Filtramos solo lo que sea Vacuna o Medicina (asumiendo categoría)
-    // O mostramos todo si prefieres
+    // Filtramos solo lo que sea Vacuna, Medicina u Otro
     const filtrados = items.filter(i =>
       i.categoria === 'Vacuna' || i.categoria === 'Medicina' || i.categoria === 'Otro'
     );
@@ -57,11 +58,17 @@ async function cargarVacunasForSelect() {
     filtrados.forEach(item => {
       const option = document.createElement('option');
       option.value = item.id;
-      option.textContent = `${item.producto} (Stock: ${item.cantidad})`;
-      option.dataset.nombre = item.producto; // Para autocompletar nombre
+
+      // V 3.4: Recuperamos la unidad de medida
+      const unidad = item.unidadMedida || 'Unidades';
+
+      option.textContent = `${item.producto} (Stock: ${item.cantidad} ${unidad})`;
+      option.dataset.nombre = item.producto;
       select.appendChild(option);
     });
-  } catch (error) { console.error(error); }
+  } catch (error) {
+    console.error('Error al cargar vacunas para select:', error);
+  }
 }
 
 async function cargarSalud() {
@@ -70,17 +77,23 @@ async function cargarSalud() {
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
+    // CORRECCIÓN: Usamos window.API_URL
     const res = await fetch(`${window.API_URL}/salud?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const salud = await res.json();
     const tbody = document.getElementById('saludTableBody');
+    if (!tbody) return;
+
     tbody.innerHTML = '';
+
     if (Array.isArray(salud) && salud.length > 0) {
       salud.forEach(s => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${s.loteId || 'N/A'}</td>
+          <td>${s.loteId || 'N/A'}</td> 
           <td>${s.tipo || 'N/A'}</td>
           <td>${s.nombre || 'N/A'}</td>
           <td>${s.Vacuna ? s.Vacuna.producto : '-'}</td>
@@ -94,14 +107,15 @@ async function cargarSalud() {
         tbody.appendChild(tr);
       });
     } else {
-      tbody.innerHTML = '<tr><td colspan="7">No hay eventos de salud registrados</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7">No hay eventos de salud registrados.</td></tr>';
     }
-  } catch (error) { console.error(error); }
+  } catch (error) {
+    console.error('Error al cargar salud:', error);
+  }
 }
 
 
 
-// --- LÓGICA DEL FORMULARIO DESPLEGABLE (Sin cambios) ---
 function abrirFormulario() {
   document.getElementById('formContainer').classList.add('is-open');
   document.getElementById('toggleFormBtn').textContent = 'Cancelar';
@@ -113,13 +127,16 @@ function cerrarFormulario() {
   document.getElementById('saludId').value = '';
   document.getElementById('formTitle').textContent = 'Registrar Evento de Salud';
   // Ocultar campo vacuna
-  document.getElementById('vacunaGroup').style.display = 'none';
+  if (document.getElementById('vacunaGroup')) {
+    document.getElementById('vacunaGroup').style.display = 'none';
+  }
 }
 
 // --- Funciones CRUD (BLINDADAS) ---
 
 async function guardarSalud(e) {
   e.preventDefault();
+
   const saludId = document.getElementById('saludId').value;
   const esEdicion = !!saludId;
   const granjaId = getSelectedGranjaId();
@@ -135,7 +152,9 @@ async function guardarSalud(e) {
   }
 
   const vacunaSelect = document.getElementById('vacunaSelect');
-  const vacunaId = (vacunaSelect.value && document.getElementById('vacunaGroup').style.display !== 'none')
+  const vacunaGroup = document.getElementById('vacunaGroup');
+  // Solo enviamos vacunaId si el grupo está visible y se seleccionó algo
+  const vacunaId = (vacunaSelect && vacunaSelect.value && vacunaGroup.style.display !== 'none')
     ? parseInt(vacunaSelect.value) : null;
 
   const salud = {
@@ -143,13 +162,15 @@ async function guardarSalud(e) {
     tipo: document.getElementById('tipo').value,
     nombre: document.getElementById('nombre').value,
     cantidad: parseFloat(document.getElementById('cantidad').value),
-    vacunaId: vacunaId, // Enviamos el ID del inventario
+    vacunaId: vacunaId,
     fecha: document.getElementById('fecha').value,
     fechaRetiro: fechaRetiroCalculada,
     granjaId: granjaId
   };
 
-  const url = esEdicion ? `${window.API_URL}/salud/${saludId}` : `${window.API_URL}/salud`;
+  const url = esEdicion
+    ? `${window.API_URL}/salud/${saludId}`
+    : `${window.API_URL}/salud`;
   const method = esEdicion ? 'PUT' : 'POST';
 
   try {
@@ -159,31 +180,36 @@ async function guardarSalud(e) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(salud)
     });
+
     if (res.ok) {
       cerrarFormulario();
       await cargarSalud();
-      await cargarVacunasForSelect(); // Recargar stock
-      // Si fue mortalidad, recargamos lotes
+      await cargarVacunasForSelect(); // Recargar stock vacunas
+      // Si fue mortalidad, recargamos lotes para ver stock aves actualizado
       if (salud.tipo === 'Mortalidad') await cargarLotesForSelect();
     } else {
       const errorText = await res.json();
-      alert('Error: ' + (errorText.error || 'Desconocido'));
+      alert('Error al guardar: ' + (errorText.error || 'Desconocido'));
     }
-  } catch (error) { alert('Error de conexión'); }
+  } catch (error) {
+    alert('Error de conexión');
+  }
 }
 
 async function editarSalud(id) {
   // Lógica de edición (simplificada: solo carga datos)
   // Nota: Editar transacciones de inventario es complejo.
   // Recomendación: Mejor borrar y crear de nuevo.
-  alert("Para corregir inventario, por favor elimine este evento y créelo de nuevo.");
+  alert("Para corregir inventario, por favor elimine este evento y créelo de nuevo. Eliminar no Revierte el Stock automaticamente");
 }
 
 async function eliminarSalud(id) {
-  if (confirm('¿Eliminar evento? (Nota: El stock de vacunas NO se devuelve automáticamente en V3.3)')) {
+  if (confirm('¿Seguro que quieres eliminar este evento?')) {
     try {
       const token = localStorage.getItem('token');
       const granjaId = getSelectedGranjaId();
+      if (!granjaId) return;
+
       await fetch(`${window.API_URL}/salud/${id}?granjaId=${granjaId}`, {
         method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
       });
@@ -196,7 +222,10 @@ async function eliminarSalud(id) {
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
-  if (granja) document.querySelector('header h1').textContent = `Salud (${granja.nombre})`;
+  if (granja) {
+    const header = document.querySelector('header h1');
+    if (header) header.textContent = `Salud (${granja.nombre})`;
+  }
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
@@ -206,45 +235,52 @@ document.addEventListener('DOMContentLoaded', () => {
   const nombreInput = document.getElementById('nombre');
 
   // Lógica para mostrar/ocultar el select de vacunas
-  tipoSelect.addEventListener('change', () => {
-    const tipo = tipoSelect.value;
-    const vacunaGroup = document.getElementById('vacunaGroup');
+  if (tipoSelect) {
+    tipoSelect.addEventListener('change', () => {
+      const tipo = tipoSelect.value;
+      const vacunaGroup = document.getElementById('vacunaGroup');
 
-    if (tipo === 'Vacunación' || tipo === 'Tratamiento') {
-      vacunaGroup.style.display = 'flex';
-      // Hacemos el select requerido
-      vacunaSelect.required = true;
-    } else {
-      vacunaGroup.style.display = 'none';
-      vacunaSelect.value = "";
-      vacunaSelect.required = false;
-    }
-  });
-
-  // Autocompletar nombre al seleccionar vacuna
-  vacunaSelect.addEventListener('change', () => {
-    const selectedOption = vacunaSelect.options[vacunaSelect.selectedIndex];
-    if (selectedOption && selectedOption.dataset.nombre) {
-      nombreInput.value = selectedOption.dataset.nombre;
-    }
-  });
-
-  if (currentUser && currentUser.role !== 'viewer') {
-    toggleBtn.style.display = 'block';
-    toggleBtn.addEventListener('click', () => {
-      const isOpen = document.getElementById('formContainer').classList.contains('is-open');
-      if (isOpen) cerrarFormulario();
-      else {
-        form.reset();
-        document.getElementById('saludId').value = '';
-        document.getElementById('formTitle').textContent = 'Registrar Evento de Salud';
-        document.getElementById('vacunaGroup').style.display = 'none';
-        abrirFormulario();
+      if (tipo === 'Vacunación' || tipo === 'Tratamiento') {
+        vacunaGroup.style.display = 'flex';
+        vacunaSelect.required = true;
+      } else {
+        vacunaGroup.style.display = 'none';
+        vacunaSelect.value = "";
+        vacunaSelect.required = false;
       }
     });
-    cancelBtn.addEventListener('click', cerrarFormulario);
-    form.onsubmit = guardarSalud;
-  } else { toggleBtn.style.display = 'none'; }
+  }
+
+  // Autocompletar nombre al seleccionar vacuna
+  if (vacunaSelect) {
+    vacunaSelect.addEventListener('change', () => {
+      const selectedOption = vacunaSelect.options[vacunaSelect.selectedIndex];
+      if (selectedOption && selectedOption.dataset.nombre) {
+        nombreInput.value = selectedOption.dataset.nombre;
+      }
+    });
+  }
+
+  if (currentUser && currentUser.role !== 'viewer') {
+    if (toggleBtn) {
+      toggleBtn.style.display = 'block';
+      toggleBtn.addEventListener('click', () => {
+        const isOpen = document.getElementById('formContainer').classList.contains('is-open');
+        if (isOpen) cerrarFormulario();
+        else {
+          form.reset();
+          document.getElementById('saludId').value = '';
+          document.getElementById('formTitle').textContent = 'Registrar Evento de Salud';
+          document.getElementById('vacunaGroup').style.display = 'none';
+          abrirFormulario();
+        }
+      });
+    }
+    if (cancelBtn) cancelBtn.addEventListener('click', cerrarFormulario);
+    if (form) form.onsubmit = guardarSalud;
+  } else {
+    if (toggleBtn) toggleBtn.style.display = 'none';
+  }
 
   cargarLotesForSelect();
   cargarVacunasForSelect();
