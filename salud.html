@@ -99,7 +99,6 @@
             </select>
           </div>
 
-          <!-- CAMBIO: Tipo es un Select -->
           <div class="form-group">
             <label for="tipo">Tipo de Evento</label>
             <select id="tipo" class="form-control" required>
@@ -111,13 +110,14 @@
             </select>
           </div>
 
-          <!-- CAMBIO: Select de Vacuna (Oculto por defecto) -->
+          <!-- Select de Vacuna (Dinámico) -->
           <div class="form-group" id="vacunaGroup" style="display: none;">
             <label for="vacunaSelect">Producto del Inventario</label>
             <select id="vacunaSelect" class="form-control">
               <option value="">Selecciona Vacuna/Medicina</option>
             </select>
-            <small style="color: #667;">Se descontará del stock.</small>
+            <!-- Aquí mostramos la unidad base para referencia -->
+            <small id="stockInfo" style="color: var(--color-secundario); font-size: 0.8rem;"></small>
           </div>
 
           <div class="form-group">
@@ -125,13 +125,25 @@
             <input type="text" id="nombre" class="form-control" placeholder="Ej: Muerte súbita o Newcastle" required>
           </div>
 
-          <div class="form-group">
-            <label for="cantidad">Cantidad (Aves/Dosis)</label>
-            <input type="number" id="cantidad" class="form-control" required>
+          <!-- CANTIDAD CON SELECTOR DE UNIDAD -->
+          <div class="form-group" style="grid-column: span 2;">
+            <label for="cantidad">Cantidad Aplicada</label>
+            <div style="display: flex; gap: 10px;">
+              <input type="number" id="cantidad" class="form-control" step="0.001" min="0" placeholder="0.00" required
+                style="flex: 2;">
+              <select id="unidadAplicacion" class="form-control" style="flex: 1;">
+                <option value="base">Unidad Base (Inventario)</option>
+                <option value="ml">Mililitros (ml)</option>
+                <option value="L">Litros (L)</option>
+                <option value="g">Gramos (g)</option>
+                <option value="kg">Kilogramos (kg)</option>
+                <option value="dosis">Dosis</option>
+              </select>
+            </div>
           </div>
 
           <div class="form-group">
-            <label for="diasRetiro">Días de Retiro (si aplica)</label>
+            <label for="diasRetiro">Días de Retiro</label>
             <input type="number" id="diasRetiro" class="form-control" min="0" value="0">
           </div>
 
@@ -162,8 +174,8 @@
               <th>Lote</th>
               <th>Tipo</th>
               <th>Nombre</th>
-              <th>Insumo Usado</th> <!-- Nueva Columna -->
-              <th>Cant.</th>
+              <th>Insumo</th>
+              <th>Cant. (Base)</th>
               <th>Fecha</th>
               <th>Acciones</th>
             </tr>
@@ -177,7 +189,6 @@
       <p>© 2025 Granja Avícola VincWill.</p>
     </footer>
   </main>
-
   <script src="app.js"></script>
   <script src="salud.js"></script>
 </body>

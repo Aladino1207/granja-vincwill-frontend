@@ -2,33 +2,27 @@
 async function cargarLotesForSelect() {
   try {
     const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    // CORRECCIÓN: Usamos window.API_URL
-    const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const res = await fetch(`${window.API_URL}/inventario?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
+    const items = await res.json();
+    const select = document.getElementById('vacunaSelect');
+    select.innerHTML = '<option value="">Selecciona Vacuna/Medicina</option>';
 
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    const lotes = await res.json();
+    const filtrados = items.filter(i => i.categoria === 'Vacuna' || i.categoria === 'Medicina' || i.categoria === 'Otro');
 
-    const select = document.getElementById('loteId'); // ID del select en salud.html
-    if (!select) return; // Protección
-
-    select.innerHTML = '<option value="">Selecciona un Lote</option>';
-
-    // Filtramos para mostrar solo lotes activos, o todos si prefieres
-    lotes.forEach(lote => {
+    filtrados.forEach(item => {
       const option = document.createElement('option');
-      option.value = lote.id;
-      option.textContent = `${lote.loteId} (Stock: ${lote.cantidad})`;
+      option.value = item.id;
+      const unidad = item.unidadMedida || 'Unidades';
+      option.textContent = `${item.producto}`;
+      option.dataset.nombre = item.producto;
+      option.dataset.stock = item.cantidad;
+      option.dataset.unidad = unidad; // Guardamos la unidad base
       select.appendChild(option);
     });
-  } catch (error) {
-    console.error('Error al cargar lotes para select:', error);
-  }
+  } catch (error) { console.error(error); }
 }
 
 async function cargarVacunasForSelect() {
