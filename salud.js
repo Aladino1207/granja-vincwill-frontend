@@ -70,46 +70,57 @@ async function cargarSalud() {
     const token = localStorage.getItem('token');
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
-
-    // CORRECCIÓN: Usamos window.API_URL
-    const res = await fetch(`${window.API_URL}/salud?granjaId=${granjaId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const res = await fetch(`${window.API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
     const salud = await res.json();
     const tbody = document.getElementById('saludTableBody');
-    if (!tbody) return;
-
     tbody.innerHTML = '';
-
     if (Array.isArray(salud) && salud.length > 0) {
       salud.forEach(s => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${s.loteId || 'N/A'}</td> 
-          <td>${s.tipo || 'N/A'}</td>
-          <td>${s.nombre || 'N/A'}</td>
+          <td>${s.loteId || 'N/A'}</td>
+          <td>${s.tipo}</td>
+          <td>${s.nombre}</td>
           <td>${s.Vacuna ? s.Vacuna.producto : '-'}</td>
-          <td>${s.cantidad || 0}</td>
-          <td>${s.fecha ? new Date(s.fecha).toLocaleDateString() : 'N/A'}</td>
+          <td>${s.cantidad.toFixed(4)}</td> <!-- Mostramos decimales -->
+          <td>${new Date(s.fecha).toLocaleDateString()}</td>
           <td>
-            <button onclick="editarSalud(${s.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
-            <button onclick="eliminarSalud(${s.id})" class="btn btn-sm btn-peligro">Eliminar</button>
+             <button onclick="eliminarSalud(${s.id})" class="btn btn-sm btn-peligro">Eliminar</button>
           </td>
         `;
         tbody.appendChild(tr);
       });
-    } else {
-      tbody.innerHTML = '<tr><td colspan="7">No hay eventos de salud registrados.</td></tr>';
-    }
-  } catch (error) {
-    console.error('Error al cargar salud:', error);
-  }
+    } else { tbody.innerHTML = '<tr><td colspan="7">Sin registros.</td></tr>'; }
+  } catch (error) { console.error(error); }
 }
 
+// --- Conversor de Unidades ---
+function calcularCantidadBase(cantidadInput, unidadInput, unidadBase) {
+  if (unidadInput === 'base' || !unidadBase) return cantidadInput;
 
+  // Normalizar textos
+  const uIn = unidadInput.toLowerCase();
+  const uBase = unidadBase.toLowerCase();
 
+  // 1. Conversión de Volumen (L <-> ml)
+  if (uBase === 'l' || uBase === 'litros') {
+    if (uIn === 'ml') return cantidadInput / 1000;
+  }
+  if (uBase === 'ml' || uBase === 'mililitros') {
+    if (uIn === 'l') return cantidadInput * 1000;
+  }
+
+  // 2. Conversión de Peso (kg <-> g)
+  if (uBase === 'kg' || uBase === 'kilogramos') {
+    if (uIn === 'g') return cantidadInput / 1000;
+    if (uIn === 'lb') return cantidadInput / 2.20462;
+  }
+
+  // Si no hay coincidencia lógica, asumimos que el usuario sabe lo que hace (1 a 1)
+  return cantidadInput;
+}
+
+// --- UI Logic ---
 function abrirFormulario() {
   document.getElementById('formContainer').classList.add('is-open');
   document.getElementById('toggleFormBtn').textContent = 'Cancelar';
@@ -119,22 +130,38 @@ function cerrarFormulario() {
   document.getElementById('toggleFormBtn').textContent = 'Registrar Nuevo Evento';
   document.getElementById('saludForm').reset();
   document.getElementById('saludId').value = '';
-  document.getElementById('formTitle').textContent = 'Registrar Evento de Salud';
-  // Ocultar campo vacuna
-  if (document.getElementById('vacunaGroup')) {
-    document.getElementById('vacunaGroup').style.display = 'none';
-  }
+  document.getElementById('vacunaGroup').style.display = 'none';
+  document.getElementById('stockInfo').textContent = '';
 }
 
 // --- Funciones CRUD (BLINDADAS) ---
 
 async function guardarSalud(e) {
   e.preventDefault();
-
-  const saludId = document.getElementById('saludId').value;
-  const esEdicion = !!saludId;
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
+
+  // Datos básicos
+  const tipo = document.getElementById('tipo').value;
+  let cantidadInput = parseFloat(document.getElementById('cantidad').value);
+  const unidadAplicacion = document.getElementById('unidadAplicacion').value;
+
+  // Lógica de Inventario y Conversión
+  const vacunaSelect = document.getElementById('vacunaSelect');
+  const vacunaId = (vacunaSelect.value && document.getElementById('vacunaGroup').style.display !== 'none') ? parseInt(vacunaSelect.value) : null;
+
+  let cantidadFinal = cantidadInput;
+
+  // Si es una vacuna del inventario, aplicamos conversión
+  if (vacunaId) {
+    const opcionSeleccionada = vacunaSelect.options[vacunaSelect.selectedIndex];
+    const unidadBase = opcionSeleccionada.dataset.unidad;
+
+    // Convertimos a la unidad del inventario
+    cantidadFinal = calcularCantidadBase(cantidadInput, unidadAplicacion, unidadBase);
+
+    console.log(`Conversión: ${cantidadInput} ${unidadAplicacion} -> ${cantidadFinal} ${unidadBase}`);
+  }
 
   // Cálculo retiro
   const diasRetiro = parseInt(document.getElementById('diasRetiro').value) || 0;
@@ -145,49 +172,34 @@ async function guardarSalud(e) {
     fechaRetiroCalculada = fechaEvento;
   }
 
-  const vacunaSelect = document.getElementById('vacunaSelect');
-  const vacunaGroup = document.getElementById('vacunaGroup');
-  // Solo enviamos vacunaId si el grupo está visible y se seleccionó algo
-  const vacunaId = (vacunaSelect && vacunaSelect.value && vacunaGroup.style.display !== 'none')
-    ? parseInt(vacunaSelect.value) : null;
-
   const salud = {
     loteId: parseInt(document.getElementById('loteId').value),
-    tipo: document.getElementById('tipo').value,
+    tipo: tipo,
     nombre: document.getElementById('nombre').value,
-    cantidad: parseFloat(document.getElementById('cantidad').value),
+    cantidad: cantidadFinal, // Enviamos la cantidad YA CONVERTIDA
     vacunaId: vacunaId,
     fecha: document.getElementById('fecha').value,
     fechaRetiro: fechaRetiroCalculada,
     granjaId: granjaId
   };
 
-  const url = esEdicion
-    ? `${window.API_URL}/salud/${saludId}`
-    : `${window.API_URL}/salud`;
-  const method = esEdicion ? 'PUT' : 'POST';
-
   try {
     const token = localStorage.getItem('token');
-    const res = await fetch(url, {
-      method: method,
+    const res = await fetch(`${window.API_URL}/salud`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(salud)
     });
-
     if (res.ok) {
       cerrarFormulario();
       await cargarSalud();
-      await cargarVacunasForSelect(); // Recargar stock vacunas
-      // Si fue mortalidad, recargamos lotes para ver stock aves actualizado
+      await cargarVacunasForSelect();
       if (salud.tipo === 'Mortalidad') await cargarLotesForSelect();
     } else {
       const errorText = await res.json();
-      alert('Error al guardar: ' + (errorText.error || 'Desconocido'));
+      alert('Error: ' + (errorText.error || 'Desconocido'));
     }
-  } catch (error) {
-    alert('Error de conexión');
-  }
+  } catch (error) { alert('Error de conexión'); }
 }
 
 async function editarSalud(id) {
@@ -216,24 +228,19 @@ async function eliminarSalud(id) {
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
-  if (granja) {
-    const header = document.querySelector('header h1');
-    if (header) header.textContent = `Salud (${granja.nombre})`;
-  }
+  if (granja) document.querySelector('header h1').textContent = `Salud (${granja.nombre})`;
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
   const form = document.getElementById('saludForm');
   const tipoSelect = document.getElementById('tipo');
   const vacunaSelect = document.getElementById('vacunaSelect');
-  const nombreInput = document.getElementById('nombre');
+  const stockInfo = document.getElementById('stockInfo');
 
-  // Lógica para mostrar/ocultar el select de vacunas
   if (tipoSelect) {
     tipoSelect.addEventListener('change', () => {
       const tipo = tipoSelect.value;
       const vacunaGroup = document.getElementById('vacunaGroup');
-
       if (tipo === 'Vacunación' || tipo === 'Tratamiento') {
         vacunaGroup.style.display = 'flex';
         vacunaSelect.required = true;
@@ -241,40 +248,36 @@ document.addEventListener('DOMContentLoaded', () => {
         vacunaGroup.style.display = 'none';
         vacunaSelect.value = "";
         vacunaSelect.required = false;
+        stockInfo.textContent = "";
       }
     });
   }
 
-  // Autocompletar nombre al seleccionar vacuna
   if (vacunaSelect) {
     vacunaSelect.addEventListener('change', () => {
-      const selectedOption = vacunaSelect.options[vacunaSelect.selectedIndex];
-      if (selectedOption && selectedOption.dataset.nombre) {
-        nombreInput.value = selectedOption.dataset.nombre;
+      const opt = vacunaSelect.options[vacunaSelect.selectedIndex];
+      if (opt && opt.dataset.nombre) {
+        document.getElementById('nombre').value = opt.dataset.nombre;
+        stockInfo.textContent = `Stock Disponible: ${opt.dataset.stock} ${opt.dataset.unidad}`;
       }
     });
   }
 
   if (currentUser && currentUser.role !== 'viewer') {
-    if (toggleBtn) {
-      toggleBtn.style.display = 'block';
-      toggleBtn.addEventListener('click', () => {
-        const isOpen = document.getElementById('formContainer').classList.contains('is-open');
-        if (isOpen) cerrarFormulario();
-        else {
-          form.reset();
-          document.getElementById('saludId').value = '';
-          document.getElementById('formTitle').textContent = 'Registrar Evento de Salud';
-          document.getElementById('vacunaGroup').style.display = 'none';
-          abrirFormulario();
-        }
-      });
-    }
-    if (cancelBtn) cancelBtn.addEventListener('click', cerrarFormulario);
-    if (form) form.onsubmit = guardarSalud;
-  } else {
-    if (toggleBtn) toggleBtn.style.display = 'none';
-  }
+    toggleBtn.style.display = 'block';
+    toggleBtn.addEventListener('click', () => {
+      const isOpen = document.getElementById('formContainer').classList.contains('is-open');
+      if (isOpen) cerrarFormulario();
+      else {
+        form.reset();
+        document.getElementById('saludId').value = '';
+        document.getElementById('vacunaGroup').style.display = 'none';
+        abrirFormulario();
+      }
+    });
+    cancelBtn.addEventListener('click', cerrarFormulario);
+    form.onsubmit = guardarSalud;
+  } else { toggleBtn.style.display = 'none'; }
 
   cargarLotesForSelect();
   cargarVacunasForSelect();
