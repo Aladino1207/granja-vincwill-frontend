@@ -87,7 +87,6 @@
   </aside>
 
   <main class="main-content">
-
     <div id="formContainer" class="form-desplegable-container">
       <section class="card">
         <h2 id="formTitle">Registrar Venta</h2>
@@ -102,31 +101,50 @@
             </select>
           </div>
 
+          <!-- Buscador Cliente -->
           <div class="form-group" style="grid-column: 2 / 4;">
             <label for="clienteSearch">Cliente</label>
             <div class="searchable-dropdown" id="clienteDropdown">
-              <input type="text" id="clienteSearch" class="form-control"
-                placeholder="Buscar por Nombre, Cédula o RUC..." required>
+              <input type="text" id="clienteSearch" class="form-control" placeholder="Buscar Cliente..." required>
               <input type="hidden" id="clienteId" value="">
               <button type="button" id="openQuickAddCliente" class="btn-add-quick">+</button>
-              <div class="search-results" id="clienteResults">
-              </div>
+              <div class="search-results" id="clienteResults"></div>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="cantidadVendida">Cantidad Vendida (Aves)</label>
-            <input type="number" id="cantidadVendida" class="form-control" placeholder="Ej: 500" required>
+            <label for="cantidadVendida">Cantidad (Aves)</label>
+            <input type="number" id="cantidadVendida" class="form-control input-calculo" placeholder="Ej: 500" required>
+          </div>
+
+          <!-- Peso y Unidad -->
+          <div class="form-group">
+            <label for="peso">Peso Total</label>
+            <div style="display: flex; gap: 5px;">
+              <input type="number" step="0.01" id="peso" class="form-control input-calculo" placeholder="Peso" required
+                style="flex: 2;">
+              <select id="unidadPeso" class="form-control input-calculo" style="flex: 1; padding: 0 5px;">
+                <option value="kg">kg</option>
+                <option value="lb">lb</option>
+              </select>
+            </div>
           </div>
 
           <div class="form-group">
-            <label for="peso">Peso Total (kg)</label>
-            <input type="number" step="0.01" id="peso" class="form-control" placeholder="Ej: 1250.5" required>
+            <label for="precio">Precio Unitario</label>
+            <div style="display: flex; gap: 5px;">
+              <span style="align-self: center;">$</span>
+              <input type="number" step="0.01" id="precio" class="form-control input-calculo" placeholder="Ej: 1.20"
+                required>
+              <span id="lblPrecioUnidad" style="align-self: center; font-size: 0.8rem; color: #666;">/kg</span>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label for="precio">Precio Unitario ($/kg)</label>
-            <input type="number" step="0.01" id="precio" class="form-control" placeholder="Ej: 1.20" required>
+          <!-- CAMPO CALCULADO VISUAL -->
+          <div class="form-group"
+            style="background: #e8f5e9; padding: 10px; border-radius: 6px; border: 1px solid #a5d6a7;">
+            <label style="color: #2e7d32;">Total a Cobrar:</label>
+            <strong id="displayTotalVenta" style="font-size: 1.5rem; color: #2e7d32;">$0.00</strong>
           </div>
 
           <div class="form-group">
@@ -155,9 +173,10 @@
             <tr>
               <th>Lote</th>
               <th>Cliente</th>
-              <th>Cantidad</th>
+              <th>Cant.</th>
               <th>Peso (kg)</th>
               <th>Precio ($/kg)</th>
+              <th>Total</th>
               <th>Fecha</th>
               <th>Acciones</th>
             </tr>
@@ -168,10 +187,11 @@
     </section>
 
     <footer>
-      <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
+      <p>© 2025 Granja Avícola VincWill.</p>
     </footer>
   </main>
 
+  <!-- Modal Rápido Cliente -->
   <div id="quickAddModal" class="modal-wrapper">
     <div class="modal-content">
       <div class="modal-header">
