@@ -81,7 +81,11 @@ async function cargarSalud() {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || `Error HTTP: ${res.status}`);
+    }
+
     const salud = await res.json();
     const tbody = document.getElementById('saludTableBody');
     if (!tbody) return;
@@ -90,27 +94,38 @@ async function cargarSalud() {
 
     if (Array.isArray(salud) && salud.length > 0) {
       salud.forEach(s => {
+        const tr = document.createElement('tr');
+
+        // Fecha corregida
         const fechaVisual = s.fecha ? new Date(s.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' }) : 'N/A';
 
+        // Nombre del lote (con protección por si se borró el lote)
+        const nombreLote = s.Lote ? s.Lote.loteId : 'Lote Eliminado';
+
+        // Nombre del insumo
+        const nombreInsumo = s.Vacuna ? s.Vacuna.producto : '-';
+
         tr.innerHTML = `
-          <td>${s.loteId || 'N/A'}</td> 
-          <td>${s.tipo || 'N/A'}</td>
-          <td>${s.nombre || 'N/A'}</td>
-          <td>${s.Vacuna ? s.Vacuna.producto : '-'}</td>
-          <td>${s.cantidad}</td>
-          <td>${fechaVisual}</td> <!-- Fecha corregida -->
+          <td><strong>${nombreLote}</strong></td> 
+          <td>${s.tipo}</td>
+          <td>${s.nombre}</td>
+          <td>${nombreInsumo}</td>
+          <td>${s.cantidad.toFixed(4)}</td>
+          <td>${fechaVisual}</td>
           <td>
-            <button onclick="editarSalud(${s.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
+            <!-- Nota: Editar salud con inventario es complejo, mejor borrar y rehacer -->
             <button onclick="eliminarSalud(${s.id})" class="btn btn-sm btn-peligro">Eliminar</button>
           </td>
         `;
         tbody.appendChild(tr);
       });
     } else {
-      tbody.innerHTML = '<tr><td colspan="7">No hay eventos de salud registrados.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay eventos registrados.</td></tr>';
     }
   } catch (error) {
     console.error('Error al cargar salud:', error);
+    const tbody = document.getElementById('saludTableBody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="color:red;">Error: ${error.message}</td></tr>`;
   }
 }
 
