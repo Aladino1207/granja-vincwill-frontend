@@ -1,5 +1,16 @@
 let listaProveedores = [];
 
+// --- Función auxiliar segura para obtener valores (BLINDAJE) ---
+// Si el elemento no existe, devuelve 0 o "" en lugar de lanzar error.
+const getVal = (id, type = 'string') => {
+  const el = document.getElementById(id);
+  if (!el) {
+    console.warn(`Elemento con ID '${id}' no encontrado. Usando valor por defecto.`);
+    return type === 'number' ? 0 : '';
+  }
+  return type === 'number' ? (parseFloat(el.value) || 0) : el.value;
+};
+
 // --- Lógica de Carga (BLINDADA) ---
 async function cargarLotes() {
   try {
@@ -14,38 +25,34 @@ async function cargarLotes() {
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
     const tbody = document.getElementById('loteTableBody');
-    if (!tbody) return; // Protección
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     if (lotes.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8">No hay lotes registrados.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8">No hay lotes registrados en esta granja.</td></tr>';
       return;
     }
 
     lotes.forEach(lote => {
       const tr = document.createElement('tr');
-
-      // TRUCO: Usar 'timeZone: UTC' para que no reste horas
-      const fechaVisual = new Date(lote.fechaIngreso).toLocaleDateString('es-ES', { timeZone: 'UTC' });
-
       tr.innerHTML = `
-    <td><strong>${lote.loteId}</strong></td>
-    <td>${lote.Proveedor ? lote.Proveedor.nombreCompania : '<em>No especificado</em>'}</td>
-    <td>
-        <div style="font-size: 0.85rem;">
-            <span style="color: var(--color-secundario);">♂ ${lote.cantidadMachos || 0}</span> / 
-            <span style="color: #e91e63;">♀ ${lote.cantidadHembras || 0}</span>
-        </div>
-    </td>
-    <td><strong>${lote.cantidad}</strong></td>
-    <td>${lote.pesoInicial ? lote.pesoInicial.toFixed(3) : '0.000'} kg</td>
-    <td>${fechaVisual}</td> <!-- USA LA FECHA CORREGIDA AQUÍ -->
-    <td><span class="badge-${lote.estado}">${lote.estado}</span></td>
-    <td>
-      <button onclick="editarLote(${lote.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
-      <button onclick="eliminarLote(${lote.id})" class="btn btn-sm btn-peligro">Eliminar</button>
-    </td>
-  `;
+        <td><strong>${lote.loteId}</strong></td>
+        <td>${lote.Proveedor ? lote.Proveedor.nombreCompania : '<em>No especificado</em>'}</td>
+        <td>
+            <div style="font-size: 0.85rem;">
+                <span style="color: var(--color-secundario);">♂ ${lote.cantidadMachos || 0}</span> / 
+                <span style="color: #e91e63;">♀ ${lote.cantidadHembras || 0}</span>
+            </div>
+        </td>
+        <td><strong>${lote.cantidad}</strong></td>
+        <td>${lote.pesoInicial ? lote.pesoInicial.toFixed(3) : '0.000'} kg</td>
+        <td>${new Date(lote.fechaIngreso).toLocaleDateString()}</td>
+        <td><span class="badge-${lote.estado}">${lote.estado}</span></td>
+        <td>
+          <button onclick="editarLote(${lote.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
+          <button onclick="eliminarLote(${lote.id})" class="btn btn-sm btn-peligro">Eliminar</button>
+        </td>
+      `;
       tbody.appendChild(tr);
     });
   } catch (error) {
