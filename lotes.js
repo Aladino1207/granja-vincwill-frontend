@@ -1,7 +1,7 @@
 let listaProveedores = [];
 
 // --- Función auxiliar segura para obtener valores (BLINDAJE) ---
-// Si el elemento no existe, devuelve 0 o "" en lugar de lanzar error.
+// Evita el error "Cannot read properties of null (reading 'value')"
 const getVal = (id, type = 'string') => {
   const el = document.getElementById(id);
   if (!el) {
@@ -11,7 +11,13 @@ const getVal = (id, type = 'string') => {
   return type === 'number' ? (parseFloat(el.value) || 0) : el.value;
 };
 
-// --- Lógica de Carga (BLINDADA) ---
+// --- Función auxiliar segura para asignar valores ---
+const setVal = (id, val) => {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+};
+
+// --- Lógica de Carga ---
 async function cargarLotes() {
   try {
     const token = localStorage.getItem('token');
@@ -46,7 +52,7 @@ async function cargarLotes() {
         </td>
         <td><strong>${lote.cantidad}</strong></td>
         <td>${lote.pesoInicial ? lote.pesoInicial.toFixed(3) : '0.000'} kg</td>
-        <td>${new Date(lote.fechaIngreso).toLocaleDateString()}</td>
+        <td>${new Date(lote.fechaIngreso).toLocaleDateString('es-ES', { timeZone: 'UTC' })}</td>
         <td><span class="badge-${lote.estado}">${lote.estado}</span></td>
         <td>
           <button onclick="editarLote(${lote.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
@@ -86,12 +92,16 @@ function cerrarFormulario() {
   const btn = document.getElementById('toggleFormBtn');
   if (btn) btn.textContent = 'Agregar Nuevo Lote';
 
-  document.getElementById('loteForm').reset();
-  document.getElementById('loteDbId').value = '';
-  document.getElementById('proveedorId').value = '';
-  document.getElementById('formTitle').textContent = 'Agregar Nuevo Lote';
+  const form = document.getElementById('loteForm');
+  if (form) form.reset();
 
-  // Resetear displays
+  setVal('loteDbId', '');
+  setVal('proveedorId', '');
+
+  const title = document.getElementById('formTitle');
+  if (title) title.textContent = 'Agregar Nuevo Lote';
+
+  // Resetear displays de cálculo
   const dispTotal = document.getElementById('displayTotalCantidad');
   if (dispTotal) dispTotal.textContent = '0';
   const dispPeso = document.getElementById('displayPesoPromedio');
@@ -100,10 +110,11 @@ function cerrarFormulario() {
 
 // --- CÁLCULOS AUTOMÁTICOS (V 3.3) ---
 function calcularTotales() {
-  const machos = parseInt(document.getElementById('cantidadMachos').value) || 0;
-  const pesoMachos = parseFloat(document.getElementById('pesoPromedioMachos').value) || 0;
-  const hembras = parseInt(document.getElementById('cantidadHembras').value) || 0;
-  const pesoHembras = parseFloat(document.getElementById('pesoPromedioHembras').value) || 0;
+  // Usamos getVal para que no falle si falta un input
+  const machos = getVal('cantidadMachos', 'number');
+  const pesoMachos = getVal('pesoPromedioMachos', 'number');
+  const hembras = getVal('cantidadHembras', 'number');
+  const pesoHembras = getVal('pesoPromedioHembras', 'number');
 
   const totalAves = machos + hembras;
   let pesoPromedioTotal = 0;
@@ -114,22 +125,22 @@ function calcularTotales() {
     pesoPromedioTotal = pesoTotalMasa / totalAves;
   }
 
-  // Actualizar UI
+  // Actualizar UI solo si existen los elementos
   const dispTotal = document.getElementById('displayTotalCantidad');
   if (dispTotal) dispTotal.textContent = totalAves;
+
   const dispPeso = document.getElementById('displayPesoPromedio');
   if (dispPeso) dispPeso.textContent = `${pesoPromedioTotal.toFixed(3)} kg`;
 
   return { totalAves, pesoPromedioTotal };
 }
 
-
 // --- CRUD ---
 
 async function guardarLote(e) {
   e.preventDefault();
 
-  // Recalcular por seguridad antes de guardar
+  // Recalcular por seguridad
   const { totalAves, pesoPromedioTotal } = calcularTotales();
 
   if (totalAves <= 0) {
@@ -137,36 +148,32 @@ async function guardarLote(e) {
     return;
   }
 
-  const loteDbId = document.getElementById('loteDbId').value;
+  const loteDbId = getVal('loteDbId');
   const esEdicion = !!loteDbId;
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
-  // Obtenemos los valores con chequeo de nulos (para evitar el error)
-  const provIdEl = document.getElementById('proveedorId');
-  const provId = provIdEl ? provIdEl.value : '';
+  const provId = getVal('proveedorId');
 
+  // Objeto seguro usando getVal
   const lote = {
-    loteId: document.getElementById('loteId').value,
-    // Proveedor (Opcional)
+    loteId: getVal('loteId'),
     proveedorId: provId ? parseInt(provId) : null,
 
-    // Datos detallados
-    cantidadMachos: parseInt(document.getElementById('cantidadMachos').value) || 0,
-    pesoPromedioMachos: parseFloat(document.getElementById('pesoPromedioMachos').value) || 0,
-    cantidadHembras: parseInt(document.getElementById('cantidadHembras').value) || 0,
-    pesoPromedioHembras: parseFloat(document.getElementById('pesoPromedioHembras').value) || 0,
+    cantidadMachos: getVal('cantidadMachos', 'number'),
+    pesoPromedioMachos: getVal('pesoPromedioMachos', 'number'),
+    cantidadHembras: getVal('cantidadHembras', 'number'),
+    pesoPromedioHembras: getVal('pesoPromedioHembras', 'number'),
 
-    // Campos calculados automáticos (totales)
+    // Campos calculados
     cantidad: totalAves,
     pesoInicial: pesoPromedioTotal,
 
-    fechaIngreso: document.getElementById('fechaIngreso').value,
-    estado: document.getElementById('estado').value,
+    fechaIngreso: getVal('fechaIngreso'),
+    estado: getVal('estado'),
     granjaId: granjaId
   };
 
-  // Si es nuevo, guardamos la cantidad inicial como referencia histórica
   if (!esEdicion) {
     lote.cantidadInicial = totalAves;
   }
@@ -212,32 +219,30 @@ async function editarLote(id) {
     if (!res.ok) throw new Error('No se pudo cargar el lote');
     const lote = await res.json();
 
-    document.getElementById('formTitle').textContent = 'Editar Lote';
-    document.getElementById('loteDbId').value = lote.id;
-    document.getElementById('loteId').value = lote.loteId;
-    document.getElementById('fechaIngreso').value = lote.fechaIngreso.split('T')[0];
-    document.getElementById('estado').value = lote.estado;
+    const title = document.getElementById('formTitle');
+    if (title) title.textContent = 'Editar Lote';
+
+    setVal('loteDbId', lote.id);
+    setVal('loteId', lote.loteId);
+    setVal('fechaIngreso', lote.fechaIngreso.split('T')[0]);
+    setVal('estado', lote.estado);
 
     // Poblar datos de sexado
-    document.getElementById('cantidadMachos').value = lote.cantidadMachos || 0;
-    document.getElementById('pesoPromedioMachos').value = lote.pesoPromedioMachos || 0;
-    document.getElementById('cantidadHembras').value = lote.cantidadHembras || 0;
-    document.getElementById('pesoPromedioHembras').value = lote.pesoPromedioHembras || 0;
+    setVal('cantidadMachos', lote.cantidadMachos || 0);
+    setVal('pesoPromedioMachos', lote.pesoPromedioMachos || 0);
+    setVal('cantidadHembras', lote.cantidadHembras || 0);
+    setVal('pesoPromedioHembras', lote.pesoPromedioHembras || 0);
 
-    // Poblar proveedor en el buscador
+    // Poblar proveedor
     if (lote.proveedorId && lote.Proveedor) {
-      const provInput = document.getElementById('proveedorSearch');
-      const provIdInput = document.getElementById('proveedorId');
-      if (provInput) provInput.value = lote.Proveedor.nombreCompania;
-      if (provIdInput) provIdInput.value = lote.proveedorId;
+      setVal('proveedorSearch', lote.Proveedor.nombreCompania);
+      setVal('proveedorId', lote.proveedorId);
     } else {
-      const provInput = document.getElementById('proveedorSearch');
-      const provIdInput = document.getElementById('proveedorId');
-      if (provInput) provInput.value = '';
-      if (provIdInput) provIdInput.value = '';
+      setVal('proveedorSearch', '');
+      setVal('proveedorId', '');
     }
 
-    calcularTotales(); // Actualizar displays visuales
+    calcularTotales();
     abrirFormulario();
     window.scrollTo(0, 0);
 
@@ -272,12 +277,11 @@ function setupProveedorSearch() {
   const dropdown = document.getElementById('proveedorDropdown');
   const hiddenInput = document.getElementById('proveedorId');
 
-  if (!searchInput || !resultsContainer || !dropdown) return; // Protección
+  if (!searchInput || !resultsContainer || !dropdown) return;
 
   searchInput.addEventListener('input', () => {
     const query = searchInput.value.toLowerCase();
-    // Limpiar ID si el usuario cambia el texto
-    hiddenInput.value = '';
+    if (hiddenInput) hiddenInput.value = '';
 
     if (query.length < 1) {
       resultsContainer.innerHTML = '';
@@ -295,7 +299,7 @@ function setupProveedorSearch() {
         item.innerHTML = `<strong>${p.nombreCompania}</strong>`;
         item.onclick = () => {
           searchInput.value = p.nombreCompania;
-          hiddenInput.value = p.id;
+          if (hiddenInput) hiddenInput.value = p.id;
           dropdown.classList.remove('is-open');
         };
         resultsContainer.appendChild(item);
@@ -307,9 +311,7 @@ function setupProveedorSearch() {
   });
 
   document.addEventListener('click', (e) => {
-    if (!dropdown.contains(e.target)) {
-      dropdown.classList.remove('is-open');
-    }
+    if (!dropdown.contains(e.target)) dropdown.classList.remove('is-open');
   });
 }
 
@@ -328,32 +330,28 @@ function setupQuickAddModal() {
     form.onsubmit = async (e) => {
       e.preventDefault();
       const nuevoProv = {
-        nombreCompania: document.getElementById('quick_nombreCompania').value,
-        ruc: document.getElementById('quick_ruc').value,
-        telefono: document.getElementById('quick_telefono').value
+        nombreCompania: getVal('quick_nombreCompania'),
+        ruc: getVal('quick_ruc'),
+        telefono: getVal('quick_telefono')
       };
       try {
         const token = localStorage.getItem('token');
-        // Usamos el endpoint global de admin
         const res = await fetch(`${window.API_URL}/proveedores`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify(nuevoProv)
         });
-
         if (res.ok) {
           const creado = await res.json();
           modal.classList.remove('is-open');
           form.reset();
 
-          await cargarProveedores(); // Refrescar lista global
+          await cargarProveedores();
 
-          // Auto-seleccionar en el formulario principal
-          document.getElementById('proveedorSearch').value = creado.nombreCompania;
-          document.getElementById('proveedorId').value = creado.id;
+          const searchInput = document.getElementById('proveedorSearch');
+          const hiddenInput = document.getElementById('proveedorId');
+          if (searchInput) searchInput.value = creado.nombreCompania;
+          if (hiddenInput) hiddenInput.value = creado.id;
         } else {
           alert('Error al crear proveedor');
         }
@@ -386,8 +384,9 @@ document.addEventListener('DOMContentLoaded', () => {
           cerrarFormulario();
         } else {
           form.reset();
-          document.getElementById('loteDbId').value = '';
-          document.getElementById('formTitle').textContent = 'Agregar Nuevo Lote';
+          setVal('loteDbId', '');
+          const title = document.getElementById('formTitle');
+          if (title) title.textContent = 'Agregar Nuevo Lote';
           abrirFormulario();
         }
       });
@@ -396,11 +395,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cancelBtn) cancelBtn.addEventListener('click', cerrarFormulario);
     if (form) form.onsubmit = guardarLote;
 
-    // Inicializar componentes nuevos
     setupProveedorSearch();
     setupQuickAddModal();
 
-    // Listeners para cálculo automático en tiempo real
     document.querySelectorAll('.input-calculo').forEach(input => {
       input.addEventListener('input', calcularTotales);
     });
@@ -410,5 +407,5 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   cargarLotes();
-  cargarProveedores(); // Cargar lista al inicio
+  cargarProveedores();
 });
