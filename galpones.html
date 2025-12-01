@@ -3,15 +3,44 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Gestión de Galpones</title>
+    <title>Granja Avícola VincWill - Configuración</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
     <header>
-        <h1>Infraestructura (Galpones)</h1>
+        <h1 id="pageTitle">Dashboard</h1>
+
         <div class="user-profile-container">
-            <div id="userMenuBtn" class="user-avatar-btn">U</div>
+            <div id="userMenuBtn" class="user-avatar-btn" title="Menú de Usuario">
+                <span id="userInitials">U</span>
+            </div>
+
+            <div id="userDropdown" class="user-dropdown-menu">
+
+                <div class="dropdown-header">
+                    <div class="dropdown-avatar-large">
+                        <span id="dropdownInitials">U</span>
+                    </div>
+                    <div class="dropdown-user-info">
+                        <h4 id="dropdownName">Cargando...</h4>
+                        <p id="dropdownBranch">Cargando...</p>
+                    </div>
+                </div>
+
+                <ul class="dropdown-actions">
+                    <li>
+                        <button id="changeBranchBtn" class="dropdown-item">
+                            🔄 Cambiar Almacén
+                        </button>
+                    </li>
+                    <li>
+                        <button onclick="logout()" class="dropdown-item logout-item">
+                            🚪 Cerrar Sesión
+                        </button>
+                    </li>
+                </ul>
+            </div>
         </div>
     </header>
     <aside class="sidebar">
