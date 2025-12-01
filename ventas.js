@@ -1,7 +1,6 @@
-// --- Variables Globales ---
 let listaClientes = [];
 
-// --- Lógica de Carga (BLINDADA) ---
+// --- Lógica de Carga ---
 
 async function cargarLotesForSelect() {
   try {
@@ -14,6 +13,8 @@ async function cargarLotesForSelect() {
     });
     const lotes = await res.json();
     const select = document.getElementById('loteSelect');
+    if (!select) return;
+
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
 
     lotes.filter(lote => lote.estado === 'disponible').forEach(lote => {
@@ -23,7 +24,9 @@ async function cargarLotesForSelect() {
       option.dataset.cantidad = lote.cantidad;
       select.appendChild(option);
     });
-  } catch (error) { console.error(error); }
+  } catch (error) {
+    console.error('Error al cargar lotes para select:', error);
+  }
 }
 
 async function cargarClientes() {
@@ -35,11 +38,16 @@ async function cargarClientes() {
     const res = await fetch(`${window.API_URL}/clientes?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (res.ok) listaClientes = await res.json();
-  } catch (error) { console.error(error); }
+    if (res.ok) {
+      listaClientes = await res.json();
+    }
+  } catch (error) {
+    console.error('Error al cargar clientes:', error);
+  }
 }
 
 async function cargarVentas() {
+  console.log("Iniciando carga de ventas..."); // Depuración
   try {
     const token = localStorage.getItem('token');
     const granjaId = getSelectedGranjaId();
@@ -48,76 +56,99 @@ async function cargarVentas() {
     const res = await fetch(`${window.API_URL}/ventas?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+
+    if (!res.ok) {
+      console.error("Error HTTP al cargar ventas:", res.status);
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+
     const ventas = await res.json();
+    console.log("Ventas recibidas:", ventas); // Depuración: Ver qué llega del servidor
+
     const tbody = document.getElementById('ventaTableBody');
-    if (!tbody) return;
+    if (!tbody) {
+      console.error("No se encontró el elemento 'ventaTableBody'");
+      return;
+    }
     tbody.innerHTML = '';
 
     if (Array.isArray(ventas) && ventas.length > 0) {
       ventas.forEach(venta => {
         const tr = document.createElement('tr');
 
-        // Corrección de Fecha
-        const fechaVisual = new Date(venta.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' });
-
-        // ... resto de variables ...
+        // Protección contra nulos
+        const nombreLote = (venta.Lote && venta.Lote.loteId) ? venta.Lote.loteId : 'N/A';
+        const nombreCliente = (venta.Cliente && venta.Cliente.nombre) ? venta.Cliente.nombre : 'N/A';
+        const total = (venta.peso * venta.precio).toFixed(2);
 
         tr.innerHTML = `
-      <td>${nombreLote}</td>
-      <td>${nombreCliente}</td>
-      <td>${venta.cantidadVendida}</td>
-      <td>${venta.peso.toFixed(2)}</td>
-      <td>$${venta.precio.toFixed(2)}</td>
-      <td><strong>$${total}</strong></td>
-      <td>${fechaVisual}</td> <!-- FECHA CORREGIDA -->
-      <td>
-        <button onclick="eliminarVenta(${venta.id})" class="btn btn-sm btn-peligro">Revertir</button>
-      </td>
-    `;
+          <td>${nombreLote}</td>
+          <td>${nombreCliente}</td>
+          <td>${venta.cantidadVendida}</td>
+          <td>${venta.peso.toFixed(2)}</td>
+          <td>$${venta.precio.toFixed(2)}</td>
+          <td><strong>$${total}</strong></td>
+          <td>${new Date(venta.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' })}</td>
+          <td>
+            <button onclick="eliminarVenta(${venta.id})" class="btn btn-sm btn-peligro">Revertir</button>
+          </td>
+        `;
         tbody.appendChild(tr);
       });
     } else {
-      tbody.innerHTML = '<tr><td colspan="8">No hay ventas registradas.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay ventas registradas para esta granja.</td></tr>';
     }
-  } catch (error) { console.error(error); }
+  } catch (error) {
+    console.error('Error CRÍTICO al cargar ventas:', error);
+  }
 }
 
-// --- CALCULADORA DE VENTA (Tiempo Real) ---
+// --- CALCULADORA EN TIEMPO REAL ---
 function calcularTotalVenta() {
   const peso = parseFloat(document.getElementById('peso').value) || 0;
   const precio = parseFloat(document.getElementById('precio').value) || 0;
   const unidad = document.getElementById('unidadPeso').value;
 
-  // Actualizar etiqueta visual
-  document.getElementById('lblPrecioUnidad').textContent = `/${unidad}`;
+  const lbl = document.getElementById('lblPrecioUnidad');
+  if (lbl) lbl.textContent = `/${unidad}`;
 
   const total = peso * precio;
-  document.getElementById('displayTotalVenta').textContent = `$${total.toFixed(2)}`;
+  const display = document.getElementById('displayTotalVenta');
+  if (display) display.textContent = `$${total.toFixed(2)}`;
 }
 
-// --- LÓGICA DEL FORMULARIO DESPLEGABLE ---
+// --- UI Logic ---
 function abrirFormulario() {
-  document.getElementById('formContainer').classList.add('is-open');
-  document.getElementById('toggleFormBtn').textContent = 'Cancelar';
+  const container = document.getElementById('formContainer');
+  if (container) container.classList.add('is-open');
+  const btn = document.getElementById('toggleFormBtn');
+  if (btn) btn.textContent = 'Cancelar';
 }
 function cerrarFormulario() {
-  document.getElementById('formContainer').classList.remove('is-open');
-  document.getElementById('toggleFormBtn').textContent = 'Registrar Nueva Venta';
+  const container = document.getElementById('formContainer');
+  if (container) container.classList.remove('is-open');
+  const btn = document.getElementById('toggleFormBtn');
+  if (btn) btn.textContent = 'Registrar Nueva Venta';
+
   document.getElementById('ventaForm').reset();
   document.getElementById('ventaId').value = '';
   document.getElementById('clienteId').value = '';
   const searchInput = document.getElementById('clienteSearch');
   if (searchInput) searchInput.value = '';
-  document.getElementById('displayTotalVenta').textContent = '$0.00';
+
+  const display = document.getElementById('displayTotalVenta');
+  if (display) display.textContent = '$0.00';
+
   document.getElementById('formTitle').textContent = 'Registrar Venta';
 }
 
-// --- Funciones CRUD ---
-
+// --- CRUD ---
 async function guardarVenta(e) {
   e.preventDefault();
+
   const ventaId = document.getElementById('ventaId').value;
   if (ventaId) { alert('Edición no soportada.'); return; }
+
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
@@ -126,32 +157,22 @@ async function guardarVenta(e) {
 
   if (!loteId || !clienteId) { alert('Selecciona Lote y Cliente.'); return; }
 
-  // Datos crudos
   let peso = parseFloat(document.getElementById('peso').value);
   let precio = parseFloat(document.getElementById('precio').value);
   const unidad = document.getElementById('unidadPeso').value;
 
-  // --- CONVERSIÓN A ESTÁNDAR (KG) ---
-  // Si el usuario vendió en Libras, convertimos a Kilos para la base de datos
-  // PERO el precio también debe ajustarse (Precio por Libra -> Precio por Kilo)
-  // Total en $ debe ser el mismo. 
-  // Ejemplo: 100 lb a $1.00/lb = $100.
-  // En kg: 45.36 kg. Precio/kg = $100 / 45.36 = $2.204/kg
-
+  // Conversión a KG si es Libras
   if (unidad === 'lb') {
-    const pesoEnLibras = peso;
-    const precioPorLibra = precio;
-
-    peso = pesoEnLibras / 2.20462; // Convertir peso a kg
-    precio = precioPorLibra * 2.20462; // Convertir precio a $/kg
+    peso = peso / 2.20462; // Peso a kg
+    precio = precio * 2.20462; // Precio a $/kg (para mantener el total $)
   }
 
   const venta = {
     loteId: parseInt(loteId),
     clienteId: parseInt(clienteId),
     cantidadVendida: parseInt(document.getElementById('cantidadVendida').value),
-    peso: peso,   // Guardado siempre en kg
-    precio: precio, // Guardado siempre en $/kg
+    peso: peso,
+    precio: precio,
     fecha: document.getElementById('fecha').value,
     granjaId: granjaId
   };
@@ -166,7 +187,7 @@ async function guardarVenta(e) {
 
     if (!res.ok) {
       const errorText = await res.json();
-      alert('Error: ' + (errorText.error || 'Desconocido'));
+      alert('Error al guardar: ' + (errorText.error || 'Desconocido'));
       return;
     }
 
@@ -178,38 +199,27 @@ async function guardarVenta(e) {
 }
 
 async function eliminarVenta(id) {
-  // Confirmación clara para el usuario
-  if (!confirm('¿Seguro que quieres REVERTIR esta venta? Esto devolverá los pollos al stock del lote.')) {
-    return;
-  }
+  if (confirm('¿Seguro que quieres REVERTIR esta venta?')) {
+    try {
+      const token = localStorage.getItem('token');
+      const granjaId = getSelectedGranjaId();
 
-  try {
-    const token = localStorage.getItem('token');
-    const granjaId = getSelectedGranjaId();
-    if (!granjaId) return;
+      const res = await fetch(`${window.API_URL}/ventas/${id}?granjaId=${granjaId}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
+      });
 
-    const res = await fetch(`${window.API_URL}/ventas/${id}?granjaId=${granjaId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (res.ok) {
-      // ÉXITO: Recargamos la lista de ventas y el selector de lotes (para ver el stock recuperado)
-      await cargarVentas();
-      await cargarLotesForSelect();
-      // Opcional: alert('Venta revertida correctamente');
-    } else {
-      // ERROR: Mostramos el mensaje que envió el backend
-      const err = await res.json();
-      alert('Error al revertir venta: ' + (err.error || 'Desconocido'));
-    }
-  } catch (error) {
-    console.error('Error de red o código:', error);
-    alert('Error de conexión al intentar eliminar.');
+      if (res.ok) {
+        await cargarVentas();
+        await cargarLotesForSelect();
+      } else {
+        const err = await res.json();
+        alert('Error: ' + (err.error || 'Desconocido'));
+      }
+    } catch (error) { console.error(error); }
   }
 }
 
-// --- LÓGICA DE BÚSQUEDA DE CLIENTE (V 3.1) ---
+// --- Buscadores y Modales (Clientes) ---
 function setupClienteSearch() {
   const searchInput = document.getElementById('clienteSearch');
   const resultsContainer = document.getElementById('clienteResults');
@@ -235,10 +245,9 @@ function setupClienteSearch() {
       dropdown.classList.add('is-open');
     } else dropdown.classList.remove('is-open');
   });
-  document.addEventListener('click', (e) => { if (!dropdown.contains(e.target)) dropdown.classList.remove('is-open'); });
+  document.addEventListener('click', (e) => { if (dropdown && !dropdown.contains(e.target)) dropdown.classList.remove('is-open'); });
 }
 
-// --- LÓGICA MODAL RÁPIDO CLIENTE ---
 function setupQuickAddModal() {
   const modal = document.getElementById('quickAddModal');
   const openBtn = document.getElementById('openQuickAddCliente');
@@ -281,13 +290,24 @@ function setupQuickAddModal() {
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
-  if (granja) document.querySelector('header h1').textContent = `Ventas (${granja.nombre})`;
+
+  if (granja) {
+    const header = document.querySelector('header h1');
+    if (header) header.textContent = `Ventas (${granja.nombre})`;
+  }
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
   const form = document.getElementById('ventaForm');
-  const formContainer = document.getElementById('formContainer');
 
+  // Calculadora en tiempo real
+  const inputsCalculo = document.querySelectorAll('.input-calculo');
+  inputsCalculo.forEach(input => {
+    input.addEventListener('input', calcularTotalVenta);
+    input.addEventListener('change', calcularTotalVenta);
+  });
+
+  // Lógica de cantidad máxima (Stock)
   const loteSelect = document.getElementById('loteSelect');
   if (loteSelect) {
     loteSelect.addEventListener('change', (e) => {
@@ -303,11 +323,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggleBtn) {
       toggleBtn.style.display = 'block';
       toggleBtn.addEventListener('click', () => {
-        const isOpen = formContainer.classList.contains('is-open');
+        const isOpen = document.getElementById('formContainer').classList.contains('is-open');
         if (isOpen) cerrarFormulario();
         else {
           form.reset();
           document.getElementById('ventaId').value = '';
+          document.getElementById('clienteId').value = '';
           document.getElementById('formTitle').textContent = 'Registrar Venta';
           abrirFormulario();
         }
@@ -319,17 +340,11 @@ document.addEventListener('DOMContentLoaded', () => {
     setupClienteSearch();
     setupQuickAddModal();
 
-    // LISTENERS PARA CÁLCULO EN TIEMPO REAL
-    document.querySelectorAll('.input-calculo').forEach(input => {
-      input.addEventListener('input', calcularTotalVenta);
-      input.addEventListener('change', calcularTotalVenta);
-    });
-
   } else {
     if (toggleBtn) toggleBtn.style.display = 'none';
   }
 
   cargarLotesForSelect();
   cargarClientes();
-  cargarVentas();
+  cargarVentas(); 
 });

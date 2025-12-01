@@ -448,37 +448,42 @@ function mostrarAlertasProduccion() {
 
 // --- 5. INICIALIZACIÓN PRINCIPAL ---
 
+// --- INICIALIZACIÓN PRINCIPAL (app.js) ---
 document.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname.split('/').pop();
 
+  // 1. LOGIN: Solo vincular formulario y salir
   if (path === 'login.html') {
     const loginForm = document.getElementById('loginForm');
     if (loginForm) loginForm.onsubmit = login;
     return;
   }
 
+  // 2. SEGURIDAD: Verificar acceso en todas las demás páginas
   checkAccess();
 
+  // 3. UI GLOBAL: Inicializar Header y Sidebar (Menú de Usuario)
+  // Se ejecuta en TODAS las páginas internas (index, lotes, ventas, etc.)
   if (path !== 'granjas.html') {
-    initializeUserProfile();
+    initializeUserProfile(); // <--- ESTO ARREGLA EL MENÚ EN LOTES
     initializeSidebar();
     setupMobileMenu();
   }
 
+  // 4. LÓGICA ESPECÍFICA DEL DASHBOARD
   if (path === 'index.html') {
     const granja = JSON.parse(localStorage.getItem('selectedGranja'));
     if (granja) document.querySelector('header h1').textContent = `Dashboard (${granja.nombre})`;
 
-    // Carga de datos
+    // Cargar widgets solo si estamos en el dashboard
     actualizarDashboard();
     mostrarCalendario();
     mostrarGraficoAgua();
 
-    // Carga de gráficos
-    mostrarGraficosDashboard();
-    mostrarCostosPieChart();
-    mostrarIngresosCostosBarChart();
-    mostrarAlertasProduccion();
+    if (typeof mostrarGraficosDashboard === 'function') mostrarGraficosDashboard();
+    if (typeof mostrarCostosPieChart === 'function') mostrarCostosPieChart();
+    if (typeof mostrarIngresosCostosBarChart === 'function') mostrarIngresosCostosBarChart();
+    if (typeof mostrarAlertasProduccion === 'function') mostrarAlertasProduccion();
   }
 });
 
