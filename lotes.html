@@ -37,37 +37,32 @@
   <aside class="sidebar">
     <nav>
       <div class="nav-group nav-group-main">
-        <div class="nav-links-container">
-          <a href="index.html" class="nav-link">Dashboard</a>
-        </div>
+        <div class="nav-links-container"><a href="index.html" class="nav-link">Dashboard</a></div>
       </div>
-
       <div class="nav-group">
         <h4 class="nav-category-title" data-target="#operaciones-links">Operaciones</h4>
         <div class="nav-links-container" id="operaciones-links">
-          <a href="lotes.html" class="nav-link">Lotes</a>
-          <a href="inventarios.html" class="nav-link">Inventario</a>
-          <a href="agua.html" class="nav-link">Agua</a>
+          <a href="galpones.html" class="nav-link">Galpones</a> <!-- Nuevo Link -->
+          <a href="lotes.html" class="nav-link active">Lotes</a>
           <a href="salud.html" class="nav-link">Salud</a>
+          <a href="agua.html" class="nav-link">Agua</a>
           <a href="seguimiento.html" class="nav-link">Seguimiento</a>
-
+          <a href="inventarios.html" class="nav-link">Inventario</a>
         </div>
       </div>
-
       <div class="nav-group">
         <h4 class="nav-category-title" data-target="#finanzas-links">Finanzas</h4>
         <div class="nav-links-container" id="finanzas-links">
           <a href="clientes.html" class="nav-link">Clientes</a>
-          <a href="proveedores.html" class="nav-link">Proveedores</a>
           <a href="ventas.html" class="nav-link">Ventas</a>
           <a href="costos.html" class="nav-link">Costos</a>
           <a href="reportes.html" class="nav-link">Reportes</a>
         </div>
       </div>
-
       <div class="nav-group">
         <h4 class="nav-category-title" data-target="#admin-links">Administración</h4>
         <div class="nav-links-container" id="admin-links">
+          <a href="proveedores.html" class="nav-link">Proveedores</a>
           <a href="usuarios.html" class="nav-link">Usuarios y Granjas</a>
           <a href="configuracion.html" class="nav-link">Configuración</a>
         </div>
@@ -77,15 +72,21 @@
 
   <main class="main-content">
 
-    <!-- Contenedor Desplegable del Formulario -->
     <div id="formContainer" class="form-desplegable-container">
       <section class="card">
         <h2 id="formTitle">Agregar Nuevo Lote</h2>
         <form id="loteForm" class="form-grid form-grid-3-col">
-          <!-- ID Oculto para edición -->
           <input type="hidden" id="loteDbId" value="">
 
-          <!-- Fila 1: Identificación Básica -->
+          <!-- NUEVO: SELECCIÓN DE GALPÓN -->
+          <div class="form-group">
+            <label for="galponSelect">Ubicación (Galpón)</label>
+            <select id="galponSelect" class="form-control" required>
+              <option value="">Cargando...</option>
+            </select>
+            <small style="color: #7f8c8d;">Solo se muestran galpones disponibles.</small>
+          </div>
+
           <div class="form-group">
             <label for="loteId">ID del Lote (Ej: LOTE-001)</label>
             <input type="text" id="loteId" class="form-control" placeholder="Identificador único" required>
@@ -102,84 +103,76 @@
             </div>
           </div>
 
-          <!-- NUEVO: Costo de Compra -->
+          <!-- Costo Inicial -->
           <div class="form-group">
-            <label for="costoInicial">Costo Total de Compra ($)</label>
+            <label for="costoInicial">Inversión Inicial ($)</label>
             <input type="number" id="costoInicial" class="form-control" step="0.01" min="0" placeholder="Ej: 5000.00"
               required>
-            <small style="color: #7f8c8d; font-size: 0.8rem;">Valor total pagado por los pollitos.</small>
           </div>
 
           <div class="form-group">
             <label for="fechaIngreso">Fecha de Ingreso</label>
+            <input type="date" id="fechaIngreso" class="form-control" required>
+          </div>
 
-            <div class="form-group">
-              <label for="fechaIngreso">Fecha de Ingreso</label>
-              <input type="date" id="fechaIngreso" class="form-control" required>
-            </div>
+          <!-- Sexado -->
+          <div class="form-group"
+            style="grid-column: 1 / -1; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+            <h4 style="margin: 0; color: var(--color-secundario); font-size: 1rem;">♂ Detalle Machos</h4>
+          </div>
+          <div class="form-group">
+            <label for="cantidadMachos">Cantidad Machos</label>
+            <input type="number" id="cantidadMachos" class="form-control input-calculo" placeholder="0" min="0">
+          </div>
+          <div class="form-group">
+            <label for="pesoPromedioMachos">Peso Promedio Machos (kg)</label>
+            <input type="number" step="0.001" id="pesoPromedioMachos" class="form-control input-calculo"
+              placeholder="Ej: 0.045">
+          </div>
+          <div class="form-group"></div>
 
-            <!-- SECCIÓN MACHOS -->
-            <div class="form-group"
-              style="grid-column: 1 / -1; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
-              <h4 style="margin: 0; color: var(--color-secundario); font-size: 1rem;">♂ Detalle Machos</h4>
-            </div>
-            <div class="form-group">
-              <label for="cantidadMachos">Cantidad Machos</label>
-              <input type="number" id="cantidadMachos" class="form-control input-calculo" placeholder="0" min="0">
-            </div>
-            <div class="form-group">
-              <label for="pesoPromedioMachos">Peso Promedio Machos (kg)</label>
-              <input type="number" step="0.001" id="pesoPromedioMachos" class="form-control input-calculo"
-                placeholder="Ej: 0.045">
-            </div>
-            <div class="form-group">
-              <!-- Espacio vacío para alinear grid de 3 columnas -->
-            </div>
+          <div class="form-group"
+            style="grid-column: 1 / -1; margin-top: 5px; border-top: 1px solid #eee; padding-top: 10px;">
+            <h4 style="margin: 0; color: #e91e63; font-size: 1rem;">♀ Detalle Hembras</h4>
+          </div>
+          <div class="form-group">
+            <label for="cantidadHembras">Cantidad Hembras</label>
+            <input type="number" id="cantidadHembras" class="form-control input-calculo" placeholder="0" min="0">
+          </div>
+          <div class="form-group">
+            <label for="pesoPromedioHembras">Peso Promedio Hembras (kg)</label>
+            <input type="number" step="0.001" id="pesoPromedioHembras" class="form-control input-calculo"
+              placeholder="Ej: 0.040">
+          </div>
 
-            <!-- SECCIÓN HEMBRAS -->
-            <div class="form-group"
-              style="grid-column: 1 / -1; margin-top: 5px; border-top: 1px solid #eee; padding-top: 10px;">
-              <h4 style="margin: 0; color: #e91e63; font-size: 1rem;">♀ Detalle Hembras</h4>
-            </div>
-            <div class="form-group">
-              <label for="cantidadHembras">Cantidad Hembras</label>
-              <input type="number" id="cantidadHembras" class="form-control input-calculo" placeholder="0" min="0">
-            </div>
-            <div class="form-group">
-              <label for="pesoPromedioHembras">Peso Promedio Hembras (kg)</label>
-              <input type="number" step="0.001" id="pesoPromedioHembras" class="form-control input-calculo"
-                placeholder="Ej: 0.040">
-            </div>
-
-            <!-- TOTALES AUTOMÁTICOS (Calculados por JS) -->
-            <div class="form-group"
-              style="grid-column: 1 / -1; margin-top: 15px; background: #f1f8ff; padding: 15px; border-radius: 8px; border-left: 4px solid var(--color-secundario);">
-              <div style="display: flex; gap: 2rem; justify-content: flex-start; align-items: center;">
-                <div>
-                  <span style="font-size: 0.9rem; color: #555;">Total Aves:</span><br>
-                  <strong id="displayTotalCantidad" style="font-size: 1.4rem; color: var(--color-primario);">0</strong>
-                </div>
-                <div style="border-left: 1px solid #ddd; padding-left: 2rem;">
-                  <span style="font-size: 0.9rem; color: #555;">Peso Promedio Inicial:</span><br>
-                  <strong id="displayPesoPromedio" style="font-size: 1.4rem; color: var(--color-primario);">0.000
-                    kg</strong>
-                </div>
+          <!-- Totales -->
+          <div class="form-group"
+            style="grid-column: 1 / -1; margin-top: 15px; background: #f1f8ff; padding: 15px; border-radius: 8px; border-left: 4px solid var(--color-secundario);">
+            <div style="display: flex; gap: 2rem; justify-content: flex-start; align-items: center;">
+              <div>
+                <span style="font-size: 0.9rem; color: #555;">Total Aves:</span><br>
+                <strong id="displayTotalCantidad" style="font-size: 1.4rem; color: var(--color-primario);">0</strong>
+              </div>
+              <div style="border-left: 1px solid #ddd; padding-left: 2rem;">
+                <span style="font-size: 0.9rem; color: #555;">Peso Promedio Inicial:</span><br>
+                <strong id="displayPesoPromedio" style="font-size: 1.4rem; color: var(--color-primario);">0.000
+                  kg</strong>
               </div>
             </div>
+          </div>
 
-            <div class="form-group" style="display: none;">
-              <!-- Estado por defecto oculto -->
-              <select id="estado" class="form-control">
-                <option value="disponible" selected>Disponible</option>
-                <option value="vendido">Vendido</option>
-              </select>
-            </div>
+          <div class="form-group" style="display: none;">
+            <select id="estado" class="form-control">
+              <option value="disponible" selected>Disponible</option>
+              <option value="vendido">Vendido</option>
+            </select>
+          </div>
 
-            <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem; margin-top: 1rem;">
-              <button type="submit" class="btn btn-primario">Guardar Lote</button>
-              <button type="button" id="cancelBtn" class="btn btn-peligro"
-                style="background-color: #7f8c8d;">Cancelar</button>
-            </div>
+          <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem; margin-top: 1rem;">
+            <button type="submit" class="btn btn-primario">Guardar Lote</button>
+            <button type="button" id="cancelBtn" class="btn btn-peligro"
+              style="background-color: #7f8c8d;">Cancelar</button>
+          </div>
         </form>
       </section>
     </div>
@@ -196,11 +189,12 @@
           <thead>
             <tr>
               <th>ID</th>
+              <th>Ubicación</th> <!-- Nueva Columna -->
               <th>Proveedor</th>
-              <th>Machos / Hembras</th>
-              <th>Total Aves</th>
-              <th>Peso Inicial (Prom)</th>
-              <th>Fecha Ingreso</th>
+              <th>M / H</th>
+              <th>Total</th>
+              <th>Peso Ini</th>
+              <th>Ingreso</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
@@ -211,11 +205,11 @@
     </section>
 
     <footer>
-      <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
+      <p>© 2025 Granja Avícola VincWill.</p>
     </footer>
   </main>
 
-  <!-- Modal de Creación Rápida de Proveedor -->
+  <!-- Modal Proveedor -->
   <div id="quickAddModal" class="modal-wrapper">
     <div class="modal-content">
       <div class="modal-header">

@@ -1,23 +1,17 @@
 let listaProveedores = [];
 
-// --- Función auxiliar segura para obtener valores (BLINDAJE) ---
-// Evita el error "Cannot read properties of null (reading 'value')"
+// --- Helpers ---
 const getVal = (id, type = 'string') => {
   const el = document.getElementById(id);
-  if (!el) {
-    console.warn(`Elemento con ID '${id}' no encontrado. Usando valor por defecto.`);
-    return type === 'number' ? 0 : '';
-  }
+  if (!el) return type === 'number' ? 0 : '';
   return type === 'number' ? (parseFloat(el.value) || 0) : el.value;
 };
-
-// --- Función auxiliar segura para asignar valores ---
 const setVal = (id, val) => {
   const el = document.getElementById(id);
   if (el) el.value = val;
 };
 
-// --- Lógica de Carga ---
+// --- CARGAR LOTES ---
 async function cargarLotes() {
   try {
     const token = localStorage.getItem('token');
@@ -35,23 +29,22 @@ async function cargarLotes() {
     tbody.innerHTML = '';
 
     if (lotes.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8">No hay lotes registrados en esta granja.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9">No hay lotes registrados.</td></tr>';
       return;
     }
 
     lotes.forEach(lote => {
       const tr = document.createElement('tr');
+      // Si el backend envía el objeto Galpon, mostramos el nombre. Si no, un fallback.
+      const nombreGalpon = lote.Galpon ? lote.Galpon.nombre : 'Desconocido';
+
       tr.innerHTML = `
         <td><strong>${lote.loteId}</strong></td>
-        <td>${lote.Proveedor ? lote.Proveedor.nombreCompania : '<em>No especificado</em>'}</td>
-        <td>
-            <div style="font-size: 0.85rem;">
-                <span style="color: var(--color-secundario);">♂ ${lote.cantidadMachos || 0}</span> / 
-                <span style="color: #e91e63;">♀ ${lote.cantidadHembras || 0}</span>
-            </div>
-        </td>
+        <td>${nombreGalpon}</td>
+        <td>${lote.Proveedor ? lote.Proveedor.nombreCompania : '-'}</td>
+        <td><small>♂${lote.cantidadMachos} / ♀${lote.cantidadHembras}</small></td>
         <td><strong>${lote.cantidad}</strong></td>
-        <td>${lote.pesoInicial ? lote.pesoInicial.toFixed(3) : '0.000'} kg</td>
+        <td>${lote.pesoInicial.toFixed(3)} kg</td>
         <td>${new Date(lote.fechaIngreso).toLocaleDateString('es-ES', { timeZone: 'UTC' })}</td>
         <td><span class="badge-${lote.estado}">${lote.estado}</span></td>
         <td>
@@ -66,7 +59,41 @@ async function cargarLotes() {
   }
 }
 
-// --- Cargar Proveedores (Global) ---
+// --- CARGAR GALPONES (CON VALIDACIÓN DE ESTADO) ---
+async function cargarGalponesSelect() {
+  try {
+    const token = localStorage.getItem('token');
+    const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    const res = await fetch(`${window.API_URL}/galpones?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const galpones = await res.json();
+    const select = document.getElementById('galponSelect');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- Seleccione Galpón --</option>';
+
+    galpones.forEach(g => {
+      const option = document.createElement('option');
+      option.value = g.id;
+
+      // Si está ocupado, lo mostramos pero deshabilitado
+      if (g.estado === 'ocupado') {
+        option.textContent = `${g.nombre} (OCUPADO)`;
+        option.disabled = true;
+        option.style.color = 'red';
+      } else {
+        option.textContent = `${g.nombre} (Capacidad: ${g.capacidad})`;
+      }
+
+      select.appendChild(option);
+    });
+  } catch (e) { console.error("Error cargando galpones", e); }
+}
+
+// --- Cargar Proveedores ---
 async function cargarProveedores() {
   try {
     const token = localStorage.getItem('token');
@@ -77,7 +104,7 @@ async function cargarProveedores() {
   } catch (error) { console.error(error); }
 }
 
-// --- Lógica de Formularios ---
+// --- Formularios ---
 function abrirFormulario() {
   const container = document.getElementById('formContainer');
   if (container) container.classList.add('is-open');
@@ -92,25 +119,24 @@ function cerrarFormulario() {
   const btn = document.getElementById('toggleFormBtn');
   if (btn) btn.textContent = 'Agregar Nuevo Lote';
 
-  const form = document.getElementById('loteForm');
-  if (form) form.reset();
-
+  document.getElementById('loteForm').reset();
   setVal('loteDbId', '');
   setVal('proveedorId', '');
+
+  // IMPORTANTE: Recargar los galpones al cerrar para refrescar estados
+  cargarGalponesSelect();
 
   const title = document.getElementById('formTitle');
   if (title) title.textContent = 'Agregar Nuevo Lote';
 
-  // Resetear displays de cálculo
   const dispTotal = document.getElementById('displayTotalCantidad');
   if (dispTotal) dispTotal.textContent = '0';
   const dispPeso = document.getElementById('displayPesoPromedio');
   if (dispPeso) dispPeso.textContent = '0.000 kg';
 }
 
-// --- CÁLCULOS AUTOMÁTICOS (V 3.3) ---
+// --- Cálculos Automáticos ---
 function calcularTotales() {
-  // Usamos getVal para que no falle si falta un input
   const machos = getVal('cantidadMachos', 'number');
   const pesoMachos = getVal('pesoPromedioMachos', 'number');
   const hembras = getVal('cantidadHembras', 'number');
@@ -120,27 +146,24 @@ function calcularTotales() {
   let pesoPromedioTotal = 0;
 
   if (totalAves > 0) {
-    // Cálculo de promedio ponderado
     const pesoTotalMasa = (machos * pesoMachos) + (hembras * pesoHembras);
     pesoPromedioTotal = pesoTotalMasa / totalAves;
   }
 
-  // Actualizar UI solo si existen los elementos
   const dispTotal = document.getElementById('displayTotalCantidad');
   if (dispTotal) dispTotal.textContent = totalAves;
-
   const dispPeso = document.getElementById('displayPesoPromedio');
   if (dispPeso) dispPeso.textContent = `${pesoPromedioTotal.toFixed(3)} kg`;
 
   return { totalAves, pesoPromedioTotal };
 }
 
-// --- CRUD ---
 
+// --- CRUD ---
 async function guardarLote(e) {
   e.preventDefault();
-
   const { totalAves, pesoPromedioTotal } = calcularTotales();
+
   if (totalAves <= 0) { alert("Debes ingresar aves."); return; }
 
   const loteDbId = getVal('loteDbId');
@@ -148,46 +171,41 @@ async function guardarLote(e) {
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
+  // V 4.1: Obtener Galpón
+  const galponId = document.getElementById('galponSelect').value;
+  if (!galponId) { alert("Debes seleccionar un Galpón."); return; }
+
   const provId = getVal('proveedorId');
-  // NUEVO: Leer costo
-  const costoIni = getVal('costoInicial', 'number');
 
   const lote = {
     loteId: getVal('loteId'),
     proveedorId: provId ? parseInt(provId) : null,
-    costoInicial: costoIni, // <-- Enviamos el costo
+    galponId: parseInt(galponId), // V 4.1
 
     cantidadMachos: getVal('cantidadMachos', 'number'),
     pesoPromedioMachos: getVal('pesoPromedioMachos', 'number'),
     cantidadHembras: getVal('cantidadHembras', 'number'),
     pesoPromedioHembras: getVal('pesoPromedioHembras', 'number'),
 
-    // Campos calculados
     cantidad: totalAves,
     pesoInicial: pesoPromedioTotal,
+    costoInicial: getVal('costoInicial', 'number'),
 
     fechaIngreso: getVal('fechaIngreso'),
     estado: getVal('estado'),
     granjaId: granjaId
   };
 
-  if (!esEdicion) {
-    lote.cantidadInicial = totalAves;
-  }
+  if (!esEdicion) lote.cantidadInicial = totalAves;
 
-  const url = esEdicion
-    ? `${window.API_URL}/lotes/${loteDbId}`
-    : `${window.API_URL}/lotes`;
+  const url = esEdicion ? `${window.API_URL}/lotes/${loteDbId}` : `${window.API_URL}/lotes`;
   const method = esEdicion ? 'PUT' : 'POST';
 
   try {
     const token = localStorage.getItem('token');
     const res = await fetch(url, {
       method: method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(lote)
     });
 
@@ -196,12 +214,14 @@ async function guardarLote(e) {
       await cargarLotes();
     } else {
       const errorData = await res.json();
-      alert('Error al guardar lote: ' + (errorData.error || 'Desconocido'));
+      // Mensaje amigable si el error es de galpón ocupado
+      if (errorData.error && errorData.error.includes('ocupado')) {
+        alert('⚠️ ' + errorData.error);
+      } else {
+        alert('Error: ' + (errorData.error || 'Desconocido'));
+      }
     }
-  } catch (error) {
-    alert('Error de conexión');
-    console.error(error);
-  }
+  } catch (error) { alert('Error de conexión'); console.error(error); }
 }
 
 async function editarLote(id) {
@@ -210,81 +230,74 @@ async function editarLote(id) {
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    const res = await fetch(`${window.API_URL}/lotes/${id}?granjaId=${granjaId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!res.ok) throw new Error('No se pudo cargar el lote');
+    const res = await fetch(`${window.API_URL}/lotes/${id}?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error('No se pudo cargar');
     const lote = await res.json();
 
-    const title = document.getElementById('formTitle');
-    if (title) title.textContent = 'Editar Lote';
-
+    document.getElementById('formTitle').textContent = 'Editar Lote';
     setVal('loteDbId', lote.id);
     setVal('loteId', lote.loteId);
     setVal('fechaIngreso', lote.fechaIngreso.split('T')[0]);
     setVal('estado', lote.estado);
+    setVal('costoInicial', lote.costoInicial || 0);
 
-    // Poblar datos de sexado
+    // V 4.1: Setear Galpón
+    const galponSelect = document.getElementById('galponSelect');
+    // Truco: Si el galpón está ocupado por ESTE mismo lote, la opción estará disabled.
+    // Tenemos que habilitarla temporalmente para poder seleccionarla en la edición.
+    for (let i = 0; i < galponSelect.options.length; i++) {
+      if (galponSelect.options[i].value == lote.galponId) {
+        galponSelect.options[i].disabled = false;
+        galponSelect.options[i].text = galponSelect.options[i].text.replace('(OCUPADO)', '(Actual)');
+        break;
+      }
+    }
+    setVal('galponSelect', lote.galponId);
+
     setVal('cantidadMachos', lote.cantidadMachos || 0);
     setVal('pesoPromedioMachos', lote.pesoPromedioMachos || 0);
     setVal('cantidadHembras', lote.cantidadHembras || 0);
     setVal('pesoPromedioHembras', lote.pesoPromedioHembras || 0);
 
-    // Poblar proveedor
     if (lote.proveedorId && lote.Proveedor) {
       setVal('proveedorSearch', lote.Proveedor.nombreCompania);
       setVal('proveedorId', lote.proveedorId);
     } else {
-      setVal('proveedorSearch', '');
-      setVal('proveedorId', '');
+      setVal('proveedorSearch', ''); setVal('proveedorId', '');
     }
 
     calcularTotales();
     abrirFormulario();
     window.scrollTo(0, 0);
 
-  } catch (error) {
-    console.error('Error al cargar datos para editar:', error);
-    alert('Error al cargar datos del lote.');
-  }
+  } catch (error) { console.error(error); alert('Error al cargar datos.'); }
 }
 
 async function eliminarLote(id) {
-  if (confirm('¿Seguro que quieres eliminar este lote? Esto borrará todo su historial.')) {
+  if (confirm('¿Eliminar lote? Esto borrará todo su historial.')) {
     try {
       const token = localStorage.getItem('token');
       const granjaId = getSelectedGranjaId();
-      if (!granjaId) return;
-
-      await fetch(`${window.API_URL}/lotes/${id}?granjaId=${granjaId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await fetch(`${window.API_URL}/lotes/${id}?granjaId=${granjaId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
       cargarLotes();
-    } catch (error) {
-      alert('Error al eliminar lote');
-    }
+      cargarGalponesSelect(); // Liberar galpón visualmente
+    } catch (error) { alert('Error al eliminar'); }
   }
 }
 
-// --- LÓGICA DE BÚSQUEDA DE PROVEEDOR ---
+// --- BUSCADOR PROVEEDOR (Misma lógica) ---
 function setupProveedorSearch() {
   const searchInput = document.getElementById('proveedorSearch');
   const resultsContainer = document.getElementById('proveedorResults');
   const dropdown = document.getElementById('proveedorDropdown');
   const hiddenInput = document.getElementById('proveedorId');
 
-  if (!searchInput || !resultsContainer || !dropdown) return;
+  if (!searchInput) return;
 
   searchInput.addEventListener('input', () => {
     const query = searchInput.value.toLowerCase();
-    if (hiddenInput) hiddenInput.value = '';
-
-    if (query.length < 1) {
-      resultsContainer.innerHTML = '';
-      dropdown.classList.remove('is-open');
-      return;
-    }
+    hiddenInput.value = '';
+    if (query.length < 1) { resultsContainer.innerHTML = ''; dropdown.classList.remove('is-open'); return; }
 
     const filtrados = listaProveedores.filter(p => p.nombreCompania.toLowerCase().includes(query));
     resultsContainer.innerHTML = '';
@@ -296,24 +309,18 @@ function setupProveedorSearch() {
         item.innerHTML = `<strong>${p.nombreCompania}</strong>`;
         item.onclick = () => {
           searchInput.value = p.nombreCompania;
-          if (hiddenInput) hiddenInput.value = p.id;
+          hiddenInput.value = p.id;
           dropdown.classList.remove('is-open');
         };
         resultsContainer.appendChild(item);
       });
       dropdown.classList.add('is-open');
-    } else {
-      dropdown.classList.remove('is-open');
-    }
+    } else dropdown.classList.remove('is-open');
   });
-
-  document.addEventListener('click', (e) => {
-    if (!dropdown.contains(e.target)) dropdown.classList.remove('is-open');
-  });
+  document.addEventListener('click', (e) => { if (!dropdown.contains(e.target)) dropdown.classList.remove('is-open'); });
 }
 
-// --- LÓGICA DEL MODAL DE CREACIÓN RÁPIDA ---
-function setupQuickAddModal() {
+function setupQuickAddModal() { /* ... (Misma lógica de siempre) ... */
   const modal = document.getElementById('quickAddModal');
   const openBtn = document.getElementById('openQuickAddProveedor');
   const closeBtn = document.getElementById('closeQuickAddModal');
@@ -334,24 +341,19 @@ function setupQuickAddModal() {
       try {
         const token = localStorage.getItem('token');
         const res = await fetch(`${window.API_URL}/proveedores`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify(nuevoProv)
         });
         if (res.ok) {
           const creado = await res.json();
           modal.classList.remove('is-open');
           form.reset();
-
           await cargarProveedores();
-
-          const searchInput = document.getElementById('proveedorSearch');
-          const hiddenInput = document.getElementById('proveedorId');
-          if (searchInput) searchInput.value = creado.nombreCompania;
-          if (hiddenInput) hiddenInput.value = creado.id;
-        } else {
-          alert('Error al crear proveedor');
-        }
+          if (document.getElementById('proveedorSearch')) {
+            document.getElementById('proveedorSearch').value = creado.nombreCompania;
+            document.getElementById('proveedorId').value = creado.id;
+          }
+        } else alert('Error al crear proveedor');
       } catch (e) { console.error(e); }
     };
   }
@@ -361,11 +363,7 @@ function setupQuickAddModal() {
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
-
-  if (granja) {
-    const headerEl = document.querySelector('header h1');
-    if (headerEl) headerEl.textContent = `Lotes (${granja.nombre})`;
-  }
+  if (granja) document.querySelector('header h1').textContent = `Lotes (${granja.nombre})`;
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
@@ -377,18 +375,15 @@ document.addEventListener('DOMContentLoaded', () => {
       toggleBtn.style.display = 'block';
       toggleBtn.addEventListener('click', () => {
         const isOpen = formContainer.classList.contains('is-open');
-        if (isOpen) {
-          cerrarFormulario();
-        } else {
+        if (isOpen) cerrarFormulario();
+        else {
           form.reset();
           setVal('loteDbId', '');
-          const title = document.getElementById('formTitle');
-          if (title) title.textContent = 'Agregar Nuevo Lote';
+          document.getElementById('formTitle').textContent = 'Agregar Nuevo Lote';
           abrirFormulario();
         }
       });
     }
-
     if (cancelBtn) cancelBtn.addEventListener('click', cerrarFormulario);
     if (form) form.onsubmit = guardarLote;
 
@@ -399,10 +394,11 @@ document.addEventListener('DOMContentLoaded', () => {
       input.addEventListener('input', calcularTotales);
     });
 
-  } else {
-    if (toggleBtn) toggleBtn.style.display = 'none';
-  }
+  } else toggleBtn.style.display = 'none';
 
-  cargarLotes();
+  // V 4.1: Cargar galpones primero
+  cargarGalponesSelect().then(() => {
+    cargarLotes();
+  });
   cargarProveedores();
 });
