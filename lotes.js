@@ -140,13 +140,8 @@ function calcularTotales() {
 async function guardarLote(e) {
   e.preventDefault();
 
-  // Recalcular por seguridad
   const { totalAves, pesoPromedioTotal } = calcularTotales();
-
-  if (totalAves <= 0) {
-    alert("Debes ingresar al menos un macho o una hembra.");
-    return;
-  }
+  if (totalAves <= 0) { alert("Debes ingresar aves."); return; }
 
   const loteDbId = getVal('loteDbId');
   const esEdicion = !!loteDbId;
@@ -154,11 +149,13 @@ async function guardarLote(e) {
   if (!granjaId) return;
 
   const provId = getVal('proveedorId');
+  // NUEVO: Leer costo
+  const costoIni = getVal('costoInicial', 'number');
 
-  // Objeto seguro usando getVal
   const lote = {
     loteId: getVal('loteId'),
     proveedorId: provId ? parseInt(provId) : null,
+    costoInicial: costoIni, // <-- Enviamos el costo
 
     cantidadMachos: getVal('cantidadMachos', 'number'),
     pesoPromedioMachos: getVal('pesoPromedioMachos', 'number'),

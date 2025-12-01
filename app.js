@@ -204,6 +204,7 @@ function setupMobileMenu() {
 async function actualizarDashboard() {
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
+
   try {
     const [lotes, salud, costos, seguimiento, ventas, agua] = await Promise.all([
       fetch(`${API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
@@ -214,45 +215,81 @@ async function actualizarDashboard() {
       fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
     ]);
 
-    let totalAvesInicial = 0, totalMuertes = 0, ultimosPesos = [];
+    // --- 1. CÁLCULOS ZOOTÉCNICOS (Producción) ---
+    let totalAvesInicial = 0;
+    let totalMuertes = 0;
+    let ultimosPesos = [];
+
     if (lotes) {
       lotes.forEach(lote => {
+        // Sumamos la población inicial
         totalAvesInicial += lote.cantidadInicial || lote.cantidad;
+
+        // Sumamos mortalidad
         const muertesLote = salud ? salud.filter(s => s.loteId === lote.id && s.tipo.toLowerCase() === 'mortalidad').reduce((sum, s) => sum + s.cantidad, 0) : 0;
         totalMuertes += muertesLote;
+
+        // Buscamos el peso más reciente
         const seguimientosLote = seguimiento ? seguimiento.filter(s => s.loteId === lote.id).sort((a, b) => b.semana - a.semana) : [];
-        if (seguimientosLote.length > 0) ultimosPesos.push(seguimientosLote[0].peso);
+        if (seguimientosLote.length > 0) {
+          ultimosPesos.push(seguimientosLote[0].peso);
+        }
       });
     }
     const totalVivos = lotes ? lotes.filter(l => l.estado === 'disponible').reduce((sum, l) => sum + l.cantidad, 0) : 0;
+    // Promedio simple de los pesos actuales de los lotes activos
     const pesoPromedioActual = ultimosPesos.length ? (ultimosPesos.reduce((a, b) => a + b, 0) / ultimosPesos.length).toFixed(2) : 0;
     const mortalidadPromedio = (totalAvesInicial > 0) ? ((totalMuertes / totalAvesInicial) * 100).toFixed(2) : 0;
-
+    // Cálculo de Conversión Alimenticia (Global)
     const conversiones = [];
     if (seguimiento && lotes) {
       seguimiento.forEach(reg => {
         const lote = lotes.find(l => l.id === reg.loteId);
         if (lote && reg.peso > lote.pesoInicial) {
           const pesoGanado = reg.peso - lote.pesoInicial;
-          if (pesoGanado > 0) conversiones.push(reg.consumo / pesoGanado);
+          if (pesoGanado > 0) {
+            const conversion = reg.consumo / pesoGanado;
+            conversiones.push(conversion);
+          }
         }
       });
     }
-    const promedio = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2) : '0';
-    const totalCostos = costos ? costos.reduce((sum, c) => sum + c.monto, 0) : 0;
-    const totalIngresos = ventas ? ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0) : 0;
-    const rentabilidad = totalIngresos - totalCostos;
+    const promedioConversion = conversiones.length ? (conversiones.reduce((a, b) => a + b, 0) / conversiones.length).toFixed(2) : '0';
 
+    // --- 2. CÁLCULOS FINANCIEROS (Dinero) ---
+    // A. Costos Operativos (Registrados en módulo Costos + Automáticos de Alimento/Vacunas)
+    const costosOperativos = costos ? costos.reduce((sum, c) => sum + c.monto, 0) : 0;
+
+    // B. Inversión en Lotes (Compra de Pollitos - NUEVO)
+    // Sumamos el 'costoInicial' de todos los lotes cargados
+    const inversionLotes = lotes ? lotes.reduce((sum, l) => sum + (l.costoInicial || 0), 0) : 0;
+    // C. Costo Total Real
+    const totalCostos = costosOperativos + inversionLotes;
+    // D. Ingresos
+    const totalIngresos = ventas ? ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0) : 0;
+    // E. Rentabilidad
+    const utilidadNeta = totalIngresos - totalCostos;
+    // --- 3. ACTUALIZACIÓN DEL DOM ---
     if (document.getElementById('totalVivos')) {
       document.getElementById('totalVivos').textContent = totalVivos;
       document.getElementById('pesoPromedio').textContent = `${pesoPromedioActual} kg`;
-      document.getElementById('conversionPromedio').textContent = promedio(conversiones);
+      document.getElementById('conversionPromedio').textContent = promedioConversion;
       document.getElementById('mortalidadPromedio').textContent = `${mortalidadPromedio}%`;
+
+      // Financieros
       document.getElementById('costosTotales').textContent = `$${totalCostos.toFixed(2)}`;
       document.getElementById('ingresosTotales').textContent = `$${totalIngresos.toFixed(2)}`;
-      document.getElementById('rentabilidad').textContent = `$${rentabilidad.toFixed(2)}`;
+
+      // Color para rentabilidad (Verde si ganas, Rojo si pierdes)
+      const rentabilidadEl = document.getElementById('rentabilidad');
+      rentabilidadEl.textContent = `$${utilidadNeta.toFixed(2)}`;
+      rentabilidadEl.style.color = utilidadNeta >= 0 ? '#27ae60' : '#e74c3c';
+      rentabilidadEl.style.fontWeight = 'bold';
     }
-  } catch (error) { console.error('Error dashboard', error); }
+
+  } catch (error) {
+    console.error('Error al actualizar dashboard:', error);
+  }
 }
 
 async function mostrarCalendario() {
