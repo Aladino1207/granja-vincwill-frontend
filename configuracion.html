@@ -51,18 +51,18 @@
                 </div>
             </div>
 
-           <div class="nav-group">
-        <h4 class="nav-category-title" data-target="#operaciones-links">Operaciones</h4>
-        <div class="nav-links-container" id="operaciones-links">
-          <a href="galpones.html" class="nav-link">Galpones</a>
-          <a href="lotes.html" class="nav-link">Lotes</a>
-          <a href="inventarios.html" class="nav-link">Inventario</a>
-          <a href="agua.html" class="nav-link">Agua</a>
-          <a href="salud.html" class="nav-link">Salud</a>
-          <a href="seguimiento.html" class="nav-link">Seguimiento</a>
+            <div class="nav-group">
+                <h4 class="nav-category-title" data-target="#operaciones-links">Operaciones</h4>
+                <div class="nav-links-container" id="operaciones-links">
+                    <a href="galpones.html" class="nav-link">Galpones</a>
+                    <a href="lotes.html" class="nav-link">Lotes</a>
+                    <a href="inventarios.html" class="nav-link">Inventario</a>
+                    <a href="agua.html" class="nav-link">Agua</a>
+                    <a href="salud.html" class="nav-link">Salud</a>
+                    <a href="seguimiento.html" class="nav-link">Seguimiento</a>
 
-        </div>
-      </div>
+                </div>
+            </div>
 
             <div class="nav-group">
                 <h4 class="nav-category-title" data-target="#finanzas-links">Finanzas</h4>
@@ -107,6 +107,15 @@
                 <div class="form-group">
                     <label for="nombreGranja">Nombre de la Granja</label>
                     <input type="text" id="nombreGranja" class="form-control">
+                </div>
+
+                <!-- NUEVO CAMPO V 4.2 -->
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label for="planVacunacion">Plan Sanitario por Defecto (Días)</label>
+                    <input type="text" id="planVacunacion" class="form-control" placeholder="Ej: 7, 14, 21, 35">
+                    <small style="color: #666;">
+                        Días después del ingreso del lote en los que se crearán recordatorios automáticos.
+                    </small>
                 </div>
 
                 <div class="form-group" style="grid-column: 1 / -1;">

@@ -2,31 +2,27 @@
 async function cargarConfiguracion() {
   try {
     const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    // V 3.0: Añadimos granjaId al fetch
-    // El backend (index.js) se encarga de 'findOrCreate' si no existe
     const res = await fetch(`${window.API_URL}/config?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const config = await res.json();
 
-    // Rellenamos el formulario de config
     document.getElementById('notificaciones').value = config.notificaciones;
     document.getElementById('idioma').value = config.idioma;
     document.getElementById('nombreGranja').value = config.nombreGranja;
 
-  } catch (error) {
-    console.error('Error al cargar config:', error);
-  }
+    // Cargar el plan
+    document.getElementById('planVacunacion').value = config.planVacunacion || "7,14,21";
+
+  } catch (error) { console.error(error); }
 }
 
 async function guardarConfiguracion(e) {
   e.preventDefault();
   const token = localStorage.getItem('token');
-  // V 3.0: Obtenemos la granja activa
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
@@ -34,32 +30,24 @@ async function guardarConfiguracion(e) {
     notificaciones: document.getElementById('notificaciones').value,
     idioma: document.getElementById('idioma').value,
     nombreGranja: document.getElementById('nombreGranja').value,
-    granjaId: granjaId // V 3.0: Añadido
+    planVacunacion: document.getElementById('planVacunacion').value, // Guardar plan
+    granjaId: granjaId
   };
   try {
-    // El backend (index.js) sabe que este POST es un "guardar o actualizar"
     const res = await fetch(`${window.API_URL}/config`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(config)
     });
     if (res.ok) {
       alert('Ajustes guardados');
-      // Actualizar el nombre de la granja en el header
-      document.querySelector('header h1').textContent = `Configuración (${config.nombreGranja})`;
-      // Actualizar el nombre en localStorage para que el sidebar se actualice al recargar
       const granjaData = JSON.parse(localStorage.getItem('selectedGranja'));
       if (granjaData) {
         granjaData.nombre = config.nombreGranja;
         localStorage.setItem('selectedGranja', JSON.stringify(granjaData));
       }
     }
-  } catch (error) {
-    alert('Error de conexión');
-  }
+  } catch (error) { alert('Error de conexión'); }
 }
 
 // --- Lógica de Agenda (BLINDADA) ---
