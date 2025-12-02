@@ -35,13 +35,15 @@ async function cargarLotes() {
 
     lotes.forEach(lote => {
       const tr = document.createElement('tr');
-      // Si el backend envía el objeto Galpon, mostramos el nombre. Si no, un fallback.
-      const nombreGalpon = lote.Galpon ? lote.Galpon.nombre : 'Desconocido';
+
+      // CORRECCIÓN VISUAL: Leemos el objeto Galpon incluido por el backend
+      const nombreGalpon = lote.Galpon ? lote.Galpon.nombre : '<span style="color:red">Sin Asignar</span>';
+      const nombreProveedor = lote.Proveedor ? lote.Proveedor.nombreCompania : '-';
 
       tr.innerHTML = `
         <td><strong>${lote.loteId}</strong></td>
-        <td>${nombreGalpon}</td>
-        <td>${lote.Proveedor ? lote.Proveedor.nombreCompania : '-'}</td>
+        <td>${nombreGalpon}</td> <!-- AQUI SE MUESTRA EL NOMBRE -->
+        <td>${nombreProveedor}</td>
         <td><small>♂${lote.cantidadMachos} / ♀${lote.cantidadHembras}</small></td>
         <td><strong>${lote.cantidad}</strong></td>
         <td>${lote.pesoInicial.toFixed(3)} kg</td>
@@ -79,13 +81,22 @@ async function cargarGalponesSelect() {
       const option = document.createElement('option');
       option.value = g.id;
 
-      // Si está ocupado, lo mostramos pero deshabilitado
+      // TRUCO: Guardamos la capacidad en un atributo de datos (dataset)
+      option.dataset.capacidad = g.capacidad;
+
       if (g.estado === 'ocupado') {
         option.textContent = `${g.nombre} (OCUPADO)`;
         option.disabled = true;
-        option.style.color = 'red';
+        option.style.color = '#e74c3c';
+      } else if (g.estado === 'mantenimiento') {
+        const fecha = new Date(g.fechaDisponible).toLocaleDateString();
+        option.textContent = `${g.nombre} (Limpieza hasta: ${fecha})`;
+        option.disabled = true;
+        option.style.color = '#f39c12';
       } else {
+        // Mostramos la capacidad al usuario también
         option.textContent = `${g.nombre} (Capacidad: ${g.capacidad})`;
+        option.style.color = '#27ae60';
       }
 
       select.appendChild(option);
@@ -166,21 +177,34 @@ async function guardarLote(e) {
 
   if (totalAves <= 0) { alert("Debes ingresar aves."); return; }
 
+  // --- VALIDACIÓN DE CAPACIDAD (NUEVO) ---
+  const galponSelect = document.getElementById('galponSelect');
+  const selectedOption = galponSelect.options[galponSelect.selectedIndex];
+
+  if (!selectedOption || !selectedOption.value) {
+    alert("Debes seleccionar un Galpón."); return;
+  }
+
+  // Leemos la capacidad que guardamos en el dataset
+  const capacidadMaxima = parseInt(selectedOption.dataset.capacidad);
+
+  if (totalAves > capacidadMaxima) {
+    alert(`⚠️ ¡ALERTA DE SOBREPOBLACIÓN!\n\nEstás intentando ingresar ${totalAves} aves en un galpón con capacidad para ${capacidadMaxima}.\n\nPor favor, ajusta la cantidad o selecciona un galpón más grande.`);
+    return; // DETENEMOS EL GUARDADO
+  }
+  // -------------------------------------
+
   const loteDbId = getVal('loteDbId');
   const esEdicion = !!loteDbId;
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
-
-  // V 4.1: Obtener Galpón
-  const galponId = document.getElementById('galponSelect').value;
-  if (!galponId) { alert("Debes seleccionar un Galpón."); return; }
 
   const provId = getVal('proveedorId');
 
   const lote = {
     loteId: getVal('loteId'),
     proveedorId: provId ? parseInt(provId) : null,
-    galponId: parseInt(galponId), // V 4.1
+    galponId: parseInt(galponSelect.value),
 
     cantidadMachos: getVal('cantidadMachos', 'number'),
     pesoPromedioMachos: getVal('pesoPromedioMachos', 'number'),
@@ -212,9 +236,10 @@ async function guardarLote(e) {
     if (res.ok) {
       cerrarFormulario();
       await cargarLotes();
+      // Recargar galpones para que el usado aparezca ocupado/actualizado
+      await cargarGalponesSelect();
     } else {
       const errorData = await res.json();
-      // Mensaje amigable si el error es de galpón ocupado
       if (errorData.error && errorData.error.includes('ocupado')) {
         alert('⚠️ ' + errorData.error);
       } else {
@@ -241,14 +266,15 @@ async function editarLote(id) {
     setVal('estado', lote.estado);
     setVal('costoInicial', lote.costoInicial || 0);
 
-    // V 4.1: Setear Galpón
+    // Manejo especial del select de Galpón en edición
     const galponSelect = document.getElementById('galponSelect');
-    // Truco: Si el galpón está ocupado por ESTE mismo lote, la opción estará disabled.
-    // Tenemos que habilitarla temporalmente para poder seleccionarla en la edición.
     for (let i = 0; i < galponSelect.options.length; i++) {
+      // Si es el galpón actual del lote, lo habilitamos visualmente para que se vea seleccionado
       if (galponSelect.options[i].value == lote.galponId) {
         galponSelect.options[i].disabled = false;
-        galponSelect.options[i].text = galponSelect.options[i].text.replace('(OCUPADO)', '(Actual)');
+        if (galponSelect.options[i].text.includes('(OCUPADO)')) {
+          galponSelect.options[i].text = galponSelect.options[i].text.replace('(OCUPADO)', '(Actual)');
+        }
         break;
       }
     }
