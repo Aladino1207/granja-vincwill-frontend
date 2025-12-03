@@ -12,7 +12,7 @@ async function cargarGalpones() {
             let accionHTML = `<button onclick="eliminarGalpon(${g.id})" class="btn btn-sm btn-peligro">Eliminar</button>`;
 
             if (g.estado === 'libre') {
-                estadoHTML = `<span class="badge-disponible">LIBRE</span>`;
+                estadoHTML = `<span class="badge-disponible" style="background:#27ae60; color:white; padding:4px 8px; border-radius:4px;">LIBRE</span>`;
                 // Aún libre, podemos registrar mantenimiento preventivo
                 accionHTML = `
                     <button onclick="abrirMantenimiento(${g.id}, '${g.nombre}')" class="btn btn-sm btn-primario" style="background:#34495e;">Mantenimiento</button>
@@ -49,7 +49,6 @@ async function cargarInventarioParaMantenimiento() {
         const select = document.getElementById('inventarioSelect');
         select.innerHTML = '<option value="">Seleccione Insumo</option>';
 
-        // Filtramos cosas útiles para mantenimiento
         const utiles = items.filter(i => i.categoria === 'Cama' || i.categoria === 'Otro' || i.categoria === 'Medicina');
 
         utiles.forEach(i => {
@@ -110,12 +109,10 @@ async function guardarMantenimiento(e) {
 async function liberarGalpon(id) {
     if (confirm("¿Confirmas que la desinfección ha terminado y el galpón está listo?")) {
         const token = localStorage.getItem('token');
-        const granjaId = getSelectedGranjaId();
         try {
             const res = await fetch(`${window.API_URL}/galpones/liberar/${id}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ granjaId })
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
             });
             if (res.ok) {
                 alert("Galpón liberado correctamente.");
@@ -144,7 +141,9 @@ async function guardarGalpon(e) {
             body: JSON.stringify(data)
         });
         if (res.ok) {
-            location.reload();
+            document.getElementById('formContainer').classList.remove('is-open');
+            document.getElementById('galponForm').reset();
+            cargarGalpones();
         } else {
             alert("Error al guardar");
         }
@@ -163,10 +162,33 @@ async function eliminarGalpon(id) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // UI Toggle lógica
+    // 1. Formulario Principal (Galpón)
+    const form = document.getElementById('galponForm');
+    if (form) form.onsubmit = guardarGalpon;
+
+    // 2. Botones de Toggle (CORRECCIÓN)
+    const toggleBtn = document.getElementById('toggleFormBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const formContainer = document.getElementById('formContainer');
+
+    if (toggleBtn) {
+        toggleBtn.onclick = () => {
+            formContainer.classList.add('is-open');
+            toggleBtn.textContent = 'Cancelar';
+        };
+    }
+    if (cancelBtn) {
+        cancelBtn.onclick = () => {
+            formContainer.classList.remove('is-open');
+            document.getElementById('toggleFormBtn').textContent = 'Nuevo Galpón';
+        };
+    }
+
+    // 3. Lógica Modal Mantenimiento
     const tipoGasto = document.getElementById('tipoGasto');
     const groupInv = document.getElementById('groupInventario');
     const groupDir = document.getElementById('groupDirecto');
+
     if (tipoGasto) {
         tipoGasto.addEventListener('change', () => {
             if (tipoGasto.value === 'Inventario') {
@@ -182,13 +204,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    // Modal close
-    document.getElementById('closeMantenimientoModal').onclick = () => {
-        document.getElementById('mantenimientoModal').classList.remove('is-open');
-    };
+
+    const closeMant = document.getElementById('closeMantenimientoModal');
+    if (closeMant) {
+        closeMant.onclick = () => {
+            document.getElementById('mantenimientoModal').classList.remove('is-open');
+        };
+    }
+
     const formMant = document.getElementById('mantenimientoForm');
     if (formMant) formMant.onsubmit = guardarMantenimiento;
-    // Init
-    initializeUI();
+
+    // Cargar datos iniciales
     cargarGalpones();
 });

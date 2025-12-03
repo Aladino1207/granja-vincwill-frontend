@@ -3,42 +3,30 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Granja Avícola VincWill - Configuración</title>
+    <title>Gestión de Galpones - Granja VincWill</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 
 <body>
     <header>
-        <h1 id="pageTitle">Dashboard</h1>
-
+        <h1>Infraestructura (Galpones)</h1>
+        <!-- ESTRUCTURA COMPLETA DEL PERFIL (Corrección) -->
         <div class="user-profile-container">
             <div id="userMenuBtn" class="user-avatar-btn" title="Menú de Usuario">
                 <span id="userInitials">U</span>
             </div>
-
             <div id="userDropdown" class="user-dropdown-menu">
-
                 <div class="dropdown-header">
-                    <div class="dropdown-avatar-large">
-                        <span id="dropdownInitials">U</span>
-                    </div>
+                    <div class="dropdown-avatar-large"><span id="dropdownInitials">U</span></div>
                     <div class="dropdown-user-info">
                         <h4 id="dropdownName">Cargando...</h4>
                         <p id="dropdownBranch">Cargando...</p>
                     </div>
                 </div>
-
                 <ul class="dropdown-actions">
-                    <li>
-                        <button id="changeBranchBtn" class="dropdown-item">
-                            🔄 Cambiar Almacén
-                        </button>
-                    </li>
-                    <li>
-                        <button onclick="logout()" class="dropdown-item logout-item">
-                            🚪 Cerrar Sesión
-                        </button>
-                    </li>
+                    <li><button id="changeBranchBtn" class="dropdown-item">🔄 Cambiar Almacén</button></li>
+                    <li><button onclick="logout()" class="dropdown-item logout-item">🚪 Cerrar Sesión</button></li>
                 </ul>
             </div>
         </div>
@@ -100,9 +88,10 @@
                         <label>Capacidad Máxima (Aves)</label>
                         <input type="number" id="capacidad" class="form-control" placeholder="Ej: 5000" required>
                     </div>
-                    <div class="form-group" style="grid-column: 1 / -1;">
+                    <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
                         <button type="submit" class="btn btn-primario">Guardar Galpón</button>
-                        <button type="button" id="cancelBtn" class="btn btn-peligro">Cancelar</button>
+                        <button type="button" id="cancelBtn" class="btn btn-peligro"
+                            style="background-color: #7f8c8d;">Cancelar</button>
                     </div>
                 </form>
             </section>
