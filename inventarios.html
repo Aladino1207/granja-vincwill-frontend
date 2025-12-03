@@ -87,6 +87,7 @@
     </aside>
 
     <main class="main-content">
+        <!-- Contenedor Desplegable -->
         <div id="formContainer" class="form-desplegable-container">
             <section class="card">
                 <h2 id="formTitle">Registrar Compra de Insumo</h2>
@@ -103,9 +104,9 @@
                         <label for="categoria">Categoría</label>
                         <select id="categoria" class="form-control">
                             <option value="Alimento">Alimento</option>
-                            <option value="Vacuna">Vacuna</option>
-                            <option value="Medicina">Medicina</option> <!-- Agregué Medicina -->
-                            <option value="Cama">Cama</option>
+                            <option value="Vacuna">Vacuna (Preventivo)</option>
+                            <option value="Medicina">Medicina (Curativo)</option>
+                            <option value="Cama">Cama / Sustrato</option>
                             <option value="Otro">Otro</option>
                         </select>
                     </div>
@@ -122,7 +123,7 @@
                         </div>
                     </div>
 
-                    <!-- NUEVO: Selector de Unidad -->
+                    <!-- Selector de Unidad -->
                     <div class="form-group">
                         <label for="unidadMedida">Unidad de Medida</label>
                         <select id="unidadMedida" class="form-control" required>
@@ -141,8 +142,8 @@
                     <div class="form-group">
                         <label for="cantidad">Cantidad Total</label>
                         <input type="number" id="cantidad" class="form-control" min="0.01" step="0.01"
-                            placeholder="Ej: 40 (Si son 2 canecas de 20L)" required>
-                        <small style="color: #e67e22;">* Ingrese la cantidad en la unidad seleccionada antes.</small>
+                            placeholder="Ej: 40" required>
+                        <small style="color: #e67e22;">* Cantidad en la unidad seleccionada.</small>
                     </div>
 
                     <div class="form-group">
@@ -165,6 +166,7 @@
             </section>
         </div>
 
+        <!-- Lista de Inventario -->
         <section class="card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2>Inventario Actual</h2>
@@ -178,8 +180,10 @@
                             <th>Producto</th>
                             <th>Proveedor</th>
                             <th>Categoría</th>
-                            <th>Stock Actual</th> <!-- Cabecera Actualizada -->
+                            <th>Stock Actual</th>
                             <th>Costo Unit.</th>
+                            <th>Valor Total</th>
+                            <th>Fecha</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -189,63 +193,11 @@
         </section>
 
         <footer>
-            <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
+            <p>© 2025 Granja Avícola VincWill.</p>
         </footer>
     </main>
 
-    <!-- NUEVO: MODAL DE CONSUMO (USO INTERNO) -->
-    <div id="consumoModal" class="modal-wrapper">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="consumoTitle">Registrar Uso de Insumo</h2>
-                <span class="modal-close-btn" id="closeConsumoModal">&times;</span>
-            </div>
-            <form id="consumoForm" class="form-grid">
-                <input type="hidden" id="consumoInventarioId">
-
-                <div class="form-group">
-                    <label>Producto:</label>
-                    <input type="text" id="consumoNombre" class="form-control" disabled style="background: #f0f0f0;">
-                </div>
-
-                <div class="form-group">
-                    <label>Destino del Gasto</label>
-                    <select id="consumoDestino" class="form-control">
-                        <option value="lote">Asignar a un Lote Específico</option>
-                        <option value="mantenimiento">Mantenimiento / General</option>
-                    </select>
-                </div>
-
-                <!-- Select de Lote (se muestra/oculta) -->
-                <div class="form-group" id="groupConsumoLote">
-                    <label>Seleccionar Lote</label>
-                    <select id="consumoLoteId" class="form-control">
-                        <option value="">Cargando lotes...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Motivo / Detalle</label>
-                    <input type="text" id="consumoMotivo" class="form-control"
-                        placeholder="Ej: Desinfección Galpón 1, Cambio de cama..." required>
-                </div>
-
-                <div class="form-group">
-                    <label id="lblConsumoCantidad">Cantidad a Usar</label>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="number" id="consumoCantidad" class="form-control" step="0.01" min="0.01" required>
-                        <strong id="consumoUnidadDisplay">Unit</strong>
-                    </div>
-                    <small style="color: #e67e22;" id="consumoStockMax"></small>
-                </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primario">Registrar Salida</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
+    <!-- Modal de Proveedor -->
     <div id="quickAddModal" class="modal-wrapper">
         <div class="modal-content">
             <div class="modal-header">
