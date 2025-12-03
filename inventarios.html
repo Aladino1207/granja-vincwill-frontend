@@ -52,18 +52,18 @@
                 </div>
             </div>
 
-           <div class="nav-group">
-        <h4 class="nav-category-title" data-target="#operaciones-links">Operaciones</h4>
-        <div class="nav-links-container" id="operaciones-links">
-          <a href="galpones.html" class="nav-link">Galpones</a>
-          <a href="lotes.html" class="nav-link">Lotes</a>
-          <a href="inventarios.html" class="nav-link">Inventario</a>
-          <a href="agua.html" class="nav-link">Agua</a>
-          <a href="salud.html" class="nav-link">Salud</a>
-          <a href="seguimiento.html" class="nav-link">Seguimiento</a>
+            <div class="nav-group">
+                <h4 class="nav-category-title" data-target="#operaciones-links">Operaciones</h4>
+                <div class="nav-links-container" id="operaciones-links">
+                    <a href="galpones.html" class="nav-link">Galpones</a>
+                    <a href="lotes.html" class="nav-link">Lotes</a>
+                    <a href="inventarios.html" class="nav-link">Inventario</a>
+                    <a href="agua.html" class="nav-link">Agua</a>
+                    <a href="salud.html" class="nav-link">Salud</a>
+                    <a href="seguimiento.html" class="nav-link">Seguimiento</a>
 
-        </div>
-      </div>
+                </div>
+            </div>
 
             <div class="nav-group">
                 <h4 class="nav-category-title" data-target="#finanzas-links">Finanzas</h4>
@@ -168,7 +168,7 @@
         <section class="card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2>Inventario Actual</h2>
-                <button id="toggleFormBtn" class="btn btn-primario">Registrar Nuevo Insumo</button>
+                <button id="toggleFormBtn" class="btn btn-primario">Registrar Nueva Compra</button>
             </div>
 
             <div class="tabla-responsive-wrapper">
@@ -178,9 +178,8 @@
                             <th>Producto</th>
                             <th>Proveedor</th>
                             <th>Categoría</th>
-                            <th>Cantidad</th>
-                            <th>Costo Unitario</th>
-                            <th>Fecha</th>
+                            <th>Stock Actual</th> <!-- Cabecera Actualizada -->
+                            <th>Costo Unit.</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -193,6 +192,59 @@
             <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
         </footer>
     </main>
+
+    <!-- NUEVO: MODAL DE CONSUMO (USO INTERNO) -->
+    <div id="consumoModal" class="modal-wrapper">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="consumoTitle">Registrar Uso de Insumo</h2>
+                <span class="modal-close-btn" id="closeConsumoModal">&times;</span>
+            </div>
+            <form id="consumoForm" class="form-grid">
+                <input type="hidden" id="consumoInventarioId">
+
+                <div class="form-group">
+                    <label>Producto:</label>
+                    <input type="text" id="consumoNombre" class="form-control" disabled style="background: #f0f0f0;">
+                </div>
+
+                <div class="form-group">
+                    <label>Destino del Gasto</label>
+                    <select id="consumoDestino" class="form-control">
+                        <option value="lote">Asignar a un Lote Específico</option>
+                        <option value="mantenimiento">Mantenimiento / General</option>
+                    </select>
+                </div>
+
+                <!-- Select de Lote (se muestra/oculta) -->
+                <div class="form-group" id="groupConsumoLote">
+                    <label>Seleccionar Lote</label>
+                    <select id="consumoLoteId" class="form-control">
+                        <option value="">Cargando lotes...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Motivo / Detalle</label>
+                    <input type="text" id="consumoMotivo" class="form-control"
+                        placeholder="Ej: Desinfección Galpón 1, Cambio de cama..." required>
+                </div>
+
+                <div class="form-group">
+                    <label id="lblConsumoCantidad">Cantidad a Usar</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="number" id="consumoCantidad" class="form-control" step="0.01" min="0.01" required>
+                        <strong id="consumoUnidadDisplay">Unit</strong>
+                    </div>
+                    <small style="color: #e67e22;" id="consumoStockMax"></small>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primario">Registrar Salida</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <div id="quickAddModal" class="modal-wrapper">
         <div class="modal-content">

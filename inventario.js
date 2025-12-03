@@ -19,31 +19,29 @@ async function cargarInventario() {
     tbody.innerHTML = '';
 
     if (inventario.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7">No hay inventario registrado.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6">No hay inventario registrado.</td></tr>';
       return;
     }
 
     inventario.forEach(item => {
       const tr = document.createElement('tr');
-      const totalEstimado = (item.cantidad * item.costo).toFixed(2);
       const unidad = item.unidadMedida || 'Unidades';
 
-      // Corrección de Fecha
-      const fechaVisual = new Date(item.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' });
+      // Botón "Usar" (Consumo)
+      const btnUsar = `<button onclick="abrirModalConsumo('${item.id}', '${item.producto}', '${item.cantidad}', '${unidad}')" class="btn btn-sm" style="background-color: #2ecc71; color: white; margin-right: 5px;">📉 Usar</button>`;
 
       tr.innerHTML = `
-    <td><strong>${item.producto}</strong></td>
-    <td>${item.Proveedor ? item.Proveedor.nombreCompania : '<em>Genérico</em>'}</td>
-    <td><span class="badge">${item.categoria}</span></td>
-    <td><strong>${item.cantidad} ${unidad}</strong></td>
-    <td>$${item.costo.toFixed(4)} / ${unidad}</td>
-    <td>$${totalEstimado}</td>
-    <td>${fechaVisual}</td> <!-- FECHA CORREGIDA -->
-    <td>
-      <button onclick="editarInventario(${item.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
-      <button onclick="eliminarInventario(${item.id})" class="btn btn-sm btn-peligro">Eliminar</button>
-    </td>
-  `;
+        <td><strong>${item.producto}</strong></td>
+        <td>${item.Proveedor ? item.Proveedor.nombreCompania : '-'}</td>
+        <td><span class="badge">${item.categoria}</span></td>
+        <td><strong>${item.cantidad} ${unidad}</strong></td>
+        <td>$${item.costo.toFixed(4)} / ${unidad}</td>
+        <td>
+          ${btnUsar}
+          <button onclick="editarInventario(${item.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
+          <button onclick="eliminarInventario(${item.id})" class="btn btn-sm btn-peligro">Eliminar</button>
+        </td>
+      `;
       tbody.appendChild(tr);
     });
   } catch (error) {
@@ -51,7 +49,44 @@ async function cargarInventario() {
   }
 }
 
-// --- V 3.1: NUEVA Lógica para cargar Proveedores ---
+// --- Cargar Lotes (Para el modal de consumo) ---
+async function cargarLotesForConsumo() {
+  try {
+    const token = localStorage.getItem('token');
+    const granjaId = getSelectedGranjaId();
+    const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
+    const lotes = await res.json();
+    const select = document.getElementById('consumoLoteId');
+    select.innerHTML = '<option value="">-- Seleccionar Lote --</option>';
+    lotes.forEach(l => {
+      // Mostramos todos, incluso los vendidos por si es un costo tardío
+      select.appendChild(new Option(`${l.loteId} (${l.estado})`, l.id));
+    });
+  } catch (e) { console.error(e); }
+}
+
+// --- LÓGICA DEL MODAL DE CONSUMO ---
+function abrirModalConsumo(id, nombre, stock, unidad) {
+  const modal = document.getElementById('consumoModal');
+  document.getElementById('consumoInventarioId').value = id;
+  document.getElementById('consumoNombre').value = nombre;
+  document.getElementById('consumoUnidadDisplay').textContent = unidad;
+  document.getElementById('consumoStockMax').textContent = `Máximo disponible: ${stock} ${unidad}`;
+
+  // Configurar input cantidad
+  const inputCant = document.getElementById('consumoCantidad');
+  inputCant.value = '';
+  inputCant.max = stock; // Validación HTML5
+
+  // Cargar lotes si no están cargados
+  if (document.getElementById('consumoLoteId').options.length <= 1) {
+    cargarLotesForConsumo();
+  }
+
+  modal.classList.add('is-open');
+}
+
+// --- Lógica para cargar Proveedores ---
 async function cargarProveedores() {
   try {
     const token = localStorage.getItem('token');
@@ -334,38 +369,92 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('header h1').textContent = `Inventario (${granja.nombre})`;
   }
 
+  // 1. Configuración del Formulario Principal
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
   const form = document.getElementById('inventarioForm');
-  const formContainer = document.getElementById('formContainer');
 
   if (currentUser && currentUser.role !== 'viewer') {
-    toggleBtn.style.display = 'block';
+    if (toggleBtn) {
+      toggleBtn.style.display = 'block';
+      toggleBtn.addEventListener('click', () => {
+        const isOpen = document.getElementById('formContainer').classList.contains('is-open');
+        if (isOpen) cerrarFormulario();
+        else {
+          document.getElementById('inventarioForm').reset();
+          document.getElementById('inventarioId').value = '';
+          document.getElementById('proveedorId').value = '';
+          document.getElementById('formTitle').textContent = 'Registrar Insumo';
+          abrirFormulario();
+        }
+      });
+    }
+    if (cancelBtn) cancelBtn.addEventListener('click', cerrarFormulario);
+    if (form) form.onsubmit = guardarInventario;
 
-    toggleBtn.addEventListener('click', () => {
-      const isOpen = formContainer.classList.contains('is-open');
-      if (isOpen) {
-        cerrarFormulario();
-      } else {
-        form.reset();
-        document.getElementById('inventarioId').value = '';
-        document.getElementById('proveedorId').value = '';
-        formTitle.textContent = 'Registrar Insumo';
-        abrirFormulario();
-      }
-    });
-
-    cancelBtn.addEventListener('click', cerrarFormulario);
-    form.onsubmit = guardarInventario;
-
-    // V 3.1: Inicializar búsqueda y modal
+    // Inicializar componentes nuevos (V 3.x)
     setupProveedorSearch();
     setupQuickAddModal();
 
   } else {
-    toggleBtn.style.display = 'none';
+    if (toggleBtn) toggleBtn.style.display = 'none';
   }
 
+  // 2. Configuración del Modal de Consumo (NUEVO)
+  const modalConsumo = document.getElementById('consumoModal');
+  const closeConsumo = document.getElementById('closeConsumoModal');
+  const formConsumo = document.getElementById('consumoForm');
+  const selectDestino = document.getElementById('consumoDestino');
+  const groupLote = document.getElementById('groupConsumoLote');
+
+  if (closeConsumo) closeConsumo.onclick = () => modalConsumo.classList.remove('is-open');
+
+  if (selectDestino) {
+    selectDestino.onchange = () => {
+      if (selectDestino.value === 'lote') {
+        groupLote.style.display = 'flex';
+        document.getElementById('consumoLoteId').required = true;
+      } else {
+        groupLote.style.display = 'none';
+        document.getElementById('consumoLoteId').required = false;
+        document.getElementById('consumoLoteId').value = "";
+      }
+    };
+  }
+
+  if (formConsumo) {
+    formConsumo.onsubmit = async (e) => {
+      e.preventDefault();
+      const granjaId = getSelectedGranjaId();
+      const payload = {
+        granjaId,
+        inventarioId: document.getElementById('consumoInventarioId').value,
+        cantidad: parseFloat(document.getElementById('consumoCantidad').value),
+        motivo: document.getElementById('consumoMotivo').value,
+        loteId: selectDestino.value === 'lote' ? document.getElementById('consumoLoteId').value : null
+      };
+
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${window.API_URL}/inventario/consumo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          modalConsumo.classList.remove('is-open');
+          alert("Consumo registrado y descontado correctamente.");
+          cargarInventario();
+        } else {
+          const err = await res.json();
+          alert("Error: " + err.error);
+        }
+      } catch (err) { alert("Error de conexión"); }
+    };
+  }
+
+  // 3. Carga de Datos Iniciales
   cargarInventario();
-  cargarProveedores(); // Carga la lista de proveedores al iniciar
+  cargarProveedores();
 });
