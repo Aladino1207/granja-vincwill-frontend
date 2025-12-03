@@ -85,6 +85,8 @@
         </nav>
     </aside>
     <main class="main-content">
+
+        <!-- Formulario Crear -->
         <div id="formContainer" class="form-desplegable-container">
             <section class="card">
                 <h2 id="formTitle">Crear Nuevo Galpón</h2>
@@ -107,7 +109,7 @@
         </div>
 
         <section class="card">
-            <div style="display: flex; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2>Mis Galpones</h2>
                 <button id="toggleFormBtn" class="btn btn-primario">Nuevo Galpón</button>
             </div>
@@ -126,8 +128,62 @@
             </div>
         </section>
     </main>
-    <script src="app.js"></script>
-    <script src="galpones.js"></script>
-</body>
 
-</html>
+    <!-- MODAL: REGISTRAR MANTENIMIENTO -->
+    <div id="mantenimientoModal" class="modal-wrapper">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Gasto de Mantenimiento</h2>
+                <span class="modal-close-btn" id="closeMantenimientoModal">&times;</span>
+            </div>
+            <form id="mantenimientoForm" class="form-grid form-grid-2-col">
+                <input type="hidden" id="mantGalponId">
+
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label>Tipo de Gasto</label>
+                    <select id="tipoGasto" class="form-control">
+                        <option value="Inventario">Usar del Inventario (Cama, Químicos)</option>
+                        <option value="Directo">Gasto Directo (Mano de obra, Reparación)</option>
+                    </select>
+                </div>
+
+                <!-- Opción A: Inventario -->
+                <div id="groupInventario" style="grid-column: 1 / -1; display: grid; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Producto</label>
+                        <select id="inventarioSelect" class="form-control">
+                            <option value="">Cargando...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Cantidad a Usar</label>
+                        <input type="number" id="mantCantidad" class="form-control" step="0.01">
+                        <small id="stockInfo" style="color: var(--color-secundario);"></small>
+                    </div>
+                </div>
+
+                <!-- Opción B: Dinero Directo -->
+                <div id="groupDirecto" style="grid-column: 1 / -1; display: none;">
+                    <div class="form-group">
+                        <label>Monto ($)</label>
+                        <input type="number" id="mantMonto" class="form-control" step="0.01">
+                    </div>
+                </div>
+
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label>Detalle / Descripción</label>
+                    <input type="text" id="mantDescripcion" class="form-control" required
+                        placeholder="Ej: Desinfección pre-lote">
+                </div>
+
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label>Fecha</label>
+                    <input type="date" id="mantFecha" class="form-control" required>
+                </div>
+
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <button type="submit" class="btn btn-primario">Registrar Gasto</button>
+                </div>
+            </form>
+        </div>
+    </div>

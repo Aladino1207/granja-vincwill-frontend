@@ -2,7 +2,6 @@ async function cargarGalpones() {
     try {
         const token = localStorage.getItem('token');
         const granjaId = getSelectedGranjaId();
-        // El backend ya revisa las fechas y actualiza estados automáticamente al hacer GET
         const res = await fetch(`${window.API_URL}/galpones?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
         const tbody = document.getElementById('tablaGalpones');
@@ -14,15 +13,19 @@ async function cargarGalpones() {
 
             if (g.estado === 'libre') {
                 estadoHTML = `<span class="badge-disponible">LIBRE</span>`;
+                // Aún libre, podemos registrar mantenimiento preventivo
+                accionHTML = `
+                    <button onclick="abrirMantenimiento(${g.id}, '${g.nombre}')" class="btn btn-sm btn-primario" style="background:#34495e;">Mantenimiento</button>
+                    <button onclick="eliminarGalpon(${g.id})" class="btn btn-sm btn-peligro">Eliminar</button>`;
             } else if (g.estado === 'ocupado') {
                 estadoHTML = `<span class="badge-ocupado" style="background:#e74c3c; color:white; padding:4px 8px; border-radius:4px;">OCUPADO</span>`;
-                // No se puede borrar si está ocupado
-                accionHTML = `<button class="btn btn-sm btn-peligro" disabled style="opacity:0.5; cursor:not-allowed;">En Uso</button>`;
+                accionHTML = `<small>En uso</small>`;
             } else if (g.estado === 'mantenimiento') {
-                const fechaLibre = new Date(g.fechaDisponible).toLocaleDateString();
+                const fechaLibre = new Date(g.fechaDisponible).toLocaleDateString('es-ES', { timeZone: 'UTC' });
                 estadoHTML = `<span class="badge-mantenimiento" style="background:#f39c12; color:white; padding:4px 8px; border-radius:4px;">LIMPIEZA (Hasta: ${fechaLibre})</span>`;
-                // Botón especial para liberar
-                accionHTML = `<button onclick="liberarGalpon(${g.id})" class="btn btn-sm btn-primario" title="Terminar limpieza ahora">Liberar Ahora</button>`;
+                accionHTML = `
+                    <button onclick="abrirMantenimiento(${g.id}, '${g.nombre}')" class="btn btn-sm btn-primario" style="background:#34495e;">Registrar Gasto</button>
+                    <button onclick="liberarGalpon(${g.id})" class="btn btn-sm btn-success" style="margin-top:5px;">Liberar</button>`;
             }
 
             tbody.innerHTML += `
@@ -34,6 +37,74 @@ async function cargarGalpones() {
                 </tr>`;
         });
     } catch (e) { console.error(e); }
+}
+
+// --- MÓDULO MANTENIMIENTO ---
+async function cargarInventarioParaMantenimiento() {
+    try {
+        const token = localStorage.getItem('token');
+        const granjaId = getSelectedGranjaId();
+        const res = await fetch(`${window.API_URL}/inventario?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
+        const items = await res.json();
+        const select = document.getElementById('inventarioSelect');
+        select.innerHTML = '<option value="">Seleccione Insumo</option>';
+
+        // Filtramos cosas útiles para mantenimiento
+        const utiles = items.filter(i => i.categoria === 'Cama' || i.categoria === 'Otro' || i.categoria === 'Medicina');
+
+        utiles.forEach(i => {
+            const option = document.createElement('option');
+            option.value = i.id;
+            option.textContent = `${i.producto} (Stock: ${i.cantidad} ${i.unidadMedida})`;
+            option.dataset.unidad = i.unidadMedida;
+            select.appendChild(option);
+        });
+    } catch (e) { console.error(e); }
+}
+
+function abrirMantenimiento(id, nombre) {
+    document.getElementById('mantGalponId').value = id;
+    document.getElementById('modalTitle').textContent = `Mantenimiento: ${nombre}`;
+    document.getElementById('mantenimientoModal').classList.add('is-open');
+    cargarInventarioParaMantenimiento();
+}
+
+async function guardarMantenimiento(e) {
+    e.preventDefault();
+    const granjaId = getSelectedGranjaId();
+    const galponId = document.getElementById('mantGalponId').value;
+    const tipoGasto = document.getElementById('tipoGasto').value;
+
+    const data = {
+        granjaId,
+        galponId,
+        tipoGasto,
+        descripcion: document.getElementById('mantDescripcion').value,
+        fecha: document.getElementById('mantFecha').value
+    };
+
+    if (tipoGasto === 'Inventario') {
+        data.inventarioId = document.getElementById('inventarioSelect').value;
+        data.cantidad = document.getElementById('mantCantidad').value;
+    } else {
+        data.monto = document.getElementById('mantMonto').value;
+    }
+
+    try {
+        const res = await fetch(`${window.API_URL}/mantenimiento`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            document.getElementById('mantenimientoModal').classList.remove('is-open');
+            document.getElementById('mantenimientoForm').reset();
+            alert("Gasto registrado correctamente.");
+        } else {
+            const err = await res.json();
+            alert("Error: " + err.error);
+        }
+    } catch (e) { alert("Error de conexión"); }
 }
 
 async function liberarGalpon(id) {
@@ -92,14 +163,32 @@ async function eliminarGalpon(id) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('galponForm');
-    if (form) form.onsubmit = guardarGalpon;
-
-    const toggleBtn = document.getElementById('toggleFormBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-
-    if (toggleBtn) toggleBtn.onclick = () => { document.getElementById('formContainer').classList.add('is-open'); };
-    if (cancelBtn) cancelBtn.onclick = () => { document.getElementById('formContainer').classList.remove('is-open'); };
-
+    // UI Toggle lógica
+    const tipoGasto = document.getElementById('tipoGasto');
+    const groupInv = document.getElementById('groupInventario');
+    const groupDir = document.getElementById('groupDirecto');
+    if (tipoGasto) {
+        tipoGasto.addEventListener('change', () => {
+            if (tipoGasto.value === 'Inventario') {
+                groupInv.style.display = 'grid';
+                groupDir.style.display = 'none';
+                document.getElementById('inventarioSelect').required = true;
+                document.getElementById('mantMonto').required = false;
+            } else {
+                groupInv.style.display = 'none';
+                groupDir.style.display = 'block';
+                document.getElementById('inventarioSelect').required = false;
+                document.getElementById('mantMonto').required = true;
+            }
+        });
+    }
+    // Modal close
+    document.getElementById('closeMantenimientoModal').onclick = () => {
+        document.getElementById('mantenimientoModal').classList.remove('is-open');
+    };
+    const formMant = document.getElementById('mantenimientoForm');
+    if (formMant) formMant.onsubmit = guardarMantenimiento;
+    // Init
+    initializeUI();
     cargarGalpones();
 });
