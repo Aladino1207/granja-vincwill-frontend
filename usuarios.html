@@ -87,7 +87,6 @@
   </aside>
   <main class="main-content">
 
-    <!-- Mensaje de Acceso Denegado -->
     <section id="accessDenied" class="card" style="display: none;">
       <h2>Acceso Denegado</h2>
       <p>Solo los administradores pueden gestionar usuarios.</p>
@@ -103,13 +102,11 @@
           <button id="toggleFormBtn" class="btn btn-primario">Crear Nuevo Usuario</button>
         </div>
 
-        <!-- FORMULARIO DE USUARIO (ESTO FALTABA) -->
         <div id="formContainer" class="form-desplegable-container">
           <div class="card" style="margin-top: 1rem; background: #f9f9f9; border: 1px solid #eee;">
             <h3 id="formTitle" style="margin-top: 0;">Crear Nuevo Usuario</h3>
             <form id="userForm" class="form-grid form-grid-2-col">
               <input type="hidden" id="usuarioId">
-
               <div class="form-group">
                 <label for="name">Nombre Completo</label>
                 <input type="text" id="name" class="form-control" required>
@@ -130,7 +127,6 @@
                   <option value="viewer">Viewer (Solo Ver)</option>
                 </select>
               </div>
-
               <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 10px;">
                 <button type="submit" class="btn btn-primario">Guardar Usuario</button>
                 <button type="button" id="cancelBtn" class="btn btn-peligro"
@@ -182,7 +178,7 @@
               <tr>
                 <th>Nombre</th>
                 <th>Ubicación</th>
-                <th>Acciones</th>
+                <th>Acción</th>
               </tr>
             </thead>
             <tbody id="tablaGranjasBody"></tbody>
@@ -190,14 +186,14 @@
         </div>
       </section>
 
-    </div> <!-- Fin Admin Section -->
+    </div>
 
     <footer>
       <p>© 2025 Granja Avícola VincWill.</p>
     </footer>
   </main>
 
-  <!-- MODAL ASIGNACIÓN -->
+  <!-- NUEVO: MODAL DE ASIGNACIÓN (CHECKBOXES) -->
   <div id="asignarModal" class="modal-wrapper">
     <div class="modal-content">
       <div class="modal-header">
@@ -206,11 +202,13 @@
       </div>
       <form id="asignarForm">
         <input type="hidden" id="assignUserId">
-        <p style="color: #666; margin-bottom: 1rem;">Marca las granjas a las que este usuario tendrá acceso:</p>
+        <p style="color: #666; margin-bottom: 1rem;">Selecciona las granjas a las que este usuario tendrá acceso:</p>
+
+        <!-- Checkboxes Dinámicos -->
         <div id="granjasCheckboxes"
           style="display: grid; gap: 10px; max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 15px; border-radius: 8px; background: #f9f9f9;">
-          <!-- Checkboxes dinámicos -->
         </div>
+
         <div class="form-group" style="margin-top: 1.5rem;">
           <button type="submit" class="btn btn-primario" style="width: 100%;">Guardar Asignación</button>
         </div>

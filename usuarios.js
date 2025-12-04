@@ -185,7 +185,7 @@ async function editarUsuario(id) {
   try {
     const token = localStorage.getItem('token');
     const res = await fetch(`${window.API_URL}/users/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) throw new Error('Error al cargar');
+    if (!res.ok) throw new Error('Error');
     const usuario = await res.json();
 
     document.getElementById('formTitle').textContent = 'Editar Usuario';
@@ -193,14 +193,9 @@ async function editarUsuario(id) {
     document.getElementById('name').value = usuario.name;
     document.getElementById('email').value = usuario.email;
     document.getElementById('role').value = usuario.role;
-    document.getElementById('password').value = '';
-    document.getElementById('password').placeholder = 'Dejar vacío si no cambia';
 
     abrirFormulario();
-    // Scroll hacia el formulario
-    const container = document.getElementById('formContainer');
-    container.scrollIntoView({ behavior: 'smooth' });
-
+    document.getElementById('formContainer').scrollIntoView({ behavior: 'smooth' });
   } catch (error) { console.error(error); }
 }
 
