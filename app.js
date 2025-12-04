@@ -308,13 +308,63 @@ async function mostrarCalendario() {
 
     if (window.flatpickr) {
       flatpickr("#calendario-container", {
-        inline: true, locale: "es",
+        inline: true,
+        locale: "es",
         enable: [{ from: "today", to: "today" }, ...eventosMapa.map(e => e.date)],
+        onDayCreate: function (dObj, dStr, fp, dayElem) {
+          const fechaStr = dayElem.dateObj.toISOString().split('T')[0];
+          const eventosDelDia = eventosMapa.filter(e => e.date === fechaStr);
+
+          if (eventosDelDia.length > 0) {
+            // Limpiamos clases previas
+            dayElem.classList.remove('evento-retiro', 'evento-pendiente');
+
+            if (eventosDelDia.some(e => e.tipo === 'retiro')) {
+              dayElem.classList.add('evento-retiro');
+            } else {
+              dayElem.classList.add('evento-pendiente');
+            }
+            dayElem.title = eventosDelDia.map(e => e.title).join('\n');
+          }
+        },
         onChange: function (selectedDates, dateStr) {
           const eventosHoy = eventosMapa.filter(e => e.date === dateStr);
           if (eventosHoy.length > 0) alert(`📅 ${dateStr}:\n\n${eventosHoy.map(e => `• ${e.title}`).join('\n')}`);
         }
       });
+      // INYECCIÓN CSS REFORZADA
+      if (!document.getElementById('estilos-calendario-vincwill')) {
+        const style = document.createElement('style');
+        style.id = 'estilos-calendario-vincwill';
+        style.innerHTML = `
+        /* Estilo Base para días con evento */
+        .flatpickr-day.evento-retiro, 
+        .flatpickr-day.evento-pendiente {
+            color: white !important;
+            border: 0 !important;
+            font-weight: bold;
+        }
+        
+        /* ROJO: Retiros de Bioseguridad */
+        .flatpickr-day.evento-retiro {
+            background: #e74c3c !important; 
+            box-shadow: inset 0 0 0 2px #c0392b !important;
+        }
+        
+        /* NARANJA: Agenda Manual */
+        .flatpickr-day.evento-pendiente {
+            background: #f39c12 !important;
+        }
+        
+        /* HOVER: Que se note al pasar el mouse */
+        .flatpickr-day.evento-retiro:hover,
+        .flatpickr-day.evento-pendiente:hover {
+            opacity: 0.8;
+            transform: scale(1.1);
+            z-index: 2;
+        }`;
+        document.head.appendChild(style);
+      }
     }
   } catch (error) { console.error(error); }
 }

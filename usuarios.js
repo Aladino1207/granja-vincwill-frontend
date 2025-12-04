@@ -4,22 +4,34 @@ let allGranjas = []; // Guardar lista de granjas
 async function cargarUsuarios() {
   try {
     const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/users`, {
+    const res = await fetch(`${window.API_URL}/users`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const usuarios = await res.json();
     const tbody = document.getElementById('userTableBody');
     tbody.innerHTML = '';
+
     usuarios.forEach(usuario => {
       const tr = document.createElement('tr');
+
+      // Crear lista visual de granjas
+      const granjasNombres = usuario.Granjas && usuario.Granjas.length > 0
+        ? usuario.Granjas.map(g => `<span class="badge">${g.nombre}</span>`).join(' ')
+        : '<span style="color: #999;">Sin asignar</span>';
+
+      // Guardamos los IDs de sus granjas en un atributo data para usarlos luego
+      const granjaIds = usuario.Granjas ? JSON.stringify(usuario.Granjas.map(g => g.id)) : '[]';
+
       tr.innerHTML = `
         <td>${usuario.name}</td>
         <td>${usuario.email}</td>
         <td>${usuario.role}</td>
+        <td>${granjasNombres}</td>
         <td>
           <button onclick="editarUsuario(${usuario.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
-          <button onclick="asignarGranjas(${usuario.id}, '${usuario.name}')" class="btn btn-sm btn-primario">Asignar Granjas</button>
+          <!-- Botón para abrir el modal de checkboxes -->
+          <button onclick='abrirAsignacion(${usuario.id}, "${usuario.name}", ${granjaIds})' class="btn btn-sm btn-primario" style="background-color: #34495e;">🏠 Asignar</button>
         </td>
       `;
       tbody.appendChild(tr);
@@ -33,32 +45,84 @@ async function cargarUsuarios() {
 async function cargarTodasGranjas() {
   try {
     const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/granjas/todas`, {
+    const res = await fetch(`${window.API_URL}/granjas/todas`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error('Error al cargar granjas');
-    allGranjas = await res.json();
-
-    // Poblar la tabla de granjas
-    const tbody = document.getElementById('tablaGranjasBody');
-    tbody.innerHTML = '';
-    if (allGranjas.length > 0) {
-      allGranjas.forEach(g => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-                <td>${g.nombre}</td>
-                <td>${g.ubicacion || 'N/A'}</td>
-                <td><button class="btn btn-sm btn-peligro" disabled>Borrar</button></td>
-            `;
-        tbody.appendChild(tr);
-      });
-    } else {
-      tbody.innerHTML = '<tr><td colspan="3">No hay granjas creadas.</td></tr>';
+    if (res.ok) {
+      allGranjas = await res.json();
+      renderGranjasTable(); // Función auxiliar para la tabla de abajo
     }
+  } catch (error) { console.error(error); }
+}
 
-  } catch (error) {
-    console.error('Error al cargar lista de granjas:', error);
+function renderGranjasTable() {
+  const tbody = document.getElementById('tablaGranjasBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  allGranjas.forEach(g => {
+    tbody.innerHTML += `<tr><td>${g.nombre}</td><td>${g.ubicacion || '-'}</td><td>-</td></tr>`;
+  });
+}
+
+// --- LÓGICA DEL MODAL DE CHECKBOXES ---
+
+function abrirAsignacion(userId, userName, userGranjasIds) {
+  const modal = document.getElementById('asignarModal');
+  const container = document.getElementById('granjasCheckboxes');
+  document.getElementById('asignarTitle').textContent = `Asignar a: ${userName}`;
+  document.getElementById('assignUserId').value = userId;
+
+  container.innerHTML = '';
+
+  if (allGranjas.length === 0) {
+    container.innerHTML = '<p>No hay granjas creadas en el sistema.</p>';
+  } else {
+    allGranjas.forEach(granja => {
+      // Verificar si el usuario ya tiene esta granja
+      const isChecked = userGranjasIds.includes(granja.id) ? 'checked' : '';
+
+      const div = document.createElement('div');
+      div.style.display = 'flex';
+      div.style.alignItems = 'center';
+      div.style.padding = '5px';
+      div.style.borderBottom = '1px solid #eee';
+
+      div.innerHTML = `
+                <input type="checkbox" id="chk_granja_${granja.id}" value="${granja.id}" ${isChecked} style="width: 20px; height: 20px; margin-right: 10px;">
+                <label for="chk_granja_${granja.id}" style="cursor: pointer; width: 100%;">${granja.nombre}</label>
+            `;
+      container.appendChild(div);
+    });
   }
+
+  modal.classList.add('is-open');
+}
+
+// Guardar la selección de checkboxes
+async function guardarAsignacion(e) {
+  e.preventDefault();
+  const userId = document.getElementById('assignUserId').value;
+  const checkboxes = document.querySelectorAll('#granjasCheckboxes input[type="checkbox"]:checked');
+
+  // Convertir nodos a array de IDs
+  const granjaIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${window.API_URL}/users/${userId}/asignar-granjas`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ granjaIds })
+    });
+
+    if (res.ok) {
+      document.getElementById('asignarModal').classList.remove('is-open');
+      alert('Permisos actualizados correctamente.');
+      cargarUsuarios(); // Refrescar la tabla
+    } else {
+      alert('Error al asignar granjas');
+    }
+  } catch (err) { alert('Error de conexión'); }
 }
 
 // --- LÓGICA DEL FORMULARIO DESPLEGABLE (Usuarios) ---
@@ -210,49 +274,68 @@ async function asignarGranjas(userId, userName) {
   }
 }
 
-// --- Event Listener Principal (MODIFICADO) ---
+// --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
 
-  document.querySelector('header h1').textContent = `Gestión Global (Admin)`;
-
+  // Referencias a elementos del DOM
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
   const userForm = document.getElementById('userForm');
   const formContainer = document.getElementById('formContainer');
+
+  const adminSection = document.getElementById('adminSection'); // Contenedor de Granjas
+  const userSection = document.getElementById('userSection');   // Contenedor de Usuarios
+  const accessDenied = document.getElementById('accessDenied');
+
   const granjaForm = document.getElementById('granjaForm');
+  const asignarModal = document.getElementById('asignarModal');
+  const closeAsignar = document.getElementById('closeAsignarModal');
+  const formAsignar = document.getElementById('asignarForm');
 
-  // Lógica de permisos
+  // LÓGICA DE PERMISOS (Solo Admin)
   if (currentUser && currentUser.role === 'admin') {
-    document.getElementById('adminSection').style.display = 'grid'; // Mostrar todo el admin
 
-    // --- Lógica de formulario de usuarios ---
-    toggleBtn.style.display = 'block';
-    toggleBtn.addEventListener('click', () => {
-      const isOpen = formContainer.classList.contains('is-open');
-      if (isOpen) {
-        cerrarFormulario();
-      } else {
-        userForm.reset();
-        document.getElementById('usuarioId').value = '';
-        formTitle.textContent = 'Crear Nuevo Usuario';
-        document.getElementById('password').placeholder = 'Contraseña (requerida)';
-        abrirFormulario();
-      }
-    });
-    cancelBtn.addEventListener('click', cerrarFormulario);
-    userForm.onsubmit = guardarUsuario;
+    // 1. Mostrar las secciones de administración
+    if (userSection) userSection.style.display = 'block';
+    if (adminSection) adminSection.style.display = 'grid'; // 'grid' porque así lo definimos en el CSS/HTML
+    if (accessDenied) accessDenied.style.display = 'none';
 
-    // --- Lógica de formulario de granjas ---
-    granjaForm.onsubmit = guardarGranja;
+    // 2. Configurar formulario de Usuarios (Crear/Editar)
+    if (toggleBtn) {
+      toggleBtn.style.display = 'block';
+      toggleBtn.addEventListener('click', () => {
+        const isOpen = formContainer.classList.contains('is-open');
+        if (isOpen) {
+          cerrarFormulario();
+        } else {
+          userForm.reset();
+          document.getElementById('usuarioId').value = '';
+          document.getElementById('formTitle').textContent = 'Crear Nuevo Usuario';
+          document.getElementById('password').placeholder = 'Contraseña (requerida)';
+          abrirFormulario();
+        }
+      });
+    }
 
-    // Cargar datos
+    if (cancelBtn) cancelBtn.addEventListener('click', cerrarFormulario);
+    if (userForm) userForm.onsubmit = guardarUsuario;
+
+    // 3. Configurar formulario de Granjas (Crear Granja)
+    if (granjaForm) granjaForm.onsubmit = guardarGranja;
+
+    // 4. Configurar Modal de Asignación de Granjas
+    if (closeAsignar) closeAsignar.onclick = () => asignarModal.classList.remove('is-open');
+    if (formAsignar) formAsignar.onsubmit = guardarAsignacion;
+
+    // 5. Cargar Datos Iniciales
     cargarUsuarios();
-    cargarTodasGranjas(); // Carga la lista para las asignaciones
+    cargarTodasGranjas(); // Importante para poder asignar después
 
   } else {
-    // Oculta todo si no es admin
-    document.getElementById('accessDenied').style.display = 'block';
-    document.getElementById('adminSection').style.display = 'none';
+    // SI NO ES ADMIN: Ocultar todo y mostrar error
+    if (accessDenied) accessDenied.style.display = 'block';
+    if (userSection) userSection.style.display = 'none';
+    if (adminSection) adminSection.style.display = 'none';
   }
 });
