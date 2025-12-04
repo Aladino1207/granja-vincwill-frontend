@@ -15,13 +15,14 @@ async function cargarUsuarios() {
     usuarios.forEach(usuario => {
       const tr = document.createElement('tr');
 
-      // Lista visual de granjas
+      // Etiquetas visuales de granjas asignadas
       const granjasNombres = usuario.Granjas && usuario.Granjas.length > 0
         ? usuario.Granjas.map(g => `<span class="badge" style="background:#ecf0f1; color:#333; padding:2px 6px; border-radius:4px; font-size:0.8em; margin-right:4px;">${g.nombre}</span>`).join('')
-        : '<span style="color: #999;">Sin asignar</span>';
+        : '<span style="color: #999; font-style: italic;">Sin asignar</span>';
 
       // IDs para el botón de asignar
       const granjaIds = usuario.Granjas ? JSON.stringify(usuario.Granjas.map(g => g.id)) : '[]';
+      // Escapar comillas en el nombre
       const safeName = usuario.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
       tr.innerHTML = `
@@ -30,10 +31,10 @@ async function cargarUsuarios() {
         <td><span class="badge">${usuario.role}</span></td>
         <td>${granjasNombres}</td>
         <td>
-          <div style="display: flex; gap: 5px;">
-            <!-- BOTÓN EDITAR -->
+          <div style="display: flex; gap: 5px; justify-content: flex-end;">
+            <!-- BOTÓN EDITAR USUARIO -->
             <button onclick="editarUsuario(${usuario.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;" title="Editar Usuario">✏️</button>
-            <!-- BOTÓN ASIGNAR (Antes Eliminar) -->
+            <!-- BOTÓN ASIGNAR GRANJAS -->
             <button onclick='abrirAsignacion(${usuario.id}, "${safeName}", ${granjaIds})' class="btn btn-sm btn-primario" style="background-color: #34495e;" title="Asignar Granjas">🏠</button>
           </div>
         </td>
@@ -59,10 +60,12 @@ function renderGranjasTable() {
   const tbody = document.getElementById('tablaGranjasBody');
   if (!tbody) return;
   tbody.innerHTML = '';
+
   if (allGranjas.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="3">No hay granjas registradas.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3">No hay granjas registradas. Crea la primera arriba.</td></tr>';
     return;
   }
+
   allGranjas.forEach(g => {
     tbody.innerHTML += `
             <tr>
@@ -87,21 +90,25 @@ function abrirAsignacion(userId, userName, userGranjasIds) {
   document.getElementById('assignUserId').value = userId;
 
   container.innerHTML = '';
+
   if (allGranjas.length === 0) {
-    container.innerHTML = '<p style="text-align:center; color:#666;">No hay granjas disponibles.</p>';
+    container.innerHTML = '<p style="text-align:center; color:#666;">Crea granjas primero para poder asignarlas.</p>';
   } else {
     allGranjas.forEach(granja => {
-      // Comparación segura (Enteros)
+      // Comparación robusta (Enteros)
       const tieneAcceso = userGranjasIds.map(id => parseInt(id)).includes(parseInt(granja.id));
       const checkedAttr = tieneAcceso ? 'checked' : '';
       const bgStyle = tieneAcceso ? 'background-color: #e8f8f5;' : '';
 
       const div = document.createElement('div');
       div.style.cssText = `display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #eee; border-radius: 4px; ${bgStyle}`;
+
       div.innerHTML = `
                 <input type="checkbox" id="chk_${granja.id}" value="${granja.id}" ${checkedAttr} style="width: 18px; height: 18px; margin-right: 10px; cursor: pointer;">
                 <label for="chk_${granja.id}" style="cursor: pointer; width: 100%;">${granja.nombre}</label>
             `;
+
+      // Efecto visual al marcar
       div.querySelector('input').addEventListener('change', (e) => {
         div.style.backgroundColor = e.target.checked ? '#e8f8f5' : 'transparent';
       });
@@ -160,7 +167,7 @@ async function guardarUsuario(e) {
   };
 
   if (!esEdicion && !usuario.password) {
-    alert('Contraseña obligatoria para nuevos usuarios.');
+    alert('La contraseña es obligatoria para nuevos usuarios.');
     return;
   }
 
@@ -175,9 +182,12 @@ async function guardarUsuario(e) {
       body: JSON.stringify(usuario)
     });
     if (res.ok) {
-      cerrarFormulario();
+      cerrarFormularioUsuario();
       cargarUsuarios();
-    } else { alert('Error al guardar usuario'); }
+    } else {
+      const err = await res.json();
+      alert('Error: ' + (err.error || 'Desconocido'));
+    }
   } catch (error) { alert('Error de conexión'); }
 }
 
@@ -193,15 +203,18 @@ async function editarUsuario(id) {
     document.getElementById('name').value = usuario.name;
     document.getElementById('email').value = usuario.email;
     document.getElementById('role').value = usuario.role;
+    document.getElementById('password').value = '';
 
-    abrirFormulario();
+    abrirFormularioUsuario();
+    // Scroll hacia el formulario
     document.getElementById('formContainer').scrollIntoView({ behavior: 'smooth' });
   } catch (error) { console.error(error); }
 }
 
 // --- V 3.0: Lógica de Creación de Granjas ---
 async function guardarGranja(e) {
-  e.preventDefault();
+  e.preventDefault(); // Prevenir recarga
+
   const granjaId = document.getElementById('granjaId').value;
   const esEdicion = !!granjaId;
 
@@ -220,10 +233,11 @@ async function guardarGranja(e) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(granja)
     });
+
     if (res.ok) {
       resetGranjaForm();
-      cargarTodasGranjas();
-      alert(esEdicion ? "Granja actualizada." : "Granja creada.");
+      await cargarTodasGranjas();
+      // Opcional: alert(esEdicion ? "Granja actualizada." : "Granja creada.");
     } else {
       const err = await res.json();
       alert("Error: " + (err.error || 'Desconocido'));
@@ -232,19 +246,17 @@ async function guardarGranja(e) {
 }
 
 function editarGranja(id) {
-  // Buscar la granja en el array local (más rápido)
   const granja = allGranjas.find(g => g.id === id);
   if (granja) {
     document.getElementById('granjaId').value = granja.id;
     document.getElementById('granjaNombre').value = granja.nombre;
     document.getElementById('granjaUbicacion').value = granja.ubicacion;
 
-    document.getElementById('granjaFormTitle').textContent = 'Editar Granja';
+    // Mostrar botón cancelar
     document.getElementById('cancelGranjaBtn').style.display = 'inline-block';
 
-    // Scroll suave hacia el formulario de granja
-    const form = document.getElementById('granjaForm');
-    form.scrollIntoView({ behavior: 'smooth' });
+    // Scroll hacia el formulario
+    document.getElementById('granjaForm').scrollIntoView({ behavior: 'smooth' });
   }
 }
 
@@ -265,7 +277,6 @@ async function eliminarGranja(id) {
 function resetGranjaForm() {
   document.getElementById('granjaForm').reset();
   document.getElementById('granjaId').value = '';
-  document.getElementById('granjaFormTitle').textContent = 'Gestionar Granjas';
   document.getElementById('cancelGranjaBtn').style.display = 'none';
 }
 
@@ -307,42 +318,54 @@ async function asignarGranjas(userId, userName) {
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
 
-  // Referencias
+  // Referencias DOM
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
   const userForm = document.getElementById('userForm');
   const granjaForm = document.getElementById('granjaForm');
   const cancelGranjaBtn = document.getElementById('cancelGranjaBtn');
+
+  const asignarModal = document.getElementById('asignarModal');
   const closeAsignar = document.getElementById('closeAsignarModal');
   const formAsignar = document.getElementById('asignarForm');
+
   const adminSection = document.getElementById('adminSection');
   const accessDenied = document.getElementById('accessDenied');
 
   if (currentUser && currentUser.role === 'admin') {
+    // 1. Mostrar interfaz
     if (adminSection) adminSection.style.display = 'grid';
     if (accessDenied) accessDenied.style.display = 'none';
 
-    if (toggleBtn) toggleBtn.onclick = () => {
-      const isOpen = document.getElementById('formContainer').classList.contains('is-open');
-      if (isOpen) cerrarFormulario(); else {
-        document.getElementById('userForm').reset();
-        document.getElementById('usuarioId').value = '';
-        document.getElementById('formTitle').textContent = 'Crear Nuevo Usuario';
-        abrirFormulario();
-      }
-    };
-    if (cancelBtn) cancelBtn.onclick = cerrarFormulario;
+    // 2. Configurar Formulario Usuario
+    if (toggleBtn) {
+      toggleBtn.onclick = () => {
+        const isOpen = document.getElementById('formContainer').classList.contains('is-open');
+        if (isOpen) cerrarFormularioUsuario(); else {
+          document.getElementById('userForm').reset();
+          document.getElementById('usuarioId').value = '';
+          document.getElementById('formTitle').textContent = 'Crear Nuevo Usuario';
+          abrirFormularioUsuario();
+        }
+      };
+    }
+    if (cancelBtn) cancelBtn.onclick = cerrarFormularioUsuario;
     if (userForm) userForm.onsubmit = guardarUsuario;
 
+    // 3. Configurar Formulario Granja (AQUÍ ESTÁ LA CLAVE PARA QUE TE DEJE AGREGAR)
     if (granjaForm) granjaForm.onsubmit = guardarGranja;
     if (cancelGranjaBtn) cancelGranjaBtn.onclick = resetGranjaForm;
 
-    if (closeAsignar) closeAsignar.onclick = () => document.getElementById('asignarModal').classList.remove('is-open');
+    // 4. Configurar Modal Asignación
+    if (closeAsignar) closeAsignar.onclick = () => asignarModal.classList.remove('is-open');
     if (formAsignar) formAsignar.onsubmit = guardarAsignacion;
 
+    // 5. Cargar Datos
     cargarUsuarios();
     cargarTodasGranjas();
+
   } else {
+    // Si no es admin
     if (accessDenied) accessDenied.style.display = 'block';
     if (adminSection) adminSection.style.display = 'none';
   }
