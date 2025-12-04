@@ -4,30 +4,17 @@ async function cargarLotesForSelect() {
     const token = localStorage.getItem('token');
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
-
-    // CORRECCIÓN: Usamos window.API_URL
-    const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
     const lotes = await res.json();
-
-    const select = document.getElementById('loteId'); // ID del select en salud.html
-    if (!select) return; // Protección
-
+    const select = document.getElementById('loteId');
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
-
-    // Filtramos para mostrar solo lotes activos, o todos si prefieres
     lotes.forEach(lote => {
       const option = document.createElement('option');
       option.value = lote.id;
       option.textContent = `${lote.loteId} (Stock: ${lote.cantidad})`;
       select.appendChild(option);
     });
-  } catch (error) {
-    console.error('Error al cargar lotes para select:', error);
-  }
+  } catch (error) { console.error(error); }
 }
 
 async function cargarVacunasForSelect() {
@@ -76,57 +63,76 @@ async function cargarSalud() {
     const token = localStorage.getItem('token');
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
-
-    const res = await fetch(`${window.API_URL}/salud?granjaId=${granjaId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || `Error HTTP: ${res.status}`);
-    }
-
+    const res = await fetch(`${window.API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
     const salud = await res.json();
     const tbody = document.getElementById('saludTableBody');
-    if (!tbody) return;
-
     tbody.innerHTML = '';
-
     if (Array.isArray(salud) && salud.length > 0) {
       salud.forEach(s => {
         const tr = document.createElement('tr');
-
-        // Fecha corregida
         const fechaVisual = s.fecha ? new Date(s.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' }) : 'N/A';
 
-        // Nombre del lote (con protección por si se borró el lote)
-        const nombreLote = s.Lote ? s.Lote.loteId : 'Lote Eliminado';
-
-        // Nombre del insumo
-        const nombreInsumo = s.Vacuna ? s.Vacuna.producto : '-';
+        // Formateo inteligente: Si es entero se muestra entero, si es decimal muestra hasta 4 dígitos
+        const cantidadVisual = Number.isInteger(s.cantidad) ? s.cantidad : parseFloat(s.cantidad).toFixed(4);
+        // Intentamos mostrar la unidad si el backend la enviara (requiere update en backend), por ahora mostramos la cantidad precisa
 
         tr.innerHTML = `
-          <td><strong>${nombreLote}</strong></td> 
+          <td>${s.loteId ? (s.Lote ? s.Lote.loteId : s.loteId) : 'N/A'}</td>
           <td>${s.tipo}</td>
           <td>${s.nombre}</td>
-          <td>${nombreInsumo}</td>
-          <td>${s.cantidad.toFixed(4)}</td>
+          <td>${s.Vacuna ? s.Vacuna.producto : '-'}</td>
+          <td>${cantidadVisual}</td>
           <td>${fechaVisual}</td>
-          <td>
-            <!-- Nota: Editar salud con inventario es complejo, mejor borrar y rehacer -->
-            <button onclick="eliminarSalud(${s.id})" class="btn btn-sm btn-peligro">Eliminar</button>
-          </td>
+          <td><button onclick="eliminarSalud(${s.id})" class="btn btn-sm btn-peligro">Eliminar</button></td>
         `;
         tbody.appendChild(tr);
       });
-    } else {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay eventos registrados.</td></tr>';
+    } else { tbody.innerHTML = '<tr><td colspan="7">No hay registros.</td></tr>'; }
+  } catch (error) { console.error(error); }
+}
+
+// --- INTELIGENCIA DE FILTRADO DE INSUMOS ---
+async function precargarInventarioSanitario() {
+  try {
+    const token = localStorage.getItem('token');
+    const granjaId = getSelectedGranjaId();
+    const res = await fetch(`${window.API_URL}/inventario?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) {
+      const items = await res.json();
+      // Guardamos en memoria solo lo que nos sirve (Vacunas y Medicinas)
+      inventarioSanitario = items.filter(i => i.categoria === 'Vacuna' || i.categoria === 'Medicina' || i.categoria === 'Otro');
     }
-  } catch (error) {
-    console.error('Error al cargar salud:', error);
-    const tbody = document.getElementById('saludTableBody');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="color:red;">Error: ${error.message}</td></tr>`;
+  } catch (e) { console.error("Error cargando inventario sanitario", e); }
+}
+
+function filtrarYMostrarInsumos(tipoEvento) {
+  const select = document.getElementById('vacunaSelect');
+  select.innerHTML = '<option value="">Seleccione Producto</option>';
+
+  let filtrados = [];
+
+  if (tipoEvento === 'Vacunación') {
+    // Mostrar SOLO Vacunas
+    filtrados = inventarioSanitario.filter(i => i.categoria === 'Vacuna');
+  } else if (tipoEvento === 'Tratamiento') {
+    // Mostrar Medicinas (y Otros por si acaso)
+    filtrados = inventarioSanitario.filter(i => i.categoria === 'Medicina' || i.categoria === 'Otro');
+  } else {
+    // Si es Mortalidad u Otro, no mostramos nada o todo (depende de tu lógica, aquí ocultamos)
+    return;
   }
+
+  filtrados.forEach(item => {
+    const option = document.createElement('option');
+    option.value = item.id;
+    const unidad = item.unidadMedida || 'Unidades';
+    option.textContent = `${item.producto} (Stock: ${item.cantidad} ${unidad})`;
+
+    // Datos para la calculadora
+    option.dataset.unidad = unidad;
+    option.dataset.nombre = item.producto;
+    select.appendChild(option);
+  });
 }
 
 // --- Conversor de Unidades ---
@@ -196,13 +202,27 @@ function cerrarFormulario() {
 
 async function guardarSalud(e) {
   e.preventDefault();
-
-  const saludId = document.getElementById('saludId').value;
-  const esEdicion = !!saludId;
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
-  // Cálculo retiro
+  const tipo = document.getElementById('tipo').value;
+  let cantidadInput = parseFloat(document.getElementById('cantidad').value);
+  const unidadAplicacion = document.getElementById('unidadAplicacion').value;
+
+  // Lógica de Inventario y Conversión
+  const vacunaSelect = document.getElementById('vacunaSelect');
+  const vacunaGroup = document.getElementById('vacunaGroup');
+  let vacunaId = null;
+  let cantidadFinal = cantidadInput;
+
+  if (vacunaSelect && vacunaSelect.value && vacunaGroup.style.display !== 'none') {
+    vacunaId = parseInt(vacunaSelect.value);
+    const opcionSeleccionada = vacunaSelect.options[vacunaSelect.selectedIndex];
+    const unidadBase = opcionSeleccionada.dataset.unidad;
+    cantidadFinal = calcularCantidadBase(cantidadInput, unidadAplicacion, unidadBase);
+  }
+
+  // Retiro
   const diasRetiro = parseInt(document.getElementById('diasRetiro').value) || 0;
   const fechaEvento = new Date(document.getElementById('fecha').value);
   let fechaRetiroCalculada = null;
@@ -211,66 +231,35 @@ async function guardarSalud(e) {
     fechaRetiroCalculada = fechaEvento;
   }
 
-  // Lógica de Conversión de Unidades
-  const vacunaSelect = document.getElementById('vacunaSelect');
-  const vacunaGroup = document.getElementById('vacunaGroup');
-
-  let vacunaId = null;
-  let cantidadFinal = parseFloat(document.getElementById('cantidad').value);
-  const unidadAplicacion = document.getElementById('unidadAplicacion').value; // Lo que eligió el usuario
-
-  // Solo procesamos inventario si el grupo está visible y se seleccionó algo
-  if (vacunaSelect && vacunaSelect.value && vacunaGroup.style.display !== 'none') {
-    vacunaId = parseInt(vacunaSelect.value);
-
-    // Obtenemos la unidad base del inventario (guardada en el dataset del option)
-    const opcionSeleccionada = vacunaSelect.options[vacunaSelect.selectedIndex];
-    const unidadBase = opcionSeleccionada.dataset.unidad;
-
-    // ¡AQUÍ OCURRE LA MAGIA! Convertimos lo que el usuario puso a la unidad del inventario
-    cantidadFinal = calcularCantidadBase(cantidadFinal, unidadAplicacion, unidadBase);
-
-    console.log(`Guardando consumo: ${cantidadFinal} (Unidad Base: ${unidadBase})`);
-  }
-
   const salud = {
     loteId: parseInt(document.getElementById('loteId').value),
-    tipo: document.getElementById('tipo').value,
+    tipo: tipo,
     nombre: document.getElementById('nombre').value,
-    cantidad: cantidadFinal, // Enviamos la cantidad YA CONVERTIDA
+    cantidad: cantidadFinal,
     vacunaId: vacunaId,
     fecha: document.getElementById('fecha').value,
     fechaRetiro: fechaRetiroCalculada,
     granjaId: granjaId
   };
 
-  const url = esEdicion
-    ? `${window.API_URL}/salud/${saludId}`
-    : `${window.API_URL}/salud`;
-  const method = esEdicion ? 'PUT' : 'POST';
-
+  const url = `${window.API_URL}/salud`; // Solo POST por ahora
   try {
     const token = localStorage.getItem('token');
     const res = await fetch(url, {
-      method: method,
+      method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(salud)
     });
-
     if (res.ok) {
       cerrarFormulario();
       await cargarSalud();
-      await cargarVacunasForSelect(); // Recargar stock vacunas
-      // Si fue mortalidad, recargamos lotes para ver stock aves actualizado
+      await precargarInventarioSanitario(); // Recargar stock en memoria
       if (salud.tipo === 'Mortalidad') await cargarLotesForSelect();
     } else {
       const errorText = await res.json();
-      alert('Error al guardar: ' + (errorText.error || 'Desconocido'));
+      alert('Error: ' + (errorText.error || 'Desconocido'));
     }
-  } catch (error) {
-    alert('Error de conexión');
-    console.error(error);
-  }
+  } catch (error) { alert('Error de conexión'); }
 }
 
 async function editarSalud(id) {
@@ -281,34 +270,34 @@ async function editarSalud(id) {
 }
 
 async function eliminarSalud(id) {
-  if (confirm('¿Seguro que quieres eliminar este evento?')) {
+  if (confirm('¿Eliminar evento?')) {
     try {
       const token = localStorage.getItem('token');
       const granjaId = getSelectedGranjaId();
-
       await fetch(`${window.API_URL}/salud/${id}?granjaId=${granjaId}`, {
         method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
       });
       cargarSalud();
     } catch (error) { alert('Error al eliminar'); }
   }
-}
+} F
 
 // --- Event Listener Principal (BLINDADO) ---
 document.addEventListener('DOMContentLoaded', () => {
-  const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
   if (granja) document.querySelector('header h1').textContent = `Salud (${granja.nombre})`;
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
   const form = document.getElementById('saludForm');
+
+  // Elementos para lógica dinámica
   const tipoSelect = document.getElementById('tipo');
   const vacunaSelect = document.getElementById('vacunaSelect');
   const nombreInput = document.getElementById('nombre');
   const stockInfo = document.getElementById('stockInfo');
 
-  // Mostrar/Ocultar vacuna
+  // 1. Escuchar cambios en el Tipo de Evento
   if (tipoSelect) {
     tipoSelect.addEventListener('change', () => {
       const tipo = tipoSelect.value;
@@ -317,6 +306,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (tipo === 'Vacunación' || tipo === 'Tratamiento') {
         vacunaGroup.style.display = 'flex';
         vacunaSelect.required = true;
+        // Filtrar la lista
+        filtrarYMostrarInsumos(tipo);
       } else {
         vacunaGroup.style.display = 'none';
         vacunaSelect.value = "";
@@ -326,42 +317,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Autocompletar y mostrar Stock
+  // 2. Autocompletar nombre al seleccionar vacuna
   if (vacunaSelect) {
     vacunaSelect.addEventListener('change', () => {
       const opt = vacunaSelect.options[vacunaSelect.selectedIndex];
       if (opt && opt.dataset.nombre) {
         nombreInput.value = opt.dataset.nombre;
-        // Mostrar al usuario cuánto hay disponible y en qué unidad
-        stockInfo.textContent = `Disponible en bodega: ${opt.dataset.stock} ${opt.dataset.unidad}`;
-      } else {
-        stockInfo.textContent = "";
+        stockInfo.textContent = `Disponible: ${opt.textContent.split('Stock:')[1].replace(')', '')}`;
       }
     });
   }
 
-  if (currentUser && currentUser.role !== 'viewer') {
-    if (toggleBtn) {
-      toggleBtn.style.display = 'block';
-      toggleBtn.addEventListener('click', () => {
-        const isOpen = document.getElementById('formContainer').classList.contains('is-open');
-        if (isOpen) cerrarFormulario();
-        else {
-          form.reset();
-          document.getElementById('saludId').value = '';
-          document.getElementById('formTitle').textContent = 'Registrar Evento de Salud';
-          document.getElementById('vacunaGroup').style.display = 'none';
-          abrirFormulario();
-        }
-      });
-    }
-    if (cancelBtn) cancelBtn.addEventListener('click', cerrarFormulario);
-    if (form) form.onsubmit = guardarSalud;
-  } else {
-    if (toggleBtn) toggleBtn.style.display = 'none';
+  if (toggleBtn) {
+    toggleBtn.onclick = () => {
+      const isOpen = document.getElementById('formContainer').classList.contains('is-open');
+      if (isOpen) cerrarFormulario(); else {
+        document.getElementById('saludForm').reset();
+        document.getElementById('vacunaGroup').style.display = 'none';
+        abrirFormulario();
+      }
+    };
   }
+  if (cancelBtn) cancelBtn.onclick = cerrarFormulario;
+  if (form) form.onsubmit = guardarSalud;
 
   cargarLotesForSelect();
-  cargarVacunasForSelect();
   cargarSalud();
+  precargarInventarioSanitario(); // Cargar lista de medicinas al inicio
 });
