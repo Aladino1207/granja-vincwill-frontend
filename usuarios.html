@@ -87,88 +87,52 @@
   </aside>
   <main class="main-content">
 
-
+    <!-- Mensaje de Acceso Denegado -->
     <section id="accessDenied" class="card" style="display: none;">
       <h2>Acceso Denegado</h2>
       <p>Solo los administradores pueden gestionar usuarios.</p>
       <a href="index.html">Volver al Dashboard</a>
     </section>
 
-    <div id="adminSection" style="display: none; display: grid; gap: 2rem;">
+    <div id="adminSection" style="display: none; grid-template-columns: 1fr; gap: 2rem;">
 
-      <section class="card">
-        <h2 id="granjaFormTitle">Gestionar Granjas</h2> <!-- ID añadido al título -->
-
-        <form id="granjaForm" class="form-grid form-grid-3-col" style="align-items: end;">
-          <!-- CAMBIO: Input oculto para ID de granja -->
-          <input type="hidden" id="granjaId">
-
-          <div class="form-group">
-            <label for="granjaNombre">Nombre de la Granja</label>
-            <input type="text" id="granjaNombre" class="form-control" placeholder="Ej: Granja Norte" required>
-          </div>
-          <div class="form-group">
-            <label for="granjaUbicacion">Ubicación (Opcional)</label>
-            <input type="text" id="granjaUbicacion" class="form-control" placeholder="Ej: Km 5 Vía a Manta">
-          </div>
-          <div class="form-group" style="display: flex; gap: 5px;">
-            <button type="submit" class="btn btn-primario" style="width: 100%;">Guardar</button>
-            <!-- Botón para cancelar edición -->
-            <button type="button" id="cancelGranjaBtn" class="btn btn-peligro" style="display: none;">Cancelar</button>
-          </div>
-        </form>
-
-        <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid #eee;">
-
-        <h3>Granjas Existentes</h3>
-        <div class="tabla-responsive-wrapper">
-          <table class="tabla-moderna">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Ubicación</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody id="tablaGranjasBody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Sección de Gestión de Usuarios -->
+      <!-- 1. GESTIÓN DE USUARIOS -->
       <section class="card" id="userSection">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <h2>Gestionar Usuarios</h2>
           <button id="toggleFormBtn" class="btn btn-primario">Crear Nuevo Usuario</button>
         </div>
 
+        <!-- FORMULARIO DE USUARIO (ESTO FALTABA) -->
         <div id="formContainer" class="form-desplegable-container">
-          <div class="card" style="margin-top: 1rem; background-color: #f9f9f9;">
-            <h3 id="formTitle">Crear Nuevo Usuario</h3>
+          <div class="card" style="margin-top: 1rem; background: #f9f9f9; border: 1px solid #eee;">
+            <h3 id="formTitle" style="margin-top: 0;">Crear Nuevo Usuario</h3>
             <form id="userForm" class="form-grid form-grid-2-col">
-              <input type="hidden" id="usuarioId" value="">
+              <input type="hidden" id="usuarioId">
+
               <div class="form-group">
-                <label for="name">Nombre</label>
-                <input type="text" id="name" class="form-control" placeholder="Nombre" required>
+                <label for="name">Nombre Completo</label>
+                <input type="text" id="name" class="form-control" required>
               </div>
               <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" class="form-control" placeholder="Email" required>
+                <label for="email">Correo Electrónico</label>
+                <input type="email" id="email" class="form-control" required>
               </div>
               <div class="form-group">
                 <label for="password">Contraseña</label>
-                <input type="password" id="password" class="form-control" placeholder="Dejar en blanco para no cambiar">
+                <input type="password" id="password" class="form-control" placeholder="Dejar vacío si no cambia">
               </div>
               <div class="form-group">
-                <label for="role">Rol</label>
+                <label for="role">Rol de Usuario</label>
                 <select id="role" class="form-control" required>
-                  <option value="viewer">Viewer</option>
-                  <option value="empleado">Empleado</option>
-                  <option value="admin">Administrador</option>
+                  <option value="admin">Administrador (Total)</option>
+                  <option value="empleado">Empleado (Operativo)</option>
+                  <option value="viewer">Viewer (Solo Ver)</option>
                 </select>
               </div>
-              <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
-                <button type="submit" class="btn btn-primario">Guardar</button>
+
+              <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 10px;">
+                <button type="submit" class="btn btn-primario">Guardar Usuario</button>
                 <button type="button" id="cancelBtn" class="btn btn-peligro"
                   style="background-color: #7f8c8d;">Cancelar</button>
               </div>
@@ -176,7 +140,6 @@
           </div>
         </div>
 
-        <!-- Tabla de Usuarios -->
         <div class="tabla-responsive-wrapper">
           <table id="userTable" class="tabla-moderna">
             <thead>
@@ -184,6 +147,7 @@
                 <th>Nombre</th>
                 <th>Email</th>
                 <th>Rol</th>
+                <th>Granjas Asignadas</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -192,13 +156,48 @@
         </div>
       </section>
 
-    </div>
+      <!-- 2. GESTIÓN DE GRANJAS -->
+      <section class="card">
+        <h2>Gestionar Granjas</h2>
+        <form id="granjaForm" class="form-grid form-grid-3-col" style="align-items: end;">
+          <input type="hidden" id="granjaId">
+          <div class="form-group">
+            <label for="granjaNombre">Nombre de Granja</label>
+            <input type="text" id="granjaNombre" class="form-control" placeholder="Ej: Granja Norte" required>
+          </div>
+          <div class="form-group">
+            <label for="granjaUbicacion">Ubicación</label>
+            <input type="text" id="granjaUbicacion" class="form-control" placeholder="Ej: Km 5">
+          </div>
+          <div class="form-group" style="display: flex; gap: 5px;">
+            <button type="submit" class="btn btn-primario" style="width: 100%;">Guardar</button>
+            <button type="button" id="cancelGranjaBtn" class="btn btn-peligro" style="display: none;">Cancelar</button>
+          </div>
+        </form>
+        <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid #eee;">
+        <h3>Granjas Existentes</h3>
+        <div class="tabla-responsive-wrapper">
+          <table class="tabla-moderna">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Ubicación</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tablaGranjasBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div> <!-- Fin Admin Section -->
+
     <footer>
-      <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
+      <p>© 2025 Granja Avícola VincWill.</p>
     </footer>
   </main>
 
-  <!-- MODAL DE ASIGNACIÓN (CHECKBOXES) -->
+  <!-- MODAL ASIGNACIÓN -->
   <div id="asignarModal" class="modal-wrapper">
     <div class="modal-content">
       <div class="modal-header">
@@ -207,14 +206,11 @@
       </div>
       <form id="asignarForm">
         <input type="hidden" id="assignUserId">
-        <p style="color: #666; margin-bottom: 1rem;">Selecciona las granjas a las que este usuario tendrá acceso:</p>
-
-        <!-- Aquí se inyectarán los checkboxes con JS -->
+        <p style="color: #666; margin-bottom: 1rem;">Marca las granjas a las que este usuario tendrá acceso:</p>
         <div id="granjasCheckboxes"
           style="display: grid; gap: 10px; max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 15px; border-radius: 8px; background: #f9f9f9;">
-          <!-- Ejemplo: <label><input type="checkbox"> Granja 1</label> -->
+          <!-- Checkboxes dinámicos -->
         </div>
-
         <div class="form-group" style="margin-top: 1.5rem;">
           <button type="submit" class="btn btn-primario" style="width: 100%;">Guardar Asignación</button>
         </div>
