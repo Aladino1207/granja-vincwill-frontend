@@ -15,16 +15,11 @@ async function cargarUsuarios() {
     usuarios.forEach(usuario => {
       const tr = document.createElement('tr');
 
-      // Generar etiquetas visuales
       const granjasNombres = usuario.Granjas && usuario.Granjas.length > 0
         ? usuario.Granjas.map(g => `<span class="badge">${g.nombre}</span>`).join(' ')
         : '<span style="color: #999; font-style: italic;">Sin asignar</span>';
 
-      // Generar array de IDs para el botón (Ej: [1, 5])
-      // Importante: Si no tiene granjas, enviamos un array vacío []
       const granjaIds = usuario.Granjas ? JSON.stringify(usuario.Granjas.map(g => g.id)) : '[]';
-
-      // Escapar comillas en el nombre por seguridad
       const safeName = usuario.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
       tr.innerHTML = `
@@ -35,7 +30,6 @@ async function cargarUsuarios() {
         <td>
           <div style="display: flex; gap: 5px; justify-content: flex-end;">
             <button onclick="editarUsuario(${usuario.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;" title="Editar Datos">✏️</button>
-            <!-- Pasamos el array granjaIds directamente a la función -->
             <button onclick='abrirAsignacion(${usuario.id}, "${safeName}", ${granjaIds})' class="btn btn-sm btn-primario" style="background-color: #34495e;" title="Asignar Granjas">🏠 Asignar</button>
           </div>
         </td>
@@ -56,7 +50,7 @@ async function cargarTodasGranjas() {
     });
     if (res.ok) {
       allGranjas = await res.json();
-      renderGranjasTable(); // Actualiza la tabla de abajo (informativa)
+      renderGranjasTable();
     }
   } catch (error) { console.error(error); }
 }
@@ -70,7 +64,18 @@ function renderGranjasTable() {
     return;
   }
   allGranjas.forEach(g => {
-    tbody.innerHTML += `<tr><td>${g.nombre}</td><td>${g.ubicacion || '-'}</td><td>-</td></tr>`;
+    // AQUÍ ESTABAN FALTANDO LOS BOTONES EN LA VERSIÓN ANTERIOR
+    tbody.innerHTML += `
+            <tr>
+                <td><strong>${g.nombre}</strong></td>
+                <td>${g.ubicacion || '-'}</td>
+                <td>
+                    <div style="display: flex; gap: 5px;">
+                        <button onclick="editarGranja(${g.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">✏️</button>
+                        <button onclick="eliminarGranja(${g.id})" class="btn btn-sm btn-peligro">🗑️</button>
+                    </div>
+                </td>
+            </tr>`;
   });
 }
 
@@ -88,14 +93,8 @@ function abrirAsignacion(userId, userName, userGranjasIds) {
     container.innerHTML = '<p style="text-align:center; color:#666;">No hay granjas disponibles para asignar.</p>';
   } else {
     allGranjas.forEach(granja => {
-      // CORRECCIÓN CRÍTICA: Convertimos todo a entero para asegurar que la comparación funcione
-      // userGranjasIds viene como [1, "2", 5] -> Convertimos a número
-      // granja.id viene como 1 o "1" -> Convertimos a número
-
       const tieneAcceso = userGranjasIds.map(id => parseInt(id)).includes(parseInt(granja.id));
       const checkedAttr = tieneAcceso ? 'checked' : '';
-
-      // Estilo visual si está marcado
       const bgStyle = tieneAcceso ? 'background-color: #e8f8f5;' : '';
 
       const div = document.createElement('div');
@@ -108,17 +107,13 @@ function abrirAsignacion(userId, userName, userGranjasIds) {
                     <span style="color: #999; font-size: 0.8rem; margin-left: 5px;">(${granja.ubicacion || 'Sin ubicación'})</span>
                 </label>
             `;
-
-      // Evento para resaltar al hacer clic
       const input = div.querySelector('input');
       input.addEventListener('change', (e) => {
         div.style.backgroundColor = e.target.checked ? '#e8f8f5' : 'transparent';
       });
-
       container.appendChild(div);
     });
   }
-
   modal.classList.add('is-open');
 }
 
@@ -126,11 +121,9 @@ function abrirAsignacion(userId, userName, userGranjasIds) {
 async function guardarAsignacion(e) {
   e.preventDefault();
   const userId = document.getElementById('assignUserId').value;
-  // Obtener todos los marcados
   const checkboxes = document.querySelectorAll('#granjasCheckboxes input[type="checkbox"]:checked');
   const granjaIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
 
-  // Cambiar texto del botón para feedback
   const btn = e.target.querySelector('button[type="submit"]');
   const originalText = btn.textContent;
   btn.textContent = 'Guardando...';
@@ -147,17 +140,13 @@ async function guardarAsignacion(e) {
     if (res.ok) {
       document.getElementById('asignarModal').classList.remove('is-open');
       alert('Permisos actualizados correctamente.');
-      cargarUsuarios(); // Refrescar tabla para ver los cambios
+      cargarUsuarios();
     } else {
       const err = await res.json();
       alert('Error: ' + (err.error || 'No se pudo guardar'));
     }
-  } catch (err) {
-    alert('Error de conexión');
-  } finally {
-    btn.textContent = originalText;
-    btn.disabled = false;
-  }
+  } catch (err) { alert('Error de conexión'); }
+  finally { btn.textContent = originalText; btn.disabled = false; }
 }
 
 // --- LÓGICA DEL FORMULARIO DESPLEGABLE (Usuarios) ---
@@ -176,7 +165,6 @@ function cerrarFormulario() {
 // --- Funciones CRUD (Globales, NO se filtran) ---
 async function guardarUsuario(e) {
   e.preventDefault();
-
   const usuarioId = document.getElementById('usuarioId').value;
   const esEdicion = !!usuarioId;
   const passwordInput = document.getElementById('password').value;
@@ -208,20 +196,22 @@ async function guardarUsuario(e) {
       cargarUsuarios();
     } else {
       const errorData = await res.json();
-      alert('Error: ' + (errorData.error || 'Desconocido'));
+      alert('Error al guardar usuario: ' + (errorData.error || 'Desconocido'));
     }
   } catch (error) { alert('Error de conexión'); }
 }
 
 async function editarUsuario(id) {
+  console.log("Editando usuario ID:", id); // Debug
   try {
     const token = localStorage.getItem('token');
     const res = await fetch(`${window.API_URL}/users/${id}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error('No se pudo cargar');
+    if (!res.ok) throw new Error('No se pudo cargar el usuario');
     const usuario = await res.json();
 
+    // Poblar formulario
     document.getElementById('formTitle').textContent = 'Editar Usuario';
     document.getElementById('usuarioId').value = usuario.id;
     document.getElementById('name').value = usuario.name;
@@ -230,41 +220,81 @@ async function editarUsuario(id) {
     document.getElementById('password').value = '';
     document.getElementById('password').placeholder = 'Dejar en blanco para no cambiar';
 
+    // Abrir formulario y subir scroll
     abrirFormulario();
-    window.scrollTo(0, 0);
-  } catch (error) { console.error(error); }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  } catch (error) { console.error('Error al cargar datos para editar:', error); }
 }
 
 // --- V 3.0: Lógica de Creación de Granjas ---
 async function guardarGranja(e) {
   e.preventDefault();
+  const granjaId = document.getElementById('granjaId').value;
+  const esEdicion = !!granjaId;
 
   const granja = {
     nombre: document.getElementById('granjaNombre').value,
     ubicacion: document.getElementById('granjaUbicacion').value
   };
 
+  const url = esEdicion ? `${window.API_URL}/granjas/${granjaId}` : `${window.API_URL}/granjas`;
+  const method = esEdicion ? 'PUT' : 'POST';
+
   try {
     const token = localStorage.getItem('token');
-    const res = await fetch(`${API_URL}/granjas`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
+    const res = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(granja)
     });
-
     if (res.ok) {
-      document.getElementById('granjaForm').reset();
-      await cargarTodasGranjas(); // Recargar la lista de granjas
+      resetGranjaForm();
+      cargarTodasGranjas();
+      alert(esEdicion ? "Granja actualizada." : "Granja creada.");
     } else {
-      const errorData = await res.json();
-      alert('Error al crear granja: ' + (errorData.error || 'Desconocido'));
+      const err = await res.json();
+      alert("Error: " + (err.error || 'Desconocido'));
     }
-  } catch (error) {
-    alert('Error de conexión al crear granja');
+  } catch (e) { alert("Error de conexión"); }
+}
+
+function editarGranja(id) {
+  // Buscar la granja en el array local (más rápido)
+  const granja = allGranjas.find(g => g.id === id);
+  if (granja) {
+    document.getElementById('granjaId').value = granja.id;
+    document.getElementById('granjaNombre').value = granja.nombre;
+    document.getElementById('granjaUbicacion').value = granja.ubicacion;
+
+    document.getElementById('granjaFormTitle').textContent = 'Editar Granja';
+    document.getElementById('cancelGranjaBtn').style.display = 'inline-block';
+
+    // Scroll suave hacia el formulario de granja
+    const form = document.getElementById('granjaForm');
+    form.scrollIntoView({ behavior: 'smooth' });
   }
+}
+
+async function eliminarGranja(id) {
+  if (confirm("¿Estás seguro? Esto eliminará TODOS los datos (lotes, ventas, costos) asociados a esta granja permanentemente.")) {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${window.API_URL}/granjas/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) cargarTodasGranjas();
+      else alert("No se pudo eliminar");
+    } catch (e) { alert("Error de conexión"); }
+  }
+}
+
+function resetGranjaForm() {
+  document.getElementById('granjaForm').reset();
+  document.getElementById('granjaId').value = '';
+  document.getElementById('granjaFormTitle').textContent = 'Gestionar Granjas';
+  document.getElementById('cancelGranjaBtn').style.display = 'none';
 }
 
 
@@ -305,7 +335,6 @@ async function asignarGranjas(userId, userName) {
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
 
-  // Referencias DOM
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
   const userForm = document.getElementById('userForm');
@@ -316,48 +345,41 @@ document.addEventListener('DOMContentLoaded', () => {
   const accessDenied = document.getElementById('accessDenied');
 
   const granjaForm = document.getElementById('granjaForm');
+  const cancelGranjaBtn = document.getElementById('cancelGranjaBtn');
 
-  // Modal Asignación
   const asignarModal = document.getElementById('asignarModal');
   const closeAsignar = document.getElementById('closeAsignarModal');
   const formAsignar = document.getElementById('asignarForm');
 
   if (currentUser && currentUser.role === 'admin') {
-    // Mostrar interfaz admin
     if (userSection) userSection.style.display = 'block';
     if (adminSection) adminSection.style.display = 'grid';
     if (accessDenied) accessDenied.style.display = 'none';
 
-    // Configurar toggle form usuario
     if (toggleBtn) {
-      toggleBtn.style.display = 'block';
-      toggleBtn.addEventListener('click', () => {
+      toggleBtn.onclick = () => {
         const isOpen = formContainer.classList.contains('is-open');
-        if (isOpen) cerrarFormulario();
-        else {
+        if (isOpen) cerrarFormulario(); else {
           document.getElementById('userForm').reset();
           document.getElementById('usuarioId').value = '';
           document.getElementById('formTitle').textContent = 'Crear Nuevo Usuario';
           abrirFormulario();
         }
-      });
+      };
     }
-    if (cancelBtn) cancelBtn.addEventListener('click', cerrarFormulario);
+    if (cancelBtn) cancelBtn.onclick = cerrarFormulario;
     if (userForm) userForm.onsubmit = guardarUsuario;
 
-    // Configurar form granja
     if (granjaForm) granjaForm.onsubmit = guardarGranja;
+    if (cancelGranjaBtn) cancelGranjaBtn.onclick = resetGranjaForm;
 
-    // Configurar Modal Asignar
     if (closeAsignar) closeAsignar.onclick = () => asignarModal.classList.remove('is-open');
     if (formAsignar) formAsignar.onsubmit = guardarAsignacion;
 
-    // Carga inicial de datos
     cargarUsuarios();
     cargarTodasGranjas();
 
   } else {
-    // Si no es admin
     if (accessDenied) accessDenied.style.display = 'block';
     if (userSection) userSection.style.display = 'none';
     if (adminSection) adminSection.style.display = 'none';
