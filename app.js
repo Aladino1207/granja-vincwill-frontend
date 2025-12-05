@@ -1,6 +1,32 @@
 window.API_URL = 'https://granja-vincwill-backend.onrender.com';
 
-// --- 1. UTILIDADES GLOBALES ---
+
+// ==================================================
+// 1. CONFIGURACIÓN DE PERMISOS (RBAC)
+// ==================================================
+const PERMISOS = {
+  admin: {
+    acceso: ['*'], // Todo
+    sidebar: ['operaciones', 'finanzas', 'admin'] // IDs de los grupos del sidebar
+  },
+  empleado: {
+    acceso: [
+      'index.html', 'granjas.html', 'login.html',
+      'galpones.html', 'lotes.html', 'salud.html',
+      'agua.html', 'seguimiento.html', 'inventarios.html'
+    ],
+    sidebar: ['operaciones'] // Solo ve operaciones
+  },
+  viewer: {
+    acceso: ['index.html', 'granjas.html', 'login.html'],
+    sidebar: [] // No ve ningún grupo (solo dashboard que está fuera de grupo)
+  }
+};
+
+// ==================================================
+// 2. UTILIDADES Y SEGURIDAD
+// ==================================================
+
 function getSelectedGranjaId() {
   try {
     const granja = JSON.parse(localStorage.getItem('selectedGranja'));
@@ -9,7 +35,6 @@ function getSelectedGranjaId() {
 
   const path = window.location.pathname.split('/').pop();
   if (path !== 'login.html' && path !== 'granjas.html') {
-    // Si no hay granja, forzamos la selección
     window.location.href = 'granjas.html';
   }
   return null;
@@ -26,7 +51,6 @@ async function handleJsonResponse(res) {
   return await res.json();
 }
 
-// --- 2. AUTENTICACIÓN ---
 async function login(e) {
   e.preventDefault();
   const email = document.getElementById('email').value.trim();
@@ -51,8 +75,6 @@ async function login(e) {
     const data = JSON.parse(text);
     localStorage.setItem('token', data.token);
     localStorage.setItem('currentUser', JSON.stringify(data.user));
-
-    // Redirigir a selección de granja
     window.location.href = 'granjas.html';
   } catch (error) {
     if (errorMessage) errorMessage.textContent = 'Error de conexión.';
@@ -71,40 +93,81 @@ async function checkAccess() {
   const token = localStorage.getItem('token');
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const selectedGranja = localStorage.getItem('selectedGranja');
-  const path = window.location.pathname.split('/').pop();
+  const path = window.location.pathname.split('/').pop() || 'index.html'; // Default index
 
   if (path === 'login.html') return;
 
-  // 1. Sin sesión -> Login
+  // 1. Validación Básica
   if (!token || !currentUser) { logout(); return; }
+  if (!selectedGranja && path !== 'granjas.html') { window.location.href = 'granjas.html'; return; }
+  if ((path === 'login.html' || path === 'granjas.html') && selectedGranja) { window.location.href = 'index.html'; return; }
 
-  // 2. Sin granja -> Selector (salvo que ya estemos ahí)
-  if (!selectedGranja) {
-    if (path === 'granjas.html') return;
-    window.location.href = 'granjas.html';
-    return;
-  }
-
-  // 3. Con todo -> Dashboard (si intenta ir a login o selector)
-  if (path === 'login.html' || path === 'granjas.html') {
-    window.location.href = 'index.html';
-    return;
-  }
-
-  // 4. Verificar Token
+  // 2. Validación de Token con Backend
   try {
     const res = await fetch(`${API_URL}/mis-granjas`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) { logout(); return; }
   } catch (error) { logout(); return; }
 
-  // 5. Permisos de Viewer
-  if (currentUser.role === 'viewer' && path !== 'index.html') {
-    const main = document.querySelector('main');
-    if (main) main.innerHTML = `<section class="card"><h2>Acceso Denegado</h2><a href="index.html">Volver</a></section>`;
+  // 3. VALIDACIÓN ESTRICTA DE ROLES (V 4.2)
+  const rol = currentUser.role;
+  const reglas = PERMISOS[rol];
+
+  if (reglas && !reglas.acceso.includes('*')) {
+    // Si no tiene acceso total (*), verificamos si la página está en su lista
+    if (!reglas.acceso.includes(path)) {
+      document.querySelector('main').innerHTML = `
+            <section class="card" style="text-align: center; padding: 50px;">
+              <h2 style="color: var(--color-peligro);">⛔ Acceso Denegado</h2>
+              <p>Tu perfil de <strong>${rol.toUpperCase()}</strong> no tiene permisos para ver el módulo <em>${path}</em>.</p>
+              <a href="index.html" class="btn btn-primario">Volver al Dashboard</a>
+            </section>`;
+      // Ocultar sidebar para que no intente navegar
+      document.querySelector('.sidebar').style.display = 'none';
+      throw new Error("Acceso denegado por rol"); // Detener ejecución de scripts posteriores
+    }
+  }
+
+  // Permisos de Viewer específicos (UI)
+  if (rol === 'viewer') {
+    document.querySelectorAll('.form-desplegable-container, #toggleFormBtn, .btn-peligro, .btn-primario').forEach(el => {
+      if (el.tagName === 'BUTTON' || el.classList.contains('form-desplegable-container')) el.style.display = 'none';
+    });
   }
 }
 
-// --- 3. LÓGICA DE UI (HEADER, SIDEBAR Y MÓVIL) ---
+// ==================================================
+// 3. UI & SIDEBAR
+// ==================================================
+
+function filtrarMenuPorRol() {
+  const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  if (!currentUser) return;
+
+  const rol = currentUser.role;
+  const reglas = PERMISOS[rol];
+
+  // Si es admin, ve todo. Si no, filtramos.
+  if (reglas && !reglas.acceso.includes('*')) {
+
+    // 1. Grupos del Sidebar (Operaciones, Finanzas, Admin)
+    const gruposPermitidos = reglas.sidebar; // ej: ['operaciones']
+
+    // Ocultar grupos no permitidos
+    const todosLosGrupos = document.querySelectorAll('.nav-group');
+
+    todosLosGrupos.forEach(grupo => {
+      const titulo = grupo.querySelector('.nav-category-title');
+      if (titulo) {
+        const targetId = titulo.dataset.target; // ej: #operaciones-links
+        const idLimpio = targetId.replace('#', '').replace('-links', ''); // operaciones
+
+        if (!gruposPermitidos.includes(idLimpio)) {
+          grupo.style.display = 'none'; // OCULTAR GRUPO COMPLETO
+        }
+      }
+    });
+  }
+}
 
 function initializeUserProfile() {
   const userBtn = document.getElementById('userMenuBtn');
@@ -147,7 +210,6 @@ function initializeUserProfile() {
 }
 
 function initializeSidebar() {
-  // Acordeón
   document.querySelectorAll('.nav-category-title').forEach(title => {
     title.addEventListener('click', () => {
       const targetId = title.dataset.target;
@@ -156,7 +218,6 @@ function initializeSidebar() {
     });
   });
 
-  // Link Activo
   const path = window.location.pathname.split('/').pop();
   try {
     let activeLink;
@@ -502,34 +563,28 @@ function mostrarAlertasProduccion() {
 document.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname.split('/').pop();
 
-  // 1. LOGIN: Solo vincular formulario y salir
   if (path === 'login.html') {
     const loginForm = document.getElementById('loginForm');
     if (loginForm) loginForm.onsubmit = login;
     return;
   }
 
-  // 2. SEGURIDAD: Verificar acceso en todas las demás páginas
-  checkAccess();
+  checkAccess(); // Valida permisos y redirige si no tiene acceso
 
-  // 3. UI GLOBAL: Inicializar Header y Sidebar (Menú de Usuario)
-  // Se ejecuta en TODAS las páginas internas (index, lotes, ventas, etc.)
   if (path !== 'granjas.html') {
-    initializeUserProfile(); // <--- ESTO ARREGLA EL MENÚ EN LOTES
+    initializeUserProfile();
     initializeSidebar();
     setupMobileMenu();
+    filtrarMenuPorRol(); // <--- AQUI SE APLICA EL FILTRO VISUAL
   }
 
-  // 4. LÓGICA ESPECÍFICA DEL DASHBOARD
   if (path === 'index.html') {
     const granja = JSON.parse(localStorage.getItem('selectedGranja'));
     if (granja) document.querySelector('header h1').textContent = `Dashboard (${granja.nombre})`;
-
-    // Cargar widgets solo si estamos en el dashboard
     actualizarDashboard();
     mostrarCalendario();
     mostrarGraficoAgua();
-
+    // Llamar al resto de gráficos
     if (typeof mostrarGraficosDashboard === 'function') mostrarGraficosDashboard();
     if (typeof mostrarCostosPieChart === 'function') mostrarCostosPieChart();
     if (typeof mostrarIngresosCostosBarChart === 'function') mostrarIngresosCostosBarChart();
@@ -537,9 +592,4 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Prevenir caché bfcache
-window.addEventListener('pageshow', (event) => {
-  if (event.persisted) {
-    window.location.reload();
-  }
-});
+window.addEventListener('pageshow', (event) => { if (event.persisted) window.location.reload(); });
