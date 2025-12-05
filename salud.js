@@ -284,8 +284,13 @@ async function eliminarSalud(id) {
 
 // --- Event Listener Principal (BLINDADO) ---
 document.addEventListener('DOMContentLoaded', () => {
+  const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
-  if (granja) document.querySelector('header h1').textContent = `Salud (${granja.nombre})`;
+
+  if (granja) {
+    const header = document.querySelector('header h1');
+    if (header) header.textContent = `Salud (${granja.nombre})`;
+  }
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
@@ -297,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const nombreInput = document.getElementById('nombre');
   const stockInfo = document.getElementById('stockInfo');
 
-  // 1. Escuchar cambios en el Tipo de Evento
+  // Listeners dinámicos
   if (tipoSelect) {
     tipoSelect.addEventListener('change', () => {
       const tipo = tipoSelect.value;
@@ -306,7 +311,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (tipo === 'Vacunación' || tipo === 'Tratamiento') {
         vacunaGroup.style.display = 'flex';
         vacunaSelect.required = true;
-        // Filtrar la lista
         filtrarYMostrarInsumos(tipo);
       } else {
         vacunaGroup.style.display = 'none';
@@ -317,31 +321,43 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. Autocompletar nombre al seleccionar vacuna
   if (vacunaSelect) {
     vacunaSelect.addEventListener('change', () => {
       const opt = vacunaSelect.options[vacunaSelect.selectedIndex];
       if (opt && opt.dataset.nombre) {
         nombreInput.value = opt.dataset.nombre;
-        stockInfo.textContent = `Disponible: ${opt.textContent.split('Stock:')[1].replace(')', '')}`;
+        stockInfo.textContent = `Disponible: ${opt.dataset.stock} ${opt.dataset.unidad}`;
       }
     });
   }
 
-  if (toggleBtn) {
-    toggleBtn.onclick = () => {
-      const isOpen = document.getElementById('formContainer').classList.contains('is-open');
-      if (isOpen) cerrarFormulario(); else {
-        document.getElementById('saludForm').reset();
-        document.getElementById('vacunaGroup').style.display = 'none';
-        abrirFormulario();
-      }
-    };
+  // Configuración de botones según permisos
+  if (currentUser && currentUser.role !== 'viewer') {
+    // Mostrar el botón de acción
+    if (toggleBtn) {
+      toggleBtn.style.display = 'block';
+      toggleBtn.addEventListener('click', () => {
+        // Toggle lógico
+        const container = document.getElementById('formContainer');
+        const isOpen = container.classList.contains('is-open');
+        if (isOpen) {
+          cerrarFormulario();
+        } else {
+          document.getElementById('saludForm').reset();
+          document.getElementById('vacunaGroup').style.display = 'none';
+          abrirFormulario();
+        }
+      });
+    }
+
+    if (cancelBtn) cancelBtn.addEventListener('click', cerrarFormulario);
+    if (form) form.onsubmit = guardarSalud;
+
+  } else {
+    if (toggleBtn) toggleBtn.style.display = 'none';
   }
-  if (cancelBtn) cancelBtn.onclick = cerrarFormulario;
-  if (form) form.onsubmit = guardarSalud;
 
   cargarLotesForSelect();
   cargarSalud();
-  precargarInventarioSanitario(); // Cargar lista de medicinas al inicio
+  precargarInventarioSanitario();
 });

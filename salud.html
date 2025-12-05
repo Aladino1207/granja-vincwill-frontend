@@ -88,6 +88,8 @@
   </aside>
 
   <main class="main-content">
+
+    <!-- 1. CONTENEDOR DEL FORMULARIO (OCULTO POR DEFECTO) -->
     <div id="formContainer" class="form-desplegable-container">
       <section class="card">
         <h2 id="formTitle">Registrar Evento de Salud</h2>
@@ -118,7 +120,6 @@
             <select id="vacunaSelect" class="form-control">
               <option value="">Selecciona Vacuna/Medicina</option>
             </select>
-            <!-- Aquí mostramos la unidad base para referencia -->
             <small id="stockInfo" style="color: var(--color-secundario); font-size: 0.8rem;"></small>
           </div>
 
@@ -163,9 +164,11 @@
       </section>
     </div>
 
+    <!-- 2. TARJETA DE LISTA (CON EL BOTÓN DE ABRIR) -->
     <section class="card">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2>Lista de Eventos de Salud</h2>
+        <!-- ESTE ES EL BOTÓN CLAVE -->
         <button id="toggleFormBtn" class="btn btn-primario">Registrar Nuevo Evento</button>
       </div>
 
