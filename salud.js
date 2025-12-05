@@ -181,21 +181,35 @@ function calcularCantidadBase(cantidadInput, unidadInput, unidadBase) {
 }
 
 // --- UI Logic ---
-function abrirFormulario() {
-  document.getElementById('formContainer').classList.add('is-open');
-  document.getElementById('toggleFormBtn').textContent = 'Cancelar';
+function abrirFormularioSalud() {
+  const container = document.getElementById('formContainer');
+  if (container) container.classList.add('is-open');
+
+  const btn = document.getElementById('toggleFormBtn');
+  if (btn) btn.textContent = 'Cancelar';
 }
-function cerrarFormulario() {
-  document.getElementById('formContainer').classList.remove('is-open');
-  document.getElementById('toggleFormBtn').textContent = 'Registrar Nuevo Evento';
-  document.getElementById('saludForm').reset();
-  document.getElementById('saludId').value = '';
-  document.getElementById('formTitle').textContent = 'Registrar Evento de Salud';
+function cerrarFormularioSalud() {
+  const container = document.getElementById('formContainer');
+  if (container) container.classList.remove('is-open');
+
+  const btn = document.getElementById('toggleFormBtn');
+  if (btn) btn.textContent = 'Registrar Nuevo Evento';
+
+  const form = document.getElementById('saludForm');
+  if (form) form.reset();
+
+  if (document.getElementById('saludId')) document.getElementById('saludId').value = '';
+
+  const title = document.getElementById('formTitle');
+  if (title) title.textContent = 'Registrar Evento de Salud';
+
   // Ocultar campo vacuna
   if (document.getElementById('vacunaGroup')) {
     document.getElementById('vacunaGroup').style.display = 'none';
   }
-  document.getElementById('stockInfo').textContent = '';
+  if (document.getElementById('stockInfo')) {
+    document.getElementById('stockInfo').textContent = '';
+  }
 }
 
 // --- Funciones CRUD (BLINDADAS) ---
@@ -251,7 +265,7 @@ async function guardarSalud(e) {
       body: JSON.stringify(salud)
     });
     if (res.ok) {
-      cerrarFormulario();
+      cerrarFormularioSalud(); // <--- LLAMADA CORREGIDA
       await cargarSalud();
       await precargarInventarioSanitario(); // Recargar stock en memoria
       if (salud.tipo === 'Mortalidad') await cargarLotesForSelect();
@@ -285,62 +299,77 @@ async function eliminarSalud(id) {
 // --- Event Listener Principal (BLINDADO) ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  const granja = JSON.parse(localStorage.getItem('selectedGranja'));
 
-  // Referencias DOM
+  if (granja) {
+    const header = document.querySelector('header h1');
+    if (header) header.textContent = `Salud (${granja.nombre})`;
+  }
+
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
-  const userForm = document.getElementById('userForm');
+  const form = document.getElementById('saludForm');
 
-  const granjaForm = document.getElementById('granjaForm');
-  const cancelGranjaBtn = document.getElementById('cancelGranjaBtn');
+  // Elementos para lógica dinámica
+  const tipoSelect = document.getElementById('tipo');
+  const vacunaSelect = document.getElementById('vacunaSelect');
+  const nombreInput = document.getElementById('nombre');
+  const stockInfo = document.getElementById('stockInfo');
 
-  const closeAsignar = document.getElementById('closeAsignarModal');
-  const formAsignar = document.getElementById('asignarForm');
+  // 1. Escuchar cambios en el Tipo de Evento
+  if (tipoSelect) {
+    tipoSelect.addEventListener('change', () => {
+      const tipo = tipoSelect.value;
+      const vacunaGroup = document.getElementById('vacunaGroup');
 
-  const adminSection = document.getElementById('adminSection');
-  const accessDenied = document.getElementById('accessDenied');
+      if (tipo === 'Vacunación' || tipo === 'Tratamiento') {
+        vacunaGroup.style.display = 'flex';
+        vacunaSelect.required = true;
+        // Filtrar la lista
+        filtrarYMostrarInsumos(tipo);
+      } else {
+        vacunaGroup.style.display = 'none';
+        vacunaSelect.value = "";
+        vacunaSelect.required = false;
+        if (stockInfo) stockInfo.textContent = "";
+      }
+    });
+  }
 
-  if (currentUser && currentUser.role === 'admin') {
-    // 1. Mostrar interfaz
-    if (adminSection) adminSection.style.display = 'grid';
-    if (accessDenied) accessDenied.style.display = 'none';
+  // 2. Autocompletar nombre al seleccionar vacuna
+  if (vacunaSelect) {
+    vacunaSelect.addEventListener('change', () => {
+      const opt = vacunaSelect.options[vacunaSelect.selectedIndex];
+      if (opt && opt.dataset.nombre) {
+        nombreInput.value = opt.dataset.nombre;
+        if (stockInfo) stockInfo.textContent = `Disponible: ${opt.dataset.stock} ${opt.dataset.unidad}`;
+      }
+    });
+  }
 
-    // 2. Configurar Formulario Usuario
+  if (currentUser && currentUser.role !== 'viewer') {
     if (toggleBtn) {
-      toggleBtn.onclick = () => {
+      toggleBtn.style.display = 'block';
+      toggleBtn.addEventListener('click', () => {
         const isOpen = document.getElementById('formContainer').classList.contains('is-open');
-        // AQUÍ ESTÁ LA CORRECCIÓN: Llamamos a las funciones renombradas
-        if (isOpen) cerrarFormularioUsuario();
-        else {
-          document.getElementById('userForm').reset();
-          document.getElementById('usuarioId').value = '';
-          document.getElementById('formTitle').textContent = 'Crear Nuevo Usuario';
-          abrirFormularioUsuario();
+        if (isOpen) {
+          cerrarFormularioSalud(); // <--- LLAMADA CORREGIDA
+        } else {
+          if (document.getElementById('saludForm')) document.getElementById('saludForm').reset();
+          if (document.getElementById('vacunaGroup')) document.getElementById('vacunaGroup').style.display = 'none';
+          abrirFormularioSalud(); // <--- LLAMADA CORREGIDA
         }
-      };
+      });
     }
-    if (cancelBtn) cancelBtn.onclick = cerrarFormularioUsuario;
-    if (userForm) userForm.onsubmit = guardarUsuario;
 
-    // 3. Configurar Formulario Granja
-    if (granjaForm) granjaForm.onsubmit = guardarGranja;
-    if (cancelGranjaBtn) cancelGranjaBtn.onclick = resetGranjaForm;
-
-    // 4. Configurar Modal Asignación
-    if (closeAsignar) closeAsignar.onclick = () => document.getElementById('asignarModal').classList.remove('is-open');
-    if (formAsignar) formAsignar.onsubmit = guardarAsignacion;
-
-    // 5. Cargar Datos
-    cargarUsuarios();
-    cargarTodasGranjas();
+    if (cancelBtn) cancelBtn.addEventListener('click', cerrarFormularioSalud); // <--- LLAMADA CORREGIDA
+    if (form) form.onsubmit = guardarSalud;
 
   } else {
-    // Si no es admin
-    if (accessDenied) accessDenied.style.display = 'block';
-    if (adminSection) adminSection.style.display = 'none';
+    if (toggleBtn) toggleBtn.style.display = 'none';
   }
 
   cargarLotesForSelect();
   cargarSalud();
-  precargarInventarioSanitario();
+  precargarInventarioSanitario(); // Cargar lista de medicinas al inicio
 });
