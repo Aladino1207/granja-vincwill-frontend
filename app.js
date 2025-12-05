@@ -1,5 +1,36 @@
 window.API_URL = 'https://granja-vincwill-backend.onrender.com';
 
+// --- FUNCIÓN PARA CARGAR EL LOGO ---
+async function cargarLogoSistema() {
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return; // En login no hay granja seleccionada aún (ver nota abajo)
+
+  try {
+    // Intentamos leer de localStorage primero para velocidad
+    const configLocal = JSON.parse(localStorage.getItem('granjaConfig'));
+
+    // Función interna para aplicar
+    const aplicarLogo = (url) => {
+      const logoEls = document.querySelectorAll('.app-logo-img'); // Clase para todas las imgs de logo
+      logoEls.forEach(img => {
+        if (url) img.src = url;
+      });
+    };
+
+    if (configLocal && configLocal.logoUrl) {
+      aplicarLogo(configLocal.logoUrl);
+    }
+
+    // De todas formas validamos con el servidor (segundo plano)
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/config?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) {
+      const config = await res.json();
+      localStorage.setItem('granjaConfig', JSON.stringify(config)); // Guardar caché
+      if (config.logoUrl) aplicarLogo(config.logoUrl);
+    }
+  } catch (e) { console.error("Error cargando logo", e); }
+}
 
 // ==================================================
 // 1. CONFIGURACIÓN DE PERMISOS (RBAC)
@@ -571,11 +602,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   checkAccess(); // Valida permisos y redirige si no tiene acceso
 
-  if (path !== 'granjas.html') {
+  if (path !== 'login.html' && path !== 'granjas.html') {
     initializeUserProfile();
     initializeSidebar();
     setupMobileMenu();
-    filtrarMenuPorRol(); // <--- AQUI SE APLICA EL FILTRO VISUAL
+    cargarLogoSistema(); // <--- LLAMADA NUEVA
   }
 
   if (path === 'index.html') {

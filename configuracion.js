@@ -13,9 +13,10 @@ async function cargarConfiguracion() {
     document.getElementById('notificaciones').value = config.notificaciones;
     document.getElementById('idioma').value = config.idioma;
     document.getElementById('nombreGranja').value = config.nombreGranja;
-
-    // Cargar el plan
     document.getElementById('planVacunacion').value = config.planVacunacion || "7,14,21";
+
+    // Cargar Logo
+    if (config.logoUrl) document.getElementById('logoUrl').value = config.logoUrl;
 
   } catch (error) { console.error(error); }
 }
@@ -30,7 +31,8 @@ async function guardarConfiguracion(e) {
     notificaciones: document.getElementById('notificaciones').value,
     idioma: document.getElementById('idioma').value,
     nombreGranja: document.getElementById('nombreGranja').value,
-    planVacunacion: document.getElementById('planVacunacion').value, // Guardar plan
+    planVacunacion: document.getElementById('planVacunacion').value,
+    logoUrl: document.getElementById('logoUrl').value,
     granjaId: granjaId
   };
   try {
@@ -41,6 +43,8 @@ async function guardarConfiguracion(e) {
     });
     if (res.ok) {
       alert('Ajustes guardados');
+      const logoImg = document.getElementById('appLogo');
+      if (logoImg && config.logoUrl) logoImg.src = config.logoUrl;
       const granjaData = JSON.parse(localStorage.getItem('selectedGranja'));
       if (granjaData) {
         granjaData.nombre = config.nombreGranja;
