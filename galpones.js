@@ -109,19 +109,30 @@ async function guardarMantenimiento(e) {
 async function liberarGalpon(id) {
     if (confirm("¿Confirmas que la desinfección ha terminado y el galpón está listo?")) {
         const token = localStorage.getItem('token');
+        const granjaId = getSelectedGranjaId(); // Obtenemos el ID
+
         try {
             const res = await fetch(`${window.API_URL}/galpones/liberar/${id}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                // CORRECCIÓN: Enviamos el granjaId en el cuerpo
+                body: JSON.stringify({ granjaId: granjaId })
             });
+
             if (res.ok) {
                 alert("Galpón liberado correctamente.");
                 cargarGalpones();
             } else {
                 const err = await res.json();
-                alert("Error: " + err.error);
+                alert("Error: " + (err.error || 'Desconocido'));
             }
-        } catch (e) { alert("Error de conexión"); }
+        } catch (e) {
+            console.error(e);
+            alert("Error de conexión");
+        }
     }
 }
 
