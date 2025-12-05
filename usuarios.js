@@ -123,6 +123,30 @@ async function editarUsuario(id) {
   } catch (error) { console.error(error); }
 }
 
+async function eliminarUsuario(id) {
+  if (!confirm("¿Estás seguro de que quieres eliminar este usuario? Esta acción no se puede deshacer.")) {
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${window.API_URL}/users/${id}`, { // Asegúrate que tu backend tenga app.delete('/users/:id')
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (res.ok) {
+      cargarUsuarios();
+    } else {
+      const err = await res.json();
+      alert("Error al eliminar: " + (err.error || "Desconocido"));
+    }
+  } catch (e) {
+    alert("Error de conexión");
+    console.error(e);
+  }
+}
+
 // ==========================================
 // 2. GESTIÓN DE GRANJAS (LÓGICA)
 // ==========================================
