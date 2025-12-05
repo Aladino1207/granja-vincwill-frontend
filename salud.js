@@ -280,7 +280,7 @@ async function eliminarSalud(id) {
       cargarSalud();
     } catch (error) { alert('Error al eliminar'); }
   }
-} F
+}
 
 // --- Event Listener Principal (BLINDADO) ---
 document.addEventListener('DOMContentLoaded', () => {
