@@ -285,76 +285,59 @@ async function eliminarSalud(id) {
 // --- Event Listener Principal (BLINDADO) ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-  const granja = JSON.parse(localStorage.getItem('selectedGranja'));
 
-  if (granja) {
-    const header = document.querySelector('header h1');
-    if (header) header.textContent = `Salud (${granja.nombre})`;
-  }
-
+  // Referencias DOM
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
-  const form = document.getElementById('saludForm');
+  const userForm = document.getElementById('userForm');
 
-  // Elementos para lógica dinámica
-  const tipoSelect = document.getElementById('tipo');
-  const vacunaSelect = document.getElementById('vacunaSelect');
-  const nombreInput = document.getElementById('nombre');
-  const stockInfo = document.getElementById('stockInfo');
+  const granjaForm = document.getElementById('granjaForm');
+  const cancelGranjaBtn = document.getElementById('cancelGranjaBtn');
 
-  // Listeners dinámicos
-  if (tipoSelect) {
-    tipoSelect.addEventListener('change', () => {
-      const tipo = tipoSelect.value;
-      const vacunaGroup = document.getElementById('vacunaGroup');
+  const closeAsignar = document.getElementById('closeAsignarModal');
+  const formAsignar = document.getElementById('asignarForm');
 
-      if (tipo === 'Vacunación' || tipo === 'Tratamiento') {
-        vacunaGroup.style.display = 'flex';
-        vacunaSelect.required = true;
-        filtrarYMostrarInsumos(tipo);
-      } else {
-        vacunaGroup.style.display = 'none';
-        vacunaSelect.value = "";
-        vacunaSelect.required = false;
-        stockInfo.textContent = "";
-      }
-    });
-  }
+  const adminSection = document.getElementById('adminSection');
+  const accessDenied = document.getElementById('accessDenied');
 
-  if (vacunaSelect) {
-    vacunaSelect.addEventListener('change', () => {
-      const opt = vacunaSelect.options[vacunaSelect.selectedIndex];
-      if (opt && opt.dataset.nombre) {
-        nombreInput.value = opt.dataset.nombre;
-        stockInfo.textContent = `Disponible: ${opt.dataset.stock} ${opt.dataset.unidad}`;
-      }
-    });
-  }
+  if (currentUser && currentUser.role === 'admin') {
+    // 1. Mostrar interfaz
+    if (adminSection) adminSection.style.display = 'grid';
+    if (accessDenied) accessDenied.style.display = 'none';
 
-  // Configuración de botones según permisos
-  if (currentUser && currentUser.role !== 'viewer') {
-    // Mostrar el botón de acción
+    // 2. Configurar Formulario Usuario
     if (toggleBtn) {
-      toggleBtn.style.display = 'block';
-      toggleBtn.addEventListener('click', () => {
-        // Toggle lógico
-        const container = document.getElementById('formContainer');
-        const isOpen = container.classList.contains('is-open');
-        if (isOpen) {
-          cerrarFormulario();
-        } else {
-          document.getElementById('saludForm').reset();
-          document.getElementById('vacunaGroup').style.display = 'none';
-          abrirFormulario();
+      toggleBtn.onclick = () => {
+        const isOpen = document.getElementById('formContainer').classList.contains('is-open');
+        // AQUÍ ESTÁ LA CORRECCIÓN: Llamamos a las funciones renombradas
+        if (isOpen) cerrarFormularioUsuario();
+        else {
+          document.getElementById('userForm').reset();
+          document.getElementById('usuarioId').value = '';
+          document.getElementById('formTitle').textContent = 'Crear Nuevo Usuario';
+          abrirFormularioUsuario();
         }
-      });
+      };
     }
+    if (cancelBtn) cancelBtn.onclick = cerrarFormularioUsuario;
+    if (userForm) userForm.onsubmit = guardarUsuario;
 
-    if (cancelBtn) cancelBtn.addEventListener('click', cerrarFormulario);
-    if (form) form.onsubmit = guardarSalud;
+    // 3. Configurar Formulario Granja
+    if (granjaForm) granjaForm.onsubmit = guardarGranja;
+    if (cancelGranjaBtn) cancelGranjaBtn.onclick = resetGranjaForm;
+
+    // 4. Configurar Modal Asignación
+    if (closeAsignar) closeAsignar.onclick = () => document.getElementById('asignarModal').classList.remove('is-open');
+    if (formAsignar) formAsignar.onsubmit = guardarAsignacion;
+
+    // 5. Cargar Datos
+    cargarUsuarios();
+    cargarTodasGranjas();
 
   } else {
-    if (toggleBtn) toggleBtn.style.display = 'none';
+    // Si no es admin
+    if (accessDenied) accessDenied.style.display = 'block';
+    if (adminSection) adminSection.style.display = 'none';
   }
 
   cargarLotesForSelect();
