@@ -4,11 +4,18 @@ async function cargarLotesForSelect() {
     const token = localStorage.getItem('token');
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
+
     const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
     const lotes = await res.json();
     const select = document.getElementById('loteId');
+    if (!select) return;
+
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
-    lotes.forEach(lote => {
+
+    // FILTRO: Solo disponibles
+    const lotesActivos = lotes.filter(l => l.estado === 'disponible');
+
+    lotesActivos.forEach(lote => {
       const option = document.createElement('option');
       option.value = lote.id;
       option.textContent = `${lote.loteId} (Stock: ${lote.cantidad})`;

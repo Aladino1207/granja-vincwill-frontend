@@ -2,27 +2,28 @@
 async function cargarLotesForSelect() {
   try {
     const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    // V 3.0: Añadimos granjaId al fetch
     const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     const lotes = await res.json();
     const select = document.getElementById('loteSelect');
+    if (!select) return;
+
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
-    lotes.forEach(lote => {
+
+    // FILTRO VITAL: Solo lotes DISPONIBLES
+    const lotesActivos = lotes.filter(l => l.estado === 'disponible');
+
+    lotesActivos.forEach(lote => {
       const option = document.createElement('option');
       option.value = lote.id;
       option.textContent = `${lote.loteId}`;
       select.appendChild(option);
     });
-  } catch (error) {
-    console.error('Error al cargar lotes para select:', error);
-  }
+  } catch (error) { console.error(error); }
 }
 
 async function cargarAlimentosParaSelect() {

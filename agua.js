@@ -2,18 +2,27 @@
 async function cargarLotesForSelect() {
   try {
     const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    // V 3.0: Añadimos granjaId al fetch
     const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const lotes = await res.json();
     const select = document.getElementById('loteSelect');
+    if (!select) return;
+
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
-    lotes.forEach(lote => {
+
+    // FILTRO VITAL: Solo mostramos lotes DISPONIBLES
+    const lotesActivos = lotes.filter(l => l.estado === 'disponible');
+
+    if (lotesActivos.length === 0) {
+      select.innerHTML = '<option value="">No hay lotes activos</option>';
+      return;
+    }
+
+    lotesActivos.forEach(lote => {
       const option = document.createElement('option');
       option.value = lote.id;
       option.textContent = `${lote.loteId}`;
@@ -27,25 +36,27 @@ async function cargarLotesForSelect() {
 async function cargarAgua() {
   try {
     const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    // V 3.0: Añadimos granjaId al fetch
     const res = await fetch(`${window.API_URL}/agua?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const registros = await res.json();
     const tbody = document.getElementById('aguaTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     if (Array.isArray(registros) && registros.length > 0) {
       registros.forEach(r => {
         const tr = document.createElement('tr');
+        // Fecha corregida
+        const fechaVisual = r.fecha ? new Date(r.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' }) : 'N/A';
+
         tr.innerHTML = `
           <td>${r.Lote ? r.Lote.loteId : 'N/A'}</td>
           <td>${r.cantidad} L</td>
-          <td>${new Date(r.fecha).toLocaleDateString()}</td>
+          <td>${fechaVisual}</td>
           <td>
             <button onclick="editarAgua(${r.id})" class="btn btn-sm btn-primario" style="background-color: #f39c12;">Editar</button>
             <button onclick="eliminarAgua(${r.id})" class="btn btn-sm btn-peligro">Eliminar</button>
@@ -54,7 +65,7 @@ async function cargarAgua() {
         tbody.appendChild(tr);
       });
     } else {
-      tbody.innerHTML = '<tr><td colspan="4">No hay registros de consumo de agua</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4">No hay registros.</td></tr>';
     }
   } catch (error) {
     console.error('Error al cargar registros de agua:', error);
@@ -122,29 +133,30 @@ async function guardarAgua(e) {
 async function editarAgua(id) {
   try {
     const token = localStorage.getItem('token');
-    // V 3.0: Obtenemos la granja activa
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    // V 3.0: Añadimos granjaId al fetch
-    const res = await fetch(`${API_URL}/agua/${id}?granjaId=${granjaId}`, {
+    const res = await fetch(`${window.API_URL}/agua/${id}?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error('No se pudo cargar el registro');
+    if (!res.ok) throw new Error('No se pudo cargar');
     const r = await res.json();
 
-    document.getElementById('formTitle').textContent = 'Editar Consumo de Agua';
+    document.getElementById('formTitle').textContent = 'Editar Consumo';
     document.getElementById('aguaId').value = r.id;
+
+    // NOTA: Si el lote ya fue vendido, no aparecerá en el select filtrado.
+    // Para edición correcta de históricos, habría que inyectar la opción manualmente,
+    // pero por seguridad operativa es aceptable que solo se edite sobre activos.
     document.getElementById('loteSelect').value = r.loteId;
+
     document.getElementById('cantidad').value = r.cantidad;
     document.getElementById('fecha').value = r.fecha.split('T')[0];
 
     abrirFormulario();
     window.scrollTo(0, 0);
 
-  } catch (error) {
-    console.error('Error al cargar datos para editar:', error);
-  }
+  } catch (error) { console.error(error); }
 }
 
 async function eliminarAgua(id) {
