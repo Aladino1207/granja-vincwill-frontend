@@ -47,7 +47,7 @@ async function cargarClientes() {
 }
 
 async function cargarVentas() {
-  console.log("Iniciando carga de ventas..."); // Depuración
+  console.log("Iniciando carga de ventas...");
   try {
     const token = localStorage.getItem('token');
     const granjaId = getSelectedGranjaId();
@@ -57,29 +57,22 @@ async function cargarVentas() {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!res.ok) {
-      console.error("Error HTTP al cargar ventas:", res.status);
-      throw new Error(`HTTP error! status: ${res.status}`);
-    }
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
     const ventas = await res.json();
-    console.log("Ventas recibidas:", ventas); // Depuración: Ver qué llega del servidor
-
     const tbody = document.getElementById('ventaTableBody');
-    if (!tbody) {
-      console.error("No se encontró el elemento 'ventaTableBody'");
-      return;
-    }
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     if (Array.isArray(ventas) && ventas.length > 0) {
       ventas.forEach(venta => {
         const tr = document.createElement('tr');
-
-        // Protección contra nulos
         const nombreLote = (venta.Lote && venta.Lote.loteId) ? venta.Lote.loteId : 'N/A';
         const nombreCliente = (venta.Cliente && venta.Cliente.nombre) ? venta.Cliente.nombre : 'N/A';
         const total = (venta.peso * venta.precio).toFixed(2);
+
+        // Formato fecha amigable
+        const fechaVisual = new Date(venta.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' });
 
         tr.innerHTML = `
           <td>${nombreLote}</td>
@@ -88,18 +81,151 @@ async function cargarVentas() {
           <td>${venta.peso.toFixed(2)}</td>
           <td>$${venta.precio.toFixed(2)}</td>
           <td><strong>$${total}</strong></td>
-          <td>${new Date(venta.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' })}</td>
+          <td>${fechaVisual}</td>
           <td>
-            <button onclick="eliminarVenta(${venta.id})" class="btn btn-sm btn-peligro">Revertir</button>
+            <div style="display: flex; gap: 5px;">
+                <button onclick="imprimirFactura(${venta.id})" class="btn btn-sm btn-primario" title="Imprimir Factura">🖨️</button>
+                
+                <button onclick="eliminarVenta(${venta.id})" class="btn btn-sm btn-peligro" title="Revertir Venta">🗑️</button>
+            </div>
           </td>
         `;
         tbody.appendChild(tr);
       });
     } else {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay ventas registradas para esta granja.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay ventas registradas.</td></tr>';
     }
   } catch (error) {
-    console.error('Error CRÍTICO al cargar ventas:', error);
+    console.error('Error al cargar ventas:', error);
+  }
+}
+
+// --- Función Generadora de PDF ---
+async function imprimirFactura(ventaId) {
+  try {
+    const token = localStorage.getItem('token');
+    const granjaId = getSelectedGranjaId();
+
+    // 1. Obtener datos de la venta específica (Back end ya soporta GET /ventas/:id)
+    const resVenta = await fetch(`${window.API_URL}/ventas/${ventaId}?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!resVenta.ok) throw new Error("No se pudo cargar la venta");
+    const venta = await resVenta.json();
+
+    // 2. Obtener datos de configuración (para nombre de granja y logo)
+    // Intentamos obtener de cache primero, si no del server
+    let config = JSON.parse(localStorage.getItem('granjaConfig'));
+    if (!config) {
+      const resConfig = await fetch(`${window.API_URL}/config?granjaId=${granjaId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      config = await resConfig.json();
+    }
+
+    // 3. Obtener datos del cliente completo (porque la venta a veces solo trae el ID o nombre basico)
+    const resCliente = await fetch(`${window.API_URL}/clientes/${venta.clienteId}?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const cliente = await resCliente.json();
+
+    // --- GENERACIÓN DEL PDF ---
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Colores y Estilos
+    const colorPrimario = [44, 62, 80]; // Un azul oscuro profesional
+    const margen = 14;
+    let cursorY = 20;
+
+    // A. ENCABEZADO
+    doc.setFontSize(22);
+    doc.setTextColor(...colorPrimario);
+    doc.text(config.nombreGranja || "Granja Avícola", margen, cursorY);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    // Si tienes dirección en config, úsala, si no, usa la ubicación de la granja
+    const ubicacion = JSON.parse(localStorage.getItem('selectedGranja'))?.ubicacion || "Ubicación General";
+    doc.text(`Dirección: ${ubicacion}`, margen, cursorY + 6);
+    doc.text(`Fecha Emisión: ${new Date().toLocaleDateString()}`, margen, cursorY + 11);
+
+    // Bloque derecho (Factura ID)
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text(`FACTURA #${venta.id.toString().padStart(6, '0')}`, 190, cursorY, { align: 'right' });
+
+    cursorY += 25;
+
+    // B. INFORMACIÓN DEL CLIENTE
+    doc.setDrawColor(200);
+    doc.line(margen, cursorY, 196, cursorY); // Línea separadora
+    cursorY += 10;
+
+    doc.setFontSize(12);
+    doc.setTextColor(...colorPrimario);
+    doc.text("Información del Cliente", margen, cursorY);
+    cursorY += 8;
+
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(`Cliente: ${cliente.nombre}`, margen, cursorY);
+    doc.text(`Identificación (${cliente.tipoIdentificacion}): ${cliente.identificacion}`, margen, cursorY + 5);
+    doc.text(`Teléfono: ${cliente.telefono || 'N/A'}`, margen, cursorY + 10);
+    doc.text(`Dirección: ${cliente.direccion || 'N/A'}`, margen, cursorY + 15);
+
+    cursorY += 25;
+
+    // C. TABLA DE DETALLES (Usando autotable)
+    const totalVenta = (venta.peso * venta.precio);
+
+    // En tu modelo, una venta es de un solo lote, así que es una sola fila
+    // Si quisieras formato tabla real:
+    const tableBody = [
+      [
+        `Pollos de Engorde - Lote ${venta.Lote ? venta.Lote.loteId : venta.loteId}`, // Descripción
+        venta.cantidadVendida, // Cantidad
+        `${venta.peso.toFixed(2)} kg`, // Peso
+        `$${venta.precio.toFixed(2)}`, // Precio Unitario
+        `$${totalVenta.toFixed(2)}` // Total
+      ]
+    ];
+
+    doc.autoTable({
+      startY: cursorY,
+      head: [['Descripción', 'Cant. Aves', 'Peso Total', 'Precio/Kg', 'Subtotal']],
+      body: tableBody,
+      theme: 'striped',
+      headStyles: { fillColor: colorPrimario },
+      styles: { fontSize: 10, halign: 'center' },
+      columnStyles: {
+        0: { halign: 'left' }, // Descripción a la izquierda
+        4: { fontStyle: 'bold', halign: 'right' } // Total a la derecha
+      }
+    });
+
+    // D. TOTALES
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    doc.setFontSize(12);
+    doc.text("Total a Pagar:", 140, finalY);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text(`$${totalVenta.toFixed(2)}`, 190, finalY, { align: 'right' });
+
+    // E. PIE DE PÁGINA
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(150);
+    doc.text("Gracias por su compra.", 105, 280, { align: 'center' });
+    doc.text("Generado por Sistema VincWill", 105, 285, { align: 'center' });
+
+    // Guardar PDF
+    doc.save(`Factura_VincWill_${venta.id}.pdf`);
+
+  } catch (error) {
+    console.error(error);
+    alert("Error al generar la factura. Verifica la consola.");
   }
 }
 
@@ -346,5 +472,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   cargarLotesForSelect();
   cargarClientes();
-  cargarVentas(); 
+  cargarVentas();
 });
