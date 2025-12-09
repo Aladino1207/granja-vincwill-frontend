@@ -106,15 +106,14 @@ async function imprimirFactura(ventaId) {
     const token = localStorage.getItem('token');
     const granjaId = getSelectedGranjaId();
 
-    // 1. Obtener datos de la venta específica (Back end ya soporta GET /ventas/:id)
+    // 1. Obtener datos
     const resVenta = await fetch(`${window.API_URL}/ventas/${ventaId}?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!resVenta.ok) throw new Error("No se pudo cargar la venta");
     const venta = await resVenta.json();
 
-    // 2. Obtener datos de configuración (para nombre de granja y logo)
-    // Intentamos obtener de cache primero, si no del server
+    // Configuración y Cliente
     let config = JSON.parse(localStorage.getItem('granjaConfig'));
     if (!config) {
       const resConfig = await fetch(`${window.API_URL}/config?granjaId=${granjaId}`, {
@@ -123,105 +122,183 @@ async function imprimirFactura(ventaId) {
       config = await resConfig.json();
     }
 
-    // 3. Obtener datos del cliente completo (porque la venta a veces solo trae el ID o nombre basico)
     const resCliente = await fetch(`${window.API_URL}/clientes/${venta.clienteId}?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const cliente = await resCliente.json();
 
-    // --- GENERACIÓN DEL PDF ---
+    // Datos de la granja (para ubicación)
+    const granjaInfo = JSON.parse(localStorage.getItem('selectedGranja'));
+
+    // --- INICIO DISEÑO PDF ---
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    // Colores y Estilos
-    const colorPrimario = [44, 62, 80]; // Un azul oscuro profesional
-    const margen = 14;
-    let cursorY = 20;
+    // --- COLORES Y FUENTES ---
+    const azulOscuro = [44, 62, 80];
+    const rojoSRI = [192, 57, 43];
+    const grisClaro = [245, 245, 245];
 
-    // A. ENCABEZADO
-    doc.setFontSize(22);
-    doc.setTextColor(...colorPrimario);
-    doc.text(config.nombreGranja || "Granja Avícola", margen, cursorY);
+    // --- CABECERA IZQUIERDA (EMISOR) ---
+    // Logo (si existe URL en config, aquí iría la lógica para convertir a base64, por ahora texto)
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...azulOscuro);
+    doc.text(config.nombreGranja || "GRANJA AVÍCOLA VINCWILL", 14, 25);
 
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80);
+    doc.text("Matriz:", 14, 35);
+    doc.text(granjaInfo.ubicacion || "Sin dirección registrada", 30, 35);
+    doc.text("Teléfono:", 14, 40);
+    doc.text("0999999999", 30, 40); // Placeholder o dato real si lo tienes
+    doc.text("Obligado a llevar contabilidad: NO", 14, 45);
+
+    // --- CABECERA DERECHA (EL "CUADRO DEL RUC") ---
+    // Dibujamos el rectángulo redondeado clásico
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(110, 15, 90, 35, 3, 3); // x, y, w, h, rx, ry
+
+    doc.setFontSize(11);
+    doc.setTextColor(0);
+    doc.setFont("helvetica", "bold");
+    doc.text("R.U.C.: 1300000000001", 115, 23); // Dato quemado o desde config
+
+    doc.setFillColor(...rojoSRI);
+    doc.rect(110, 28, 90, 8, 'F'); // Barra roja de título
+    doc.setTextColor(255, 255, 255);
+    doc.text("F A C T U R A", 155, 34, { align: "center" });
+
+    doc.setTextColor(0);
     doc.setFontSize(10);
+    // Formato tradicional 001-001-xxxxxxxxx
+    const numFactura = venta.id.toString().padStart(9, '0');
+    doc.text(`No. 001-001-${numFactura}`, 115, 43);
+
+    doc.setFontSize(7);
     doc.setTextColor(100);
-    // Si tienes dirección en config, úsala, si no, usa la ubicación de la granja
-    const ubicacion = JSON.parse(localStorage.getItem('selectedGranja'))?.ubicacion || "Ubicación General";
-    doc.text(`Dirección: ${ubicacion}`, margen, cursorY + 6);
-    doc.text(`Fecha Emisión: ${new Date().toLocaleDateString()}`, margen, cursorY + 11);
+    doc.text("AUTORIZACIÓN SRI: 1111222233", 115, 48); // Placeholder
 
-    // Bloque derecho (Factura ID)
-    doc.setFontSize(14);
+    // --- DATOS DEL CLIENTE (BANDA GRIS) ---
+    doc.setFillColor(230, 230, 230);
+    doc.rect(14, 60, 186, 22, 'F'); // Fondo gris suave
+
+    doc.setFontSize(9);
     doc.setTextColor(0);
-    doc.text(`FACTURA #${venta.id.toString().padStart(6, '0')}`, 190, cursorY, { align: 'right' });
+    doc.setFont("helvetica", "bold");
 
-    cursorY += 25;
+    // Fila 1
+    doc.text("Razón Social / Nombres:", 16, 66);
+    doc.setFont("helvetica", "normal");
+    doc.text(cliente.nombre, 60, 66);
 
-    // B. INFORMACIÓN DEL CLIENTE
-    doc.setDrawColor(200);
-    doc.line(margen, cursorY, 196, cursorY); // Línea separadora
-    cursorY += 10;
+    doc.setFont("helvetica", "bold");
+    doc.text("Identificación:", 140, 66);
+    doc.setFont("helvetica", "normal");
+    doc.text(cliente.identificacion, 165, 66);
 
-    doc.setFontSize(12);
-    doc.setTextColor(...colorPrimario);
-    doc.text("Información del Cliente", margen, cursorY);
-    cursorY += 8;
+    // Fila 2
+    doc.setFont("helvetica", "bold");
+    doc.text("Fecha Emisión:", 16, 73);
+    doc.setFont("helvetica", "normal");
+    // Formato fecha Ecuador (DD/MM/AAAA)
+    const fechaObj = new Date(venta.fecha);
+    const fechaEcuador = `${fechaObj.getUTCDate().toString().padStart(2, '0')}/${(fechaObj.getUTCMonth() + 1).toString().padStart(2, '0')}/${fechaObj.getUTCFullYear()}`;
+    doc.text(fechaEcuador, 60, 73);
 
-    doc.setFontSize(10);
-    doc.setTextColor(0);
-    doc.text(`Cliente: ${cliente.nombre}`, margen, cursorY);
-    doc.text(`Identificación (${cliente.tipoIdentificacion}): ${cliente.identificacion}`, margen, cursorY + 5);
-    doc.text(`Teléfono: ${cliente.telefono || 'N/A'}`, margen, cursorY + 10);
-    doc.text(`Dirección: ${cliente.direccion || 'N/A'}`, margen, cursorY + 15);
+    doc.setFont("helvetica", "bold");
+    doc.text("Guía Remisión:", 140, 73);
+    doc.setFont("helvetica", "normal");
+    doc.text("-", 165, 73);
 
-    cursorY += 25;
+    // Fila 3
+    doc.setFont("helvetica", "bold");
+    doc.text("Dirección:", 16, 80);
+    doc.setFont("helvetica", "normal");
+    doc.text(cliente.direccion || "S/N", 60, 80);
 
-    // C. TABLA DE DETALLES (Usando autotable)
+    // --- TABLA DE DETALLES ---
     const totalVenta = (venta.peso * venta.precio);
 
-    // En tu modelo, una venta es de un solo lote, así que es una sola fila
-    // Si quisieras formato tabla real:
     const tableBody = [
       [
-        `Pollos de Engorde - Lote ${venta.Lote ? venta.Lote.loteId : venta.loteId}`, // Descripción
         venta.cantidadVendida, // Cantidad
-        `${venta.peso.toFixed(2)} kg`, // Peso
+        `Pollos en pie - Lote ${venta.Lote ? venta.Lote.loteId : venta.loteId} (${venta.peso.toFixed(2)} kg)`, // Descripción detallada
         `$${venta.precio.toFixed(2)}`, // Precio Unitario
         `$${totalVenta.toFixed(2)}` // Total
       ]
     ];
 
     doc.autoTable({
-      startY: cursorY,
-      head: [['Descripción', 'Cant. Aves', 'Peso Total', 'Precio/Kg', 'Subtotal']],
+      startY: 90,
+      head: [['Cant.', 'Descripción', 'V. Unitario', 'V. Total']],
       body: tableBody,
-      theme: 'striped',
-      headStyles: { fillColor: colorPrimario },
-      styles: { fontSize: 10, halign: 'center' },
+      theme: 'plain', // Tema plano para personalizar bordes
+      styles: {
+        fontSize: 9,
+        cellPadding: 2,
+        lineWidth: 0.1,
+        lineColor: [200, 200, 200]
+      },
+      headStyles: {
+        fillColor: azulOscuro,
+        textColor: 255,
+        halign: 'center'
+      },
       columnStyles: {
-        0: { halign: 'left' }, // Descripción a la izquierda
-        4: { fontStyle: 'bold', halign: 'right' } // Total a la derecha
+        0: { halign: 'center', width: 20 },
+        2: { halign: 'right', width: 30 },
+        3: { halign: 'right', width: 30 }
       }
     });
 
-    // D. TOTALES
-    const finalY = doc.lastAutoTable.finalY + 10;
+    // --- PIE DE PÁGINA Y TOTALES ---
+    let finalY = doc.lastAutoTable.finalY + 5;
 
-    doc.setFontSize(12);
-    doc.text("Total a Pagar:", 140, finalY);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text(`$${totalVenta.toFixed(2)}`, 190, finalY, { align: 'right' });
-
-    // E. PIE DE PÁGINA
+    // Sección Izquierda (Info Adicional)
     doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text("Información Adicional:", 14, finalY + 5);
+
+    doc.rect(14, finalY + 7, 100, 25); // Caja info
+    doc.text(`Email: ${cliente.email || 'No registrado'}`, 16, finalY + 13);
+    doc.text(`Teléfono: ${cliente.telefono || 'No registrado'}`, 16, finalY + 18);
+    doc.text("Forma de Pago: Efectivo / Transferencia", 16, finalY + 23);
+
+    // Sección Derecha (Totales - Estilo Ecuador)
+    const xTotales = 130;
+    const wTotales = 66;
+    const hLine = 6;
+
+    // Función auxiliar para dibujar filas de totales
+    const drawTotalRow = (label, value, y, isBold = false) => {
+      doc.setDrawColor(200);
+      doc.rect(xTotales, y, wTotales, hLine); // Caja
+      doc.rect(xTotales, y, wTotales / 2, hLine); // Línea vertical media
+
+      doc.setFont("helvetica", isBold ? "bold" : "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(0);
+      doc.text(label, xTotales + 2, y + 4);
+      doc.text(value, xTotales + wTotales - 2, y + 4, { align: "right" });
+    };
+
+    // NOTA: Pollos en pie suelen ser tarifa 0% IVA. Ajusta si es diferente.
+    drawTotalRow("SUBTOTAL 12%", "$ 0.00", finalY);
+    drawTotalRow("SUBTOTAL 0%", `$ ${totalVenta.toFixed(2)}`, finalY + hLine);
+    drawTotalRow("DESCUENTO", "$ 0.00", finalY + (hLine * 2));
+    drawTotalRow("IVA 12%", "$ 0.00", finalY + (hLine * 3));
+    drawTotalRow("VALOR TOTAL", `$ ${totalVenta.toFixed(2)}`, finalY + (hLine * 4), true);
+
+    // Mensaje final
+    doc.setFontSize(7);
     doc.setTextColor(150);
-    doc.text("Gracias por su compra.", 105, 280, { align: 'center' });
-    doc.text("Generado por Sistema VincWill", 105, 285, { align: 'center' });
+    doc.text("Documento sin validez tributaria (Generado por Sistema VincWill)", 105, 285, { align: 'center' });
 
     // Guardar PDF
-    doc.save(`Factura_VincWill_${venta.id}.pdf`);
+    doc.save(`Factura_${venta.id}_${cliente.identificacion}.pdf`);
 
   } catch (error) {
     console.error(error);
