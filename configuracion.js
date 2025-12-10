@@ -16,7 +16,14 @@ async function cargarConfiguracion() {
     document.getElementById('planVacunacion').value = config.planVacunacion || "7,14,21";
 
     // Cargar Logo
-    if (config.logoUrl) document.getElementById('logoUrl').value = config.logoUrl;
+    if (config.logoUrl) {
+      // Guardamos el valor actual en el hidden por si no lo cambian
+      document.getElementById('logoBase64').value = config.logoUrl;
+      // Mostramos el preview
+      const preview = document.getElementById('logoPreview');
+      preview.src = config.logoUrl;
+      preview.style.display = 'inline-block';
+    }
 
   } catch (error) { console.error(error); }
 }
@@ -32,7 +39,7 @@ async function guardarConfiguracion(e) {
     idioma: document.getElementById('idioma').value,
     nombreGranja: document.getElementById('nombreGranja').value,
     planVacunacion: document.getElementById('planVacunacion').value,
-    logoUrl: document.getElementById('logoUrl').value,
+    logoUrl: document.getElementById('logoBase64').value,
     granjaId: granjaId
   };
   try {
@@ -43,9 +50,14 @@ async function guardarConfiguracion(e) {
     });
     if (res.ok) {
       alert('Ajustes guardados');
-      const logoImg = document.getElementById('appLogo');
-      if (logoImg && config.logoUrl) logoImg.src = config.logoUrl;
-      const granjaData = JSON.parse(localStorage.getItem('selectedGranja'));
+      // Actualizar el logo en el header inmediatamente sin recargar
+      const logoHeader = document.querySelector('.app-logo-img');
+      if (logoHeader && config.logoUrl) logoHeader.src = config.logoUrl;
+
+      // Actualizar localStorage
+      const configLocal = JSON.parse(localStorage.getItem('granjaConfig')) || {};
+      configLocal.logoUrl = config.logoUrl;
+      localStorage.setItem('granjaConfig', JSON.stringify(configLocal));
       if (granjaData) {
         granjaData.nombre = config.nombreGranja;
         localStorage.setItem('selectedGranja', JSON.stringify(granjaData));
@@ -144,6 +156,38 @@ async function eliminarEvento(id) {
 // --- Inicialización (BLINDADA) ---
 document.addEventListener('DOMContentLoaded', () => {
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
+
+  const logoInput = document.getElementById('logoInput');
+  const logoPreview = document.getElementById('logoPreview');
+  const logoBase64 = document.getElementById('logoBase64');
+
+  if (logoInput) {
+    logoInput.addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // Validación simple de tamaño (ej. 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        alert("La imagen es muy pesada (Máx 2MB). Por favor redúcela.");
+        this.value = ""; // Limpiar input
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        // El resultado es una cadena larga: "data:image/png;base64,iVBORw0KGgo..."
+        const base64String = event.target.result;
+
+        // Mostramos preview
+        logoPreview.src = base64String;
+        logoPreview.style.display = 'inline-block';
+
+        // Guardamos en el input oculto para enviarlo luego
+        logoBase64.value = base64String;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 
   // V 3.0: Poner el nombre de la granja en el título
   if (granja) {

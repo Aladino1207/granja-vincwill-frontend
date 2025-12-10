@@ -99,9 +99,19 @@
 
                 <!-- NUEVO CAMPO LOGO -->
                 <div class="form-group" style="grid-column: 1 / -1;">
-                    <label for="logoUrl">URL del Logo de la Empresa</label>
-                    <input type="url" id="logoUrl" class="form-control" placeholder="https://ejemplo.com/mi-logo.png">
-                    <small style="color: #666;">Pega aquí el enlace directo a tu imagen de logo.</small>
+                    <label for="logoInput">Logo de la Empresa</label>
+
+                    <input type="file" id="logoInput" class="form-control" accept="image/*">
+
+                    <input type="hidden" id="logoBase64">
+
+                    <small style="color: #666;">Formatos: PNG, JPG. Máx 2MB recomendado.</small>
+
+                    <div style="margin-top: 10px; padding: 10px; border: 1px dashed #ccc; text-align: center;">
+                        <p style="margin:0 0 5px 0; font-size: 0.8rem;">Vista Previa:</p>
+                        <img id="logoPreview" src="" alt="Sin Logo"
+                            style="max-height: 80px; max-width: 100%; display: none;">
+                    </div>
                 </div>
 
                 <div class="form-group">
