@@ -606,7 +606,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeUserProfile();
     initializeSidebar();
     setupMobileMenu();
-    cargarLogoSistema(); // <--- LLAMADA NUEVA
+    cargarLogoSistema();
+    filtrarMenuPorRol();
   }
 
   if (path === 'index.html') {
