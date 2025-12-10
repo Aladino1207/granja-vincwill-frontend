@@ -34,36 +34,61 @@ async function guardarConfiguracion(e) {
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
+  // 1. Validar que el elemento hidden exista (por si acaso no actualizaste el HTML)
+  const logoInput = document.getElementById('logoBase64');
+  if (!logoInput) {
+    alert("Error: No se encontró el campo oculto 'logoBase64'. Revisa tu HTML.");
+    return;
+  }
+
   const config = {
     notificaciones: document.getElementById('notificaciones').value,
     idioma: document.getElementById('idioma').value,
     nombreGranja: document.getElementById('nombreGranja').value,
     planVacunacion: document.getElementById('planVacunacion').value,
-    logoUrl: document.getElementById('logoBase64').value,
+    logoUrl: logoInput.value,
     granjaId: granjaId
   };
+
   try {
     const res = await fetch(`${window.API_URL}/config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(config)
     });
+
     if (res.ok) {
       alert('Ajustes guardados');
-      // Actualizar el logo en el header inmediatamente sin recargar
+
+      // Actualizar el logo en el header
       const logoHeader = document.querySelector('.app-logo-img');
       if (logoHeader && config.logoUrl) logoHeader.src = config.logoUrl;
 
-      // Actualizar localStorage
+      // Actualizar caché de config
       const configLocal = JSON.parse(localStorage.getItem('granjaConfig')) || {};
       configLocal.logoUrl = config.logoUrl;
       localStorage.setItem('granjaConfig', JSON.stringify(configLocal));
+
+      // --- CORRECCIÓN AQUÍ: Definir granjaData antes de usarlo ---
+      const granjaData = JSON.parse(localStorage.getItem('selectedGranja'));
+
       if (granjaData) {
         granjaData.nombre = config.nombreGranja;
         localStorage.setItem('selectedGranja', JSON.stringify(granjaData));
       }
+
+      // Opcional: Recargar para ver cambios
+      // window.location.reload(); 
+    } else {
+      // Si el servidor responde con error (ej: imagen muy grande)
+      const errorText = await res.text();
+      console.error("Error del servidor:", errorText);
+      alert('Error al guardar: ' + res.status + '. Revisa la consola.');
     }
-  } catch (error) { alert('Error de conexión'); }
+  } catch (error) {
+    console.error(error); // Ver el error real en consola
+    alert('Error de conexión o de código (Revisa la consola F12)');
+  }
 }
 
 // --- Lógica de Agenda (BLINDADA) ---
