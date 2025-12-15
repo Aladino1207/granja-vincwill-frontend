@@ -178,6 +178,101 @@ async function eliminarEvento(id) {
   }
 }
 
+// --- FUNCIONES DE BACKUP ---
+
+async function exportarBackup() {
+  const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+  if (currentUser.role !== 'admin') {
+    alert("Solo el administrador puede exportar datos.");
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+    const btn = document.getElementById('btnExportar');
+    btn.textContent = "Generando archivo...";
+    btn.disabled = true;
+
+    const res = await fetch(`${window.API_URL}/backup/export`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) throw new Error('Error al descargar');
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    // Nombre del archivo con fecha
+    const fecha = new Date().toISOString().split('T')[0];
+    a.download = `VincWill_Backup_${fecha}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    btn.textContent = "💾 Descargar Copia de Seguridad";
+    btn.disabled = false;
+
+  } catch (error) {
+    console.error(error);
+    alert("Error al generar el backup.");
+    document.getElementById('btnExportar').disabled = false;
+  }
+}
+
+async function importarBackup() {
+  const fileInput = document.getElementById('backupInput');
+  const file = fileInput.files[0];
+
+  if (!file) {
+    alert("Por favor selecciona un archivo .json primero.");
+    return;
+  }
+
+  if (!confirm("⚠️ ¡ADVERTENCIA CRÍTICA! ⚠️\n\nEsta acción BORRARÁ TODOS los datos actuales de esta base de datos y los reemplazará con los del archivo.\n\n¿Estás seguro de que esta es una base de datos nueva o que quieres sobrescribir todo?")) {
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = async function (e) {
+    try {
+      const jsonData = JSON.parse(e.target.result);
+      const token = localStorage.getItem('token');
+      const btn = document.getElementById('btnImportar');
+
+      btn.textContent = "Restaurando... (No cierres)";
+      btn.disabled = true;
+
+      const res = await fetch(`${window.API_URL}/backup/import`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(jsonData) // Enviamos el JSON completo
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        alert(result.message);
+        localStorage.clear(); // Limpiar sesión local para evitar conflictos
+        window.location.href = 'login.html';
+      } else {
+        alert("Error: " + (result.error || "Desconocido"));
+      }
+
+    } catch (error) {
+      console.error(error);
+      alert("El archivo no es un JSON válido o es demasiado grande.");
+    } finally {
+      document.getElementById('btnImportar').textContent = "⚠️ Restaurar Backup";
+      document.getElementById('btnImportar').disabled = false;
+    }
+  };
+  reader.readAsText(file);
+}
+
 // --- Inicialización (BLINDADA) ---
 document.addEventListener('DOMContentLoaded', () => {
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
@@ -218,6 +313,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (granja) {
     document.querySelector('header h1').textContent = `Configuración (${granja.nombre})`;
   }
+
+  const btnExp = document.getElementById('btnExportar');
+  if (btnExp) btnExp.addEventListener('click', exportarBackup);
+
+  const btnImp = document.getElementById('btnImportar');
+  if (btnImp) btnImp.addEventListener('click', importarBackup);
 
   // Cargar datos
   cargarConfiguracion();

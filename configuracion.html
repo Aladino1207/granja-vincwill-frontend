@@ -188,6 +188,40 @@
             </div>
         </section>
 
+        <section class="card" style="border: 1px solid #e74c3c;">
+            <h2 style="color: #c0392b;">🛠️ Zona de Respaldo y Restauración</h2>
+            <p style="color: #666; margin-bottom: 1rem;">
+                Utiliza esta zona para descargar una copia completa de tu base de datos antes de que expire en Render,
+                o para restaurar dicha copia en una base de datos nueva.
+            </p>
+
+            <div class="form-grid form-grid-2-col">
+                <!-- EXPORTAR -->
+                <div style="background: #fdf2f2; padding: 20px; border-radius: 8px;">
+                    <h3>1. Exportar Datos</h3>
+                    <p style="font-size: 0.9rem;">Descarga un archivo <code>.json</code> con toda la información actual.
+                    </p>
+                    <button id="btnExportar" class="btn btn-primario" style="background-color: #27ae60; width: 100%;">
+                        💾 Descargar Copia de Seguridad
+                    </button>
+                </div>
+
+                <!-- IMPORTAR -->
+                <div style="background: #fff8e1; padding: 20px; border-radius: 8px;">
+                    <h3>2. Restaurar Datos</h3>
+                    <p style="font-size: 0.9rem;">Sube el archivo <code>.json</code> para restaurar en una base de datos
+                        <strong>NUEVA</strong>.</p>
+
+                    <input type="file" id="backupInput" accept=".json" class="form-control"
+                        style="margin-bottom: 10px;">
+
+                    <button id="btnImportar" class="btn btn-peligro" style="width: 100%;">
+                        ⚠️ Restaurar Backup
+                    </button>
+                </div>
+            </div>
+        </section>
+
         <footer>
             <p>© 2025 Granja Avícola VincWill. Todos los derechos reservados.</p>
         </footer>
