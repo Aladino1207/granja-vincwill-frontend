@@ -94,12 +94,18 @@
                     <div class="form-group">
                         <label for="tipoReporte">Tipo de Reporte</label>
                         <select id="tipoReporte" class="form-control">
-                            <option value="liquidacion">💰 Liquidación de Lote</option>
-                            <option value="comparativa">⚔️ Comparativa de Lotes (Nuevo)</option> <!-- OPCIÓN NUEVA -->
-                            <option value="costos">📉 Listado de Gastos</option>
-                            <option value="ventas">📈 Historial de Ventas</option>
-                            <option value="inventario-actual">📦 Inventario Actual</option>
-                            <option value="sanitario">💉 Registro Sanitario</option>
+                            <optgroup label="Estratégicos">
+                                <option value="liquidacion">💰 Liquidación de Lote</option>
+                                <option value="inventario-actual">📦 Inventario Actual</option>
+                                <option value="comparativa">⚔️ Comparativa de Lotes</option>
+                            </optgroup>
+                            <optgroup label="Operativos">
+                                <option value="costos">📉 Listado de Gastos</option>
+                                <option value="ventas">📈 Historial de Ventas</option>
+                                <option value="sanitario">💉 Registro Sanitario</option>
+                            </optgroup>
+
+
                         </select>
                     </div>
 
@@ -134,42 +140,7 @@
                     </div>
                 </form>
 
-                <form id="reporteForm" class="form-grid form-grid-2-col">
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <label for="tipoReporte">Tipo de Informe</label>
-                        <select id="tipoReporte" class="form-control" required>
-                            <option value="" disabled selected>-- Seleccione --</option>
-                            <optgroup label="Estratégicos">
-                                <option value="liquidacion">Liquidación de Lote (Cierre)</option>
-                                <option value="inventario-actual">Inventario Valorizado (Actual)</option>
-                            </optgroup>
-                            <optgroup label="Operativos">
-                                <option value="sanitario">Historial Sanitario y Retiros</option>
-                                <option value="ventas">Listado de Ventas</option>
-                                <option value="costos">Listado de Gastos</option>
-                            </optgroup>
-                        </select>
-                    </div>
 
-                    <div class="form-group" id="groupLote">
-                        <label for="loteSelect">Seleccionar Lote</label>
-                        <select id="loteSelect" class="form-control"></select>
-                    </div>
-
-                    <div class="form-group" id="groupFechaInicio">
-                        <label for="fechaInicio">Fecha Inicio</label>
-                        <input type="date" id="fechaInicio" class="form-control">
-                    </div>
-
-                    <div class="form-group" id="groupFechaFin">
-                        <label for="fechaFin">Fecha Fin</label>
-                        <input type="date" id="fechaFin" class="form-control">
-                    </div>
-
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <button type="submit" class="btn btn-primario" id="btnGenerar">Generar Informe</button>
-                    </div>
-                </form>
 
                 <!-- Área de Previsualización -->
                 <div id="previewArea" style="margin-top: 2rem; display: none;">
