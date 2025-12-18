@@ -1,30 +1,38 @@
 // --- Lógica de UI ---
 const tipoReporteEl = document.getElementById('tipoReporte');
+const groupLote = document.getElementById('groupLote');
+const groupLoteB = document.getElementById('groupLoteB');
 const groupFechas = [document.getElementById('groupFechaInicio'), document.getElementById('groupFechaFin')];
 const loteSelect = document.getElementById('loteSelect');
+const loteSelectB = document.getElementById('loteSelectB');
 
 // Mostrar/Ocultar campos según el reporte
 tipoReporteEl.addEventListener('change', () => {
   const tipo = tipoReporteEl.value;
 
+  // Resetear visibilidad
+  groupFechas.forEach(el => el.style.display = 'none');
+  groupLote.style.display = 'none';
+  groupLoteB.style.display = 'none';
+
+  // Lógica de visibilidad
   if (tipo === 'liquidacion') {
-    // Liquidación: Solo Lote
-    groupFechas.forEach(el => el.style.display = 'none');
-    loteSelect.parentElement.style.display = 'flex';
-    loteSelect.required = true;
-    document.getElementById('fechaInicio').required = false;
-  } else if (tipo === 'inventario-actual') {
-    // Inventario Actual: Nada (es foto instantánea)
-    groupFechas.forEach(el => el.style.display = 'none');
-    loteSelect.parentElement.style.display = 'none';
-    loteSelect.required = false;
-    document.getElementById('fechaInicio').required = false;
-  } else {
-    // Estándar: Fechas (y Lote opcional)
-    groupFechas.forEach(el => el.style.display = 'flex');
-    loteSelect.parentElement.style.display = 'flex';
-    loteSelect.required = false;
-    document.getElementById('fechaInicio').required = true;
+    groupLote.style.display = 'block';
+    document.getElementById('lblLoteA').textContent = "Seleccionar Lote";
+  }
+  else if (tipo === 'comparativa') {
+    groupLote.style.display = 'block';
+    groupLoteB.style.display = 'block'; // Mostrar segundo selector
+    document.getElementById('lblLoteA').textContent = "Lote A (Base)";
+  }
+  else if (tipo === 'inventario-actual') {
+    // Nada
+  }
+  else {
+    // Costos, Ventas, Sanitario
+    groupFechas.forEach(el => el.style.display = 'block');
+    groupLote.style.display = 'block'; // Opcional en estos reportes
+    document.getElementById('lblLoteA').textContent = "Filtrar por Lote (Opcional)";
   }
 });
 
@@ -33,16 +41,27 @@ async function cargarLotesForSelect() {
     const token = localStorage.getItem('token');
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
-    const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
-    const lotes = await res.json();
-    loteSelect.innerHTML = '<option value="">-- Seleccionar Lote --</option>';
-    lotes.forEach(lote => {
-      const option = document.createElement('option');
-      option.value = lote.id;
-      option.textContent = `${lote.loteId} (${lote.estado})`;
-      loteSelect.appendChild(option);
+
+    const res = await fetch(`${window.API_URL}/lotes?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
-  } catch (e) { console.error(e); }
+    const lotes = await res.json();
+
+    // Función interna para llenar un select
+    const llenar = (selectEl) => {
+      selectEl.innerHTML = '<option value="">Selecciona un Lote</option>';
+      lotes.forEach(l => {
+        const opt = document.createElement('option');
+        opt.value = l.id;
+        opt.textContent = `${l.loteId} (${l.estado})`;
+        selectEl.appendChild(opt);
+      });
+    };
+
+    llenar(loteSelect);
+    llenar(loteSelectB);
+
+  } catch (error) { console.error(error); }
 }
 
 // --- Generación ---
@@ -56,6 +75,38 @@ async function generarReporte(e) {
 
   const tipo = tipoReporteEl.value;
 
+  // --- 1. LÓGICA NUEVA: CAMINO DE COMPARATIVA ---
+  if (tipo === 'comparativa') {
+    const idA = loteSelect.value;
+    const idB = loteSelectB.value;
+
+    if (!idA || !idB) return alert("Debes seleccionar dos lotes distintos");
+    if (idA === idB) return alert("¡Selecciona lotes diferentes para comparar!");
+
+    try {
+      const btn = document.getElementById('btnGenerar');
+      if (btn) { btn.textContent = 'Comparando...'; btn.disabled = true; }
+
+      const res = await fetch(`${window.API_URL}/comparativa?granjaId=${granjaId}&loteA=${idA}&loteB=${idB}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) throw new Error("Error en la comparación");
+
+      const data = await res.json();
+      generarTablaComparativa(data); // <--- Llamamos a la nueva función visual
+
+    } catch (err) {
+      alert("Error al comparar: " + err.message);
+      console.error(err);
+    } finally {
+      const btn = document.getElementById('btnGenerar');
+      if (btn) { btn.textContent = 'Generar Informe'; btn.disabled = false; }
+    }
+    return; // <--- IMPORTANTE: Aquí termina si es comparativa
+  }
+
+  // --- 2. LÓGICA ANTIGUA: REPORTE ESTÁNDAR (Tu código original intacto) ---
   const payload = {
     tipoReporte: tipo,
     granjaId: granjaId,
@@ -66,8 +117,7 @@ async function generarReporte(e) {
 
   try {
     const btn = document.getElementById('btnGenerar');
-    btn.textContent = 'Procesando...';
-    btn.disabled = true;
+    if (btn) { btn.textContent = 'Procesando...'; btn.disabled = true; }
 
     const res = await fetch(`${window.API_URL}/reporte`, {
       method: 'POST',
@@ -87,9 +137,126 @@ async function generarReporte(e) {
     alert('Error: ' + error.message);
   } finally {
     const btn = document.getElementById('btnGenerar');
-    btn.textContent = 'Generar Informe';
-    btn.disabled = false;
+    if (btn) { btn.textContent = 'Generar Informe'; btn.disabled = false; }
   }
+}
+
+// --- FUNCIONES PARA COMPARATIVA ---
+
+function generarTablaComparativa(data) {
+  const { loteA, loteB } = data;
+  const tbody = document.getElementById('reporteTableBody');
+  const thead = document.getElementById('reporteTableHead');
+  const area = document.getElementById('previewArea');
+  const resumen = document.getElementById('liquidacionResumen');
+
+  // Preparar UI
+  area.style.display = 'block';
+  resumen.style.display = 'none';
+  document.querySelector('.tabla-responsive-wrapper').style.display = 'block';
+
+  // Encabezados
+  thead.innerHTML = `
+        <tr>
+            <th>Métrica</th>
+            <th>${loteA.nombre}</th>
+            <th>${loteB.nombre}</th>
+            <th>Diferencia</th>
+            <th>Ganador</th>
+        </tr>
+    `;
+
+  // Definición de Métricas
+  const metricas = [
+    { key: 'ingresos', label: 'Ingresos Totales ($)', esMejorMayor: true },
+    { key: 'egresos', label: 'Costos Totales ($)', esMejorMayor: false },
+    { key: 'utilidad', label: 'Utilidad Neta ($)', esMejorMayor: true },
+    { key: 'rentabilidad', label: 'Rentabilidad (ROI)', esMejorMayor: true },
+    { key: 'mortalidad', label: 'Mortalidad', esMejorMayor: false }, // Texto complejo
+    { key: 'costoPorAve', label: 'Costo Prod. por Ave ($)', esMejorMayor: false },
+    { key: 'pesoTotal', label: 'Peso Total Vendido (Kg)', esMejorMayor: true }
+  ];
+
+  tbody.innerHTML = '';
+
+  metricas.forEach(m => {
+    const valA = loteA[m.key];
+    const valB = loteB[m.key];
+
+    // Limpieza de datos para cálculo numérico (quitar %, paréntesis, letras)
+    let numA = parseFloat(String(valA).replace('%', '').split(' ')[0]) || 0;
+    let numB = parseFloat(String(valB).replace('%', '').split(' ')[0]) || 0;
+
+    let dif = (numA - numB).toFixed(2);
+    let ganador = '-';
+    let color = '#7f8c8d'; // Gris por defecto
+
+    if (numA !== numB) {
+      // Lógica para determinar ganador
+      let ganaA = m.esMejorMayor ? (numA > numB) : (numA < numB);
+      ganador = ganaA ? loteA.nombre : loteB.nombre;
+      color = '#27ae60'; // Verde siempre para el ganador visualmente
+    }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+            <td><strong>${m.label}</strong></td>
+            <td>${valA}</td>
+            <td>${valB}</td>
+            <td>${dif}</td>
+            <td style="color: ${color}; font-weight: bold;">${ganador}</td>
+        `;
+    tbody.appendChild(tr);
+  });
+
+  // Configurar botón PDF específico
+  document.getElementById('btnDescargarPDF').onclick = () => exportarPDFComparativa(loteA, loteB);
+}
+
+function exportarPDFComparativa(loteA, loteB) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const granja = JSON.parse(localStorage.getItem('selectedGranja'));
+
+  // Header
+  doc.setFillColor(44, 62, 80);
+  doc.rect(0, 0, 210, 25, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.text("Reporte Comparativo de Lotes", 14, 16);
+  doc.setFontSize(10);
+  doc.text(`Granja: ${granja.nombre}`, 190, 16, { align: 'right' });
+
+  doc.setTextColor(0);
+  doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 35);
+
+  // Tabla
+  doc.autoTable({
+    html: '#reporteTable',
+    startY: 40,
+    theme: 'grid',
+    headStyles: { fillColor: [52, 152, 219] },
+    styles: { halign: 'center' },
+    columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } }
+  });
+
+  // Veredicto
+  let utilA = parseFloat(loteA.utilidad);
+  let utilB = parseFloat(loteB.utilidad);
+  let mejor = utilA > utilB ? loteA.nombre : loteB.nombre;
+  let extra = Math.abs(utilA - utilB).toFixed(2);
+
+  const finalY = doc.lastAutoTable.finalY + 15;
+  doc.setFontSize(12);
+  doc.setTextColor(100);
+  doc.text("Conclusión basada en utilidad neta:", 14, finalY);
+
+  doc.setFontSize(14);
+  doc.setTextColor(39, 174, 96);
+  doc.setFont("helvetica", "bold");
+  doc.text(`El lote más rentable fue ${mejor} generando $${extra} adicionales.`, 14, finalY + 7);
+
+  doc.save(`Versus_${loteA.nombre}_vs_${loteB.nombre}.pdf`);
 }
 
 function mostrarResultados(data, tipo) {
