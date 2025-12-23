@@ -1,3 +1,6 @@
+/// --- Variables Globales ---
+let inventarioSanitario = [];
+
 // --- Lógica de Carga (BLINDADA) ---
 async function cargarLotesForSelect() {
   try {
@@ -12,13 +15,14 @@ async function cargarLotesForSelect() {
 
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
 
-    // FILTRO: Solo disponibles
-    const lotesActivos = lotes.filter(l => l.estado === 'disponible');
+    // FILTRO: Solo disponibles (o ocupados si lo prefieres)
+    // Mostramos estado para claridad
+    const lotesActivos = lotes.filter(l => l.estado !== 'vendido' && l.estado !== 'archivado');
 
     lotesActivos.forEach(lote => {
       const option = document.createElement('option');
       option.value = lote.id;
-      option.textContent = `${lote.loteId} (Stock: ${lote.cantidad})`;
+      option.textContent = `${lote.loteId} (${lote.estado}) - Aves: ${lote.cantidadActual || lote.cantidad}`;
       select.appendChild(option);
     });
   } catch (error) { console.error(error); }
@@ -33,36 +37,43 @@ async function cargarVacunasForSelect() {
     const res = await fetch(`${window.API_URL}/inventario?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+    const inventario = await res.json();
+    inventarioSanitario = inventario; // Guardamos en global para conversiones
 
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    const items = await res.json();
+    const vacunaSelect = document.getElementById('vacunaSelect'); // Para Vacunación
+    const insumoSelect = document.getElementById('insumoSelect'); // Para Tratamiento
 
-    const select = document.getElementById('vacunaSelect');
-    if (!select) return;
+    if (vacunaSelect) {
+      vacunaSelect.innerHTML = '<option value="">Selecciona Vacuna</option>';
+      const vacunas = inventario.filter(i => i.categoria === 'Vacuna' && i.cantidad > 0);
+      vacunas.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.id;
+        opt.textContent = `${v.producto} (Stock: ${v.cantidad} ${v.unidadMedida})`;
+        // Datos para la conversión automática
+        opt.dataset.nombre = v.producto;
+        opt.dataset.stock = v.cantidad;
+        opt.dataset.unidad = v.unidadMedida;
+        vacunaSelect.appendChild(opt);
+      });
+    }
 
-    select.innerHTML = '<option value="">Selecciona Vacuna/Medicina</option>';
+    if (insumoSelect) {
+      insumoSelect.innerHTML = '<option value="">Selecciona Insumo</option>';
+      // Filtramos Medicina, Otro, etc.
+      const insumos = inventario.filter(i => (i.categoria === 'Medicina' || i.categoria === 'Otro') && i.cantidad > 0);
+      insumos.forEach(i => {
+        const opt = document.createElement('option');
+        opt.value = i.id;
+        opt.textContent = `${i.producto} (Stock: ${i.cantidad} ${i.unidadMedida})`;
+        opt.dataset.nombre = i.producto;
+        opt.dataset.stock = i.cantidad;
+        opt.dataset.unidad = i.unidadMedida;
+        insumoSelect.appendChild(opt);
+      });
+    }
 
-    // Filtramos solo lo que sea Vacuna, Medicina u Otro
-    const filtrados = items.filter(i =>
-      i.categoria === 'Vacuna' || i.categoria === 'Medicina' || i.categoria === 'Otro'
-    );
-
-    filtrados.forEach(item => {
-      const option = document.createElement('option');
-      option.value = item.id;
-
-      // V 3.4: Recuperamos la unidad de medida
-      const unidad = item.unidadMedida || 'Unidades';
-
-      option.textContent = `${item.producto} (Stock: ${item.cantidad} ${unidad})`;
-      option.dataset.nombre = item.producto;
-      option.dataset.stock = item.cantidad;
-      option.dataset.unidad = unidad; // Guardamos la unidad base para la calculadora
-      select.appendChild(option);
-    });
-  } catch (error) {
-    console.error('Error al cargar vacunas para select:', error);
-  }
+  } catch (error) { console.error('Error cargando inventario:', error); }
 }
 
 async function cargarSalud() {
@@ -70,32 +81,41 @@ async function cargarSalud() {
     const token = localStorage.getItem('token');
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
-    const res = await fetch(`${window.API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
-    const salud = await res.json();
+
+    const res = await fetch(`${window.API_URL}/salud?granjaId=${granjaId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const registros = await res.json();
     const tbody = document.getElementById('saludTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
-    if (Array.isArray(salud) && salud.length > 0) {
-      salud.forEach(s => {
-        const tr = document.createElement('tr');
-        const fechaVisual = s.fecha ? new Date(s.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' }) : 'N/A';
 
-        // Formateo inteligente: Si es entero se muestra entero, si es decimal muestra hasta 4 dígitos
-        const cantidadVisual = Number.isInteger(s.cantidad) ? s.cantidad : parseFloat(s.cantidad).toFixed(4);
-        // Intentamos mostrar la unidad si el backend la enviara (requiere update en backend), por ahora mostramos la cantidad precisa
+    registros.forEach(reg => {
+      const tr = document.createElement('tr');
+      // Intentamos mostrar la unidad original si el backend la devolviera, 
+      // pero por ahora mostramos lo que se guardó (cantidadBase)
+      const nombreLote = reg.Lote ? reg.Lote.loteId : 'General';
 
-        tr.innerHTML = `
-          <td>${s.loteId ? (s.Lote ? s.Lote.loteId : s.loteId) : 'N/A'}</td>
-          <td>${s.tipo}</td>
-          <td>${s.nombre}</td>
-          <td>${s.Vacuna ? s.Vacuna.producto : '-'}</td>
-          <td>${cantidadVisual}</td>
-          <td>${fechaVisual}</td>
-          <td><button onclick="eliminarSalud(${s.id})" class="btn btn-sm btn-peligro">Eliminar</button></td>
-        `;
-        tbody.appendChild(tr);
-      });
-    } else { tbody.innerHTML = '<tr><td colspan="7">No hay registros.</td></tr>'; }
+      tr.innerHTML = `
+        <td>${nombreLote}</td>
+        <td><span class="badge" style="background:${getColorTipo(reg.tipo)}">${reg.tipo}</span></td>
+        <td>${reg.productoAplicado}</td>
+        <td>${reg.cantidad}</td> <!-- Mostramos la cantidad base -->
+        <td>${new Date(reg.fecha).toLocaleDateString()}</td>
+        <td>
+          <button onclick="eliminarSalud(${reg.id})" class="btn btn-sm btn-peligro">Eliminar</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
   } catch (error) { console.error(error); }
+}
+
+function getColorTipo(tipo) {
+  if (tipo === 'Vacunacion') return '#3498db';
+  if (tipo === 'Tratamiento') return '#e67e22';
+  if (tipo === 'Mortalidad') return '#e74c3c';
+  return '#95a5a6';
 }
 
 // --- INTELIGENCIA DE FILTRADO DE INSUMOS ---
@@ -143,48 +163,73 @@ function filtrarYMostrarInsumos(tipoEvento) {
 }
 
 // --- Conversor de Unidades ---
-function calcularCantidadBase(cantidadInput, unidadInput, unidadBase) {
-  if (!unidadBase || unidadInput === 'base') return cantidadInput;
+function calcularCantidadBase(cantidad, unidadUso, unidadBase) {
+  if (!unidadUso || !unidadBase) return cantidad;
 
-  // Normalizar a minúsculas para evitar errores (Kg vs kg)
-  const uIn = unidadInput.toLowerCase().trim();
-  const uBase = unidadBase.toLowerCase().trim();
+  // Normalizar texto (minusculas, sin espacios, quitar 's' final para plurales)
+  const uUso = unidadUso.toLowerCase().trim().replace(/s$/, ''); // gramos -> gramo
+  const uBase = unidadBase.toLowerCase().trim().replace(/s$/, ''); // libras -> libra
 
-  // Si son iguales, no convertir
-  if (uIn === uBase) return cantidadInput;
+  // 1. Si son iguales, no tocar
+  if (uUso === uBase || uUso === 'unidad' || uBase === 'unidad') return parseFloat(cantidad);
 
-  // --- LÓGICA DE VOLUMEN ---
-  // Base: Litros (L)
-  if (uBase === 'l' || uBase === 'litros') {
-    if (uIn === 'ml' || uIn === 'mililitros') return cantidadInput / 1000;
+  // Mapeo de alias comunes a estándar
+  const mapUnit = (u) => {
+    if (['g', 'gr', 'gramo'].includes(u)) return 'g';
+    if (['kg', 'kilo', 'kilogramo'].includes(u)) return 'kg';
+    if (['lb', 'libra'].includes(u)) return 'lb';
+    if (['oz', 'onza'].includes(u)) return 'oz';
+    if (['l', 'lt', 'litro'].includes(u)) return 'l';
+    if (['ml', 'mililitro', 'cc'].includes(u)) return 'ml';
+    if (['gl', 'gal', 'galon'].includes(u)) return 'gal';
+    return u;
+  };
+
+  const from = mapUnit(uUso);
+  const to = mapUnit(uBase);
+  const val = parseFloat(cantidad);
+
+  console.log(`Convirtiendo ${val} ${from} -> ${to}`);
+
+  // --- PESO ---
+  // Base Libra (lb)
+  if (to === 'lb') {
+    if (from === 'g') return val / 453.592;
+    if (from === 'kg') return val * 2.20462;
+    if (from === 'oz') return val / 16;
   }
-  // Base: Mililitros (ml)
-  if (uBase === 'ml' || uBase === 'mililitros') {
-    if (uIn === 'l' || uIn === 'litros') return cantidadInput * 1000;
+  // Base Kilogramo (kg)
+  if (to === 'kg') {
+    if (from === 'g') return val / 1000;
+    if (from === 'lb') return val / 2.20462;
+    if (from === 'oz') return val / 35.274;
+  }
+  // Base Gramo (g)
+  if (to === 'g') {
+    if (from === 'kg') return val * 1000;
+    if (from === 'lb') return val * 453.592;
   }
 
-  // --- LÓGICA DE PESO ---
-  // Base: Kilogramos (kg)
-  if (uBase === 'kg' || uBase === 'kilogramos') {
-    if (uIn === 'g' || uIn === 'gramos') return cantidadInput / 1000;
-    if (uIn === 'lb' || uIn === 'libras') return cantidadInput / 2.20462;
-    if (uIn === 'qq' || uIn === 'quintales') return cantidadInput * 45.36; // 1 qq = 100 lb approx 45.36kg
+  // --- VOLUMEN ---
+  // Base Litro (l)
+  if (to === 'l') {
+    if (from === 'ml') return val / 1000;
+    if (from === 'gal') return val * 3.78541;
   }
-  // Base: Gramos (g)
-  if (uBase === 'g' || uBase === 'gramos') {
-    if (uIn === 'kg') return cantidadInput * 1000;
+  // Base Mililitro (ml)
+  if (to === 'ml') {
+    if (from === 'l') return val * 1000;
+    if (from === 'gal') return val * 3785.41;
   }
-  // Base: Libras (lb)
-  if (uBase === 'lb' || uBase === 'libras') {
-    if (uIn === 'kg') return cantidadInput * 2.20462;
+  // Base Galón (gal)
+  if (to === 'gal') {
+    if (from === 'l') return val / 3.78541;
+    if (from === 'ml') return val / 3785.41;
   }
 
-  // --- OTROS (Dosis, Unidades, Sacos) ---
-  // Asumimos conversión directa 1:1 si no hay fórmula matemática obvia
-  // o si el usuario selecciona la misma unidad en el dropdown.
-
-  console.log(`Conversión aplicada: ${cantidadInput} ${uIn} -> ${uBase} (Sin cambio o conversión directa)`);
-  return cantidadInput;
+  // Si llegamos aquí, no se encontró conversión válida
+  console.warn(`⚠️ No existe conversión definida de ${from} a ${to}. Se enviará el valor original.`);
+  return val;
 }
 
 // --- UI Logic ---
@@ -281,6 +326,102 @@ async function guardarSalud(e) {
       alert('Error: ' + (errorText.error || 'Desconocido'));
     }
   } catch (error) { alert('Error de conexión'); }
+} async function guardarSalud(e) {
+  e.preventDefault();
+  const token = localStorage.getItem('token');
+  const granjaId = getSelectedGranjaId();
+  if (!granjaId) return;
+
+  const tipo = document.getElementById('tipoEvento').value;
+  const loteId = document.getElementById('loteId').value;
+  const fecha = document.getElementById('fecha').value;
+  const diasRetiro = parseInt(document.getElementById('diasRetiro').value) || 0;
+
+  // Calcular fecha de retiro
+  let fechaRetiro = null;
+  if (diasRetiro > 0 && fecha) {
+    const f = new Date(fecha);
+    f.setDate(f.getDate() + diasRetiro);
+    fechaRetiro = f.toISOString().split('T')[0];
+  }
+
+  // Preparar payload
+  const payload = {
+    granjaId,
+    tipo,
+    loteId,
+    fecha,
+    diasRetiro,
+    fechaRetiro,
+    descripcion: document.getElementById('descripcion').value
+  };
+
+  // Logica por tipo
+  if (tipo === 'Mortalidad') {
+    const cantidad = parseInt(document.getElementById('cantidad').value);
+    if (!cantidad || cantidad <= 0) return alert('Ingresa una cantidad válida');
+    payload.productoAplicado = 'N/A';
+    payload.cantidad = cantidad; // Cantidad de aves muertas
+    payload.costoTotal = 0; // La mortalidad es pérdida, no costo directo de bolsillo aquí
+  }
+  else {
+    // Vacunación o Tratamiento (Requiere Inventario)
+    let inventarioId, cantidadUso, unidadUso;
+
+    if (tipo === 'Vacunacion') {
+      inventarioId = document.getElementById('vacunaSelect').value;
+      cantidadUso = parseFloat(document.getElementById('dosis').value);
+      unidadUso = document.getElementById('unidadDosis').value;
+    } else {
+      inventarioId = document.getElementById('insumoSelect').value;
+      cantidadUso = parseFloat(document.getElementById('cantidadTratamiento').value);
+      unidadUso = document.getElementById('unidadTratamiento').value;
+    }
+
+    if (!inventarioId) return alert("Selecciona un producto del inventario");
+
+    // Buscar el item en memoria para saber su unidad base y stock
+    const item = inventarioSanitario.find(i => i.id == inventarioId);
+    if (!item) return alert("Error identificando el producto");
+
+    // --- AQUÍ OCURRE LA MAGIA MATEMÁTICA ---
+    const cantidadBase = calcularCantidadBase(cantidadUso, unidadUso, item.unidadMedida);
+
+    console.log(`Stock: ${item.cantidad} ${item.unidadMedida} | Uso: ${cantidadUso} ${unidadUso} => Base: ${cantidadBase.toFixed(4)} ${item.unidadMedida}`);
+
+    if (cantidadBase > item.cantidad) {
+      return alert(`Error: Stock insuficiente de ${item.producto}. Tienes ${item.cantidad} ${item.unidadMedida}, necesitas ${cantidadBase.toFixed(4)} ${item.unidadMedida}.`);
+    }
+
+    payload.productoAplicado = item.producto;
+    payload.inventarioId = parseInt(inventarioId);
+    payload.cantidad = cantidadBase; // Enviamos lo convertido al backend
+  }
+
+  try {
+    const res = await fetch(`${window.API_URL}/salud`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      alert('Registro guardado correctamente');
+      cerrarFormularioSalud();
+      cargarSalud();
+      // Recargar inventario para actualizar stocks en los selects
+      cargarVacunasForSelect();
+    } else {
+      const errData = await res.json();
+      alert('Error: ' + (errData.error || 'No se pudo guardar'));
+    }
+  } catch (error) {
+    console.error(error);
+    alert('Error de conexión');
+  }
 }
 
 async function editarSalud(id) {
