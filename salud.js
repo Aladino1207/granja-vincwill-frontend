@@ -1,7 +1,9 @@
 // --- Variables Globales ---
 let inventarioSanitario = []; // Memoria caché del inventario
 
-// --- 1. Lógica de Carga ---
+// ==========================================
+// 1. CARGA DE DATOS
+// ==========================================
 
 async function cargarLotesForSelect() {
   try {
@@ -15,6 +17,7 @@ async function cargarLotesForSelect() {
     if (!select) return;
 
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
+    // Mostrar lotes disponibles y ocupados (para que aparezcan los que tienen pollos)
     const lotesActivos = lotes.filter(l => l.estado === 'disponible' || l.estado === 'ocupado');
 
     lotesActivos.forEach(lote => {
@@ -31,10 +34,14 @@ async function cargarSalud() {
     const token = localStorage.getItem('token');
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
+    
     const res = await fetch(`${window.API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
     const salud = await res.json();
+    
     const tbody = document.getElementById('saludTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
+    
     if (Array.isArray(salud) && salud.length > 0) {
       salud.forEach(s => {
         const tr = document.createElement('tr');
@@ -52,7 +59,9 @@ async function cargarSalud() {
         `;
         tbody.appendChild(tr);
       });
-    } else { tbody.innerHTML = '<tr><td colspan="7">No hay registros.</td></tr>'; }
+    } else { 
+        tbody.innerHTML = '<tr><td colspan="7">No hay registros.</td></tr>'; 
+    }
   } catch (error) { console.error(error); }
 }
 
@@ -63,7 +72,9 @@ function getColorTipo(tipo) {
     return '#95a5a6';
 }
 
-// --- 2. Gestión Inteligente de Inventario ---
+// ==========================================
+// 2. GESTIÓN DE INVENTARIO Y UI
+// ==========================================
 
 async function precargarInventarioSanitario() {
   try {
@@ -80,6 +91,8 @@ async function precargarInventarioSanitario() {
 
 function filtrarYMostrarInsumos(tipoEvento) {
   const select = document.getElementById('vacunaSelect');
+  if (!select) return;
+  
   select.innerHTML = '<option value="">Seleccione Producto</option>';
 
   let filtrados = [];
@@ -108,7 +121,10 @@ function filtrarYMostrarInsumos(tipoEvento) {
   });
 }
 
-// --- 3. CONVERSOR DE UNIDADES (CORREGIDO) ---
+// ==========================================
+// 3. CONVERSOR DE UNIDADES (CORREGIDO)
+// ==========================================
+
 function calcularCantidadBase(cantidadInput, unidadInput, unidadBase) {
   if (!unidadBase || unidadInput === 'base') return cantidadInput;
 
@@ -125,7 +141,7 @@ function calcularCantidadBase(cantidadInput, unidadInput, unidadBase) {
   // DESTINO: LIBRAS (lb)
   if (uBase === 'lb' || uBase === 'libra') {
     if (uIn === 'kg' || uIn === 'kilo' || uIn === 'kilogramo') return cantidadInput * 2.20462;
-    if (uIn === 'g' || uIn === 'gr' || uIn === 'gramo') return cantidadInput / 453.592; // <--- ESTO FALTABA
+    if (uIn === 'g' || uIn === 'gr' || uIn === 'gramo') return cantidadInput / 453.592; // <--- FÓRMULA CLAVE
     if (uIn === 'oz' || uIn === 'onza') return cantidadInput / 16;
     if (uIn === 'qq') return cantidadInput * 100;
   }
@@ -160,7 +176,9 @@ function calcularCantidadBase(cantidadInput, unidadInput, unidadBase) {
   return cantidadInput;
 }
 
-// --- 4. Funciones CRUD ---
+// ==========================================
+// 4. FUNCIONES CRUD
+// ==========================================
 
 async function guardarSalud(e) {
   e.preventDefault();
@@ -195,7 +213,7 @@ async function guardarSalud(e) {
     
     console.log(`Stock: ${stockActual} ${unidadBase} | Pedido: ${cantidadInput} ${unidadAplicacion} -> ${cantidadFinal.toFixed(4)} ${unidadBase}`);
 
-    // 2. Validar Stock (Frontend)
+    // 2. Validar Stock (Frontend - Optimista)
     // Usamos un pequeño margen de error para flotantes
     if (cantidadFinal > (stockActual + 0.0001)) {
         alert(`❌ Stock Insuficiente.\n\nInventario: ${stockActual} ${unidadBase}\nNecesitas: ${cantidadFinal.toFixed(4)} ${unidadBase}\n(${cantidadInput} ${unidadAplicacion})`);
@@ -261,7 +279,10 @@ async function eliminarSalud(id) {
   }
 }
 
-// --- UI Helpers ---
+// ==========================================
+// 5. UI HELPERS E INICIALIZACIÓN
+// ==========================================
+
 function abrirFormularioSalud() {
   const container = document.getElementById('formContainer');
   if (container) container.classList.add('is-open');
@@ -286,10 +307,12 @@ function cerrarFormularioSalud() {
   if (document.getElementById('stockInfo')) document.getElementById('stockInfo').textContent = '';
 }
 
-// --- Inicialización ---
 document.addEventListener('DOMContentLoaded', () => {
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
-  if (granja) document.querySelector('header h1').textContent = `Salud (${granja.nombre})`;
+  if (granja) {
+      const headerTitle = document.querySelector('header h1');
+      if(headerTitle) headerTitle.textContent = `Salud (${granja.nombre})`;
+  }
 
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
@@ -308,11 +331,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const vacunaGroup = document.getElementById('vacunaGroup');
       
       if (tipo === 'Vacunación' || tipo === 'Tratamiento') {
-        vacunaGroup.style.display = 'block';
+        if(vacunaGroup) vacunaGroup.style.display = 'block';
         if(vacunaSelect) vacunaSelect.required = true;
         filtrarYMostrarInsumos(tipo);
       } else {
-        vacunaGroup.style.display = 'none';
+        if(vacunaGroup) vacunaGroup.style.display = 'none';
         if(vacunaSelect) {
             vacunaSelect.value = "";
             vacunaSelect.required = false;
@@ -327,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
     vacunaSelect.addEventListener('change', () => {
       const opt = vacunaSelect.options[vacunaSelect.selectedIndex];
       if (opt && opt.dataset.nombre) {
-        nombreInput.value = opt.dataset.nombre; // Autocompletar nombre
+        if(nombreInput) nombreInput.value = opt.dataset.nombre; // Autocompletar nombre
         if (stockInfo) {
             stockInfo.textContent = `Stock: ${opt.dataset.stock} ${opt.dataset.unidad}`;
             // Cambiar color si stock es bajo
@@ -350,16 +373,3 @@ document.addEventListener('DOMContentLoaded', () => {
   cargarSalud();
   precargarInventarioSanitario();
 });
-```
-
-### ¿Qué corregí? (La Magia Matemática) 🧮
-
-En la función `calcularCantidadBase`, agregué este bloque vital que faltaba:
-
-```javascript
-// Si la base es Libras (lb)
-if (uBase === 'lb' || uBase === 'libra') {
-    // ...
-    if (uIn === 'g' || uIn === 'gr' || uIn === 'gramo') return cantidadInput / 453.592; // <--- AQUÍ ESTÁ LA SOLUCIÓN
-    // ...
-}
