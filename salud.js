@@ -100,7 +100,7 @@ function filtrarYMostrarInsumos(tipoEvento) {
   // CAMBIO CLAVE: Ahora mostramos TODO (Vacunas + Medicinas + Otros) tanto para Vacunación como Tratamiento.
   // Esto da flexibilidad total al usuario.
   if (tipoEvento === 'Vacunación' || tipoEvento === 'Tratamiento') {
-    filtrados = inventarioSanitario.filter(i => ['Vacuna', 'Medicina'].includes(i.categoria));
+    filtrados = inventarioSanitario.filter(i => ['Vacuna', 'Medicina', 'Otro'].includes(i.categoria));
   } else {
     // Si es Mortalidad u otro, no mostramos nada
     return; 
@@ -376,4 +376,5 @@ document.addEventListener('DOMContentLoaded', () => {
   cargarSalud();
   precargarInventarioSanitario();
 });
+
 
