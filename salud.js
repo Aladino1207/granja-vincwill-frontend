@@ -83,7 +83,7 @@ async function precargarInventarioSanitario() {
     const res = await fetch(`${window.API_URL}/inventario?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) {
       const items = await res.json();
-      // Guardamos todo lo que sea sanitario
+      // Guardamos todo lo que sea sanitario para tenerlo listo
       inventarioSanitario = items.filter(i => ['Vacuna', 'Medicina', 'Otro'].includes(i.categoria));
     }
   } catch (e) { console.error("Error cargando inventario sanitario", e); }
@@ -96,13 +96,14 @@ function filtrarYMostrarInsumos(tipoEvento) {
   select.innerHTML = '<option value="">Seleccione Producto</option>';
 
   let filtrados = [];
-  // Lógica de filtrado según tipo de evento
-  if (tipoEvento === 'Vacunación') {
-    filtrados = inventarioSanitario.filter(i => i.categoria === 'Vacuna');
-  } else if (tipoEvento === 'Tratamiento') {
-    filtrados = inventarioSanitario.filter(i => i.categoria === 'Medicina' || i.categoria === 'Otro');
+  
+  // CAMBIO CLAVE: Ahora mostramos TODO (Vacunas + Medicinas + Otros) tanto para Vacunación como Tratamiento.
+  // Esto da flexibilidad total al usuario.
+  if (tipoEvento === 'Vacunación' || tipoEvento === 'Tratamiento') {
+    filtrados = inventarioSanitario.filter(i => ['Vacuna', 'Medicina', 'Otro'].includes(i.categoria));
   } else {
-    return; // Si es Mortalidad u otro, no mostramos nada
+    // Si es Mortalidad u otro, no mostramos nada
+    return; 
   }
 
   filtrados.forEach(item => {
@@ -110,7 +111,8 @@ function filtrarYMostrarInsumos(tipoEvento) {
     option.value = item.id;
     const unidad = item.unidadMedida || 'Unidades';
     
-    option.textContent = `${item.producto}`;
+    // Mostramos también la categoría en el nombre para ayudar a distinguir
+    option.textContent = `${item.producto} (${item.categoria})`;
     
     // Guardamos DATOS CLAVE en el dataset para usarlos al guardar
     option.dataset.stock = item.cantidad; // Stock actual (ej: 4)
@@ -333,6 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (tipo === 'Vacunación' || tipo === 'Tratamiento') {
         if(vacunaGroup) vacunaGroup.style.display = 'block';
         if(vacunaSelect) vacunaSelect.required = true;
+        // LLAMADA AL FILTRO UNIFICADO
         filtrarYMostrarInsumos(tipo);
       } else {
         if(vacunaGroup) vacunaGroup.style.display = 'none';
