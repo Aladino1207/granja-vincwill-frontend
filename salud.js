@@ -48,11 +48,11 @@ async function cargarSalud() {
         const fechaVisual = s.fecha ? new Date(s.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' }) : 'N/A';
         const cantidadVisual = Number.isInteger(s.cantidad) ? s.cantidad : parseFloat(s.cantidad).toFixed(4);
 
+        // CAMBIO 1: Eliminada la columna de 'Insumo/ProductoAplicado'
         tr.innerHTML = `
           <td>${s.loteId ? (s.Lote ? s.Lote.loteId : s.loteId) : 'N/A'}</td>
           <td><span class="badge" style="background-color: ${getColorTipo(s.tipo)}">${s.tipo}</span></td>
           <td>${s.nombre}</td>
-          <td>${s.productoAplicado || '-'}</td>
           <td>${cantidadVisual}</td>
           <td>${fechaVisual}</td>
           <td><button onclick="eliminarSalud(${s.id})" class="btn btn-sm btn-peligro">Eliminar</button></td>
@@ -60,7 +60,7 @@ async function cargarSalud() {
         tbody.appendChild(tr);
       });
     } else { 
-        tbody.innerHTML = '<tr><td colspan="7">No hay registros.</td></tr>'; 
+        tbody.innerHTML = '<tr><td colspan="6">No hay registros.</td></tr>'; // Ajustado colspan a 6
     }
   } catch (error) { console.error(error); }
 }
@@ -97,12 +97,9 @@ function filtrarYMostrarInsumos(tipoEvento) {
 
   let filtrados = [];
   
-  // CAMBIO CLAVE: Ahora mostramos TODO (Vacunas + Medicinas + Otros) tanto para Vacunación como Tratamiento.
-  // Esto da flexibilidad total al usuario.
   if (tipoEvento === 'Vacunación' || tipoEvento === 'Tratamiento') {
     filtrados = inventarioSanitario.filter(i => ['Vacuna', 'Medicina', 'Otro'].includes(i.categoria));
   } else {
-    // Si es Mortalidad u otro, no mostramos nada
     return; 
   }
 
@@ -111,12 +108,12 @@ function filtrarYMostrarInsumos(tipoEvento) {
     option.value = item.id;
     const unidad = item.unidadMedida || 'Unidades';
     
-    // Mostramos también la categoría en el nombre para ayudar a distinguir
-    option.textContent = `${item.producto} (${item.categoria})`;
+    // CAMBIO 2: Mostrar Stock en lugar de Categoría
+    option.textContent = `${item.producto} (Stock: ${item.cantidad} ${unidad})`;
     
-    // Guardamos DATOS CLAVE en el dataset para usarlos al guardar
-    option.dataset.stock = item.cantidad; // Stock actual (ej: 4)
-    option.dataset.unidad = unidad;       // Unidad base (ej: lb)
+    // Guardamos DATOS CLAVE en el dataset
+    option.dataset.stock = item.cantidad;
+    option.dataset.unidad = unidad;
     option.dataset.nombre = item.producto;
     
     select.appendChild(option);
@@ -130,46 +127,35 @@ function filtrarYMostrarInsumos(tipoEvento) {
 function calcularCantidadBase(cantidadInput, unidadInput, unidadBase) {
   if (!unidadBase || unidadInput === 'base') return cantidadInput;
 
-  // Normalizar strings
-  const uIn = unidadInput.toLowerCase().trim().replace(/s$/, ''); // gramos -> gramo
-  const uBase = unidadBase.toLowerCase().trim().replace(/s$/, ''); // libras -> libra
+  const uIn = unidadInput.toLowerCase().trim().replace(/s$/, ''); 
+  const uBase = unidadBase.toLowerCase().trim().replace(/s$/, ''); 
 
   if (uIn === uBase) return cantidadInput;
 
   console.log(`Intentando convertir: ${cantidadInput} ${uIn} a ${uBase}`);
 
-  // --- LÓGICA DE PESO ---
-  
-  // DESTINO: LIBRAS (lb)
+  // --- PESO ---
   if (uBase === 'lb' || uBase === 'libra') {
     if (uIn === 'kg' || uIn === 'kilo' || uIn === 'kilogramo') return cantidadInput * 2.20462;
-    if (uIn === 'g' || uIn === 'gr' || uIn === 'gramo') return cantidadInput / 453.592; // <--- FÓRMULA CLAVE
+    if (uIn === 'g' || uIn === 'gr' || uIn === 'gramo') return cantidadInput / 453.592;
     if (uIn === 'oz' || uIn === 'onza') return cantidadInput / 16;
     if (uIn === 'qq') return cantidadInput * 100;
   }
-
-  // DESTINO: KILOGRAMOS (kg)
   if (uBase === 'kg' || uBase === 'kilo' || uBase === 'kilogramo') {
     if (uIn === 'g' || uIn === 'gr' || uIn === 'gramo') return cantidadInput / 1000;
     if (uIn === 'lb' || uIn === 'libra') return cantidadInput / 2.20462;
     if (uIn === 'qq') return cantidadInput * 45.36;
   }
-
-  // DESTINO: GRAMOS (g)
   if (uBase === 'g' || uBase === 'gr' || uBase === 'gramo') {
     if (uIn === 'kg' || uIn === 'kilo') return cantidadInput * 1000;
     if (uIn === 'lb' || uIn === 'libra') return cantidadInput * 453.592;
   }
 
-  // --- LÓGICA DE VOLUMEN ---
-  
-  // DESTINO: LITROS (l)
+  // --- VOLUMEN ---
   if (uBase === 'l' || uBase === 'litro' || uBase === 'lt') {
     if (uIn === 'ml' || uIn === 'cc' || uIn === 'mililitro') return cantidadInput / 1000;
     if (uIn === 'gal' || uIn === 'galon') return cantidadInput * 3.785;
   }
-
-  // DESTINO: MILILITROS (ml)
   if (uBase === 'ml' || uBase === 'cc' || uBase === 'mililitro') {
     if (uIn === 'l' || uIn === 'litro' || uIn === 'lt') return cantidadInput * 1000;
   }
@@ -191,44 +177,36 @@ async function guardarSalud(e) {
   let cantidadInput = parseFloat(document.getElementById('cantidad').value);
   const unidadAplicacion = document.getElementById('unidadAplicacion').value;
   
-  // Elementos de inventario
   const vacunaSelect = document.getElementById('vacunaSelect');
-  const vacunaGroup = document.getElementById('vacunaGroup');
   
   let vacunaId = null;
   let productoAplicado = 'N/A';
-  let cantidadFinal = cantidadInput; // Por defecto es lo que escribió el usuario
+  let cantidadFinal = cantidadInput; 
 
-  // Lógica si es Tratamiento o Vacunación (implica inventario)
   if ((tipo === 'Vacunación' || tipo === 'Tratamiento') && vacunaSelect.value) {
     
     vacunaId = parseInt(vacunaSelect.value);
     
-    // Recuperamos la info del DATASET del option seleccionado
     const opcion = vacunaSelect.options[vacunaSelect.selectedIndex];
     const unidadBase = opcion.dataset.unidad;
     const stockActual = parseFloat(opcion.dataset.stock);
     productoAplicado = opcion.dataset.nombre;
 
-    // 1. Convertir
     cantidadFinal = calcularCantidadBase(cantidadInput, unidadAplicacion, unidadBase);
     
     console.log(`Stock: ${stockActual} ${unidadBase} | Pedido: ${cantidadInput} ${unidadAplicacion} -> ${cantidadFinal.toFixed(4)} ${unidadBase}`);
 
-    // 2. Validar Stock (Frontend - Optimista)
-    // Usamos un pequeño margen de error para flotantes
     if (cantidadFinal > (stockActual + 0.0001)) {
         alert(`❌ Stock Insuficiente.\n\nInventario: ${stockActual} ${unidadBase}\nNecesitas: ${cantidadFinal.toFixed(4)} ${unidadBase}\n(${cantidadInput} ${unidadAplicacion})`);
-        return; // Detenemos aquí, no enviamos al backend
+        return; 
     }
   }
 
-  // Cálculo de fechas
   const diasRetiro = parseInt(document.getElementById('diasRetiro').value) || 0;
   const fechaEvento = new Date(document.getElementById('fecha').value);
   let fechaRetiroCalculada = null;
   if (diasRetiro > 0) {
-    const f = new Date(fechaEvento); // Copia
+    const f = new Date(fechaEvento);
     f.setDate(f.getDate() + diasRetiro);
     fechaRetiroCalculada = f.toISOString().split('T')[0];
   }
@@ -237,7 +215,7 @@ async function guardarSalud(e) {
     loteId: parseInt(document.getElementById('loteId').value),
     tipo: tipo,
     nombre: document.getElementById('nombre').value,
-    cantidad: cantidadFinal, // ENVIAMOS LA CANTIDAD CONVERTIDA
+    cantidad: cantidadFinal, 
     vacunaId: vacunaId,
     productoAplicado: productoAplicado,
     fecha: document.getElementById('fecha').value,
@@ -257,9 +235,7 @@ async function guardarSalud(e) {
       alert('Evento registrado con éxito');
       cerrarFormularioSalud();
       await cargarSalud();
-      await precargarInventarioSanitario(); // Actualizar stock en memoria inmediatamente
-      
-      // Si fue mortalidad, recargar lotes para actualizar conteo de aves
+      await precargarInventarioSanitario(); 
       if (tipo === 'Mortalidad') await cargarLotesForSelect();
     } else {
       const errorText = await res.json();
@@ -303,7 +279,6 @@ function cerrarFormularioSalud() {
   if (form) form.reset();
   if (document.getElementById('saludId')) document.getElementById('saludId').value = '';
 
-  // Resetear vista
   const vacunaGroup = document.getElementById('vacunaGroup');
   if (vacunaGroup) vacunaGroup.style.display = 'none';
   if (document.getElementById('stockInfo')) document.getElementById('stockInfo').textContent = '';
@@ -320,13 +295,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelBtn = document.getElementById('cancelBtn');
   const form = document.getElementById('saludForm');
 
-  // Elementos UI
   const tipoSelect = document.getElementById('tipo');
   const vacunaSelect = document.getElementById('vacunaSelect');
   const nombreInput = document.getElementById('nombre');
   const stockInfo = document.getElementById('stockInfo');
 
-  // 1. Listener Tipo
   if (tipoSelect) {
     tipoSelect.addEventListener('change', () => {
       const tipo = tipoSelect.value;
@@ -335,7 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (tipo === 'Vacunación' || tipo === 'Tratamiento') {
         if(vacunaGroup) vacunaGroup.style.display = 'block';
         if(vacunaSelect) vacunaSelect.required = true;
-        // LLAMADA AL FILTRO UNIFICADO
         filtrarYMostrarInsumos(tipo);
       } else {
         if(vacunaGroup) vacunaGroup.style.display = 'none';
@@ -348,15 +320,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. Listener Producto (Para mostrar stock)
   if (vacunaSelect) {
     vacunaSelect.addEventListener('change', () => {
       const opt = vacunaSelect.options[vacunaSelect.selectedIndex];
       if (opt && opt.dataset.nombre) {
-        if(nombreInput) nombreInput.value = opt.dataset.nombre; // Autocompletar nombre
+        if(nombreInput) nombreInput.value = opt.dataset.nombre;
         if (stockInfo) {
             stockInfo.textContent = `Stock: ${opt.dataset.stock} ${opt.dataset.unidad}`;
-            // Cambiar color si stock es bajo
             stockInfo.style.color = parseFloat(opt.dataset.stock) < 5 ? 'red' : 'var(--color-secundario)';
         }
       }
@@ -376,5 +346,3 @@ document.addEventListener('DOMContentLoaded', () => {
   cargarSalud();
   precargarInventarioSanitario();
 });
-
-
