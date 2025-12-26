@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (form) form.onsubmit = guardarSeguimiento;
 
   } else {
-    if (toggleBtn) toggleBtn.style.display = 'none';
+    if (toggleBtn) toggleBtn.style.display = 'none'; 
   }
 
   cargarLotesForSelect();
