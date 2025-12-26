@@ -1,7 +1,10 @@
 // --- Variables Globales ---
-let inventarioSanitario = [];
+let inventarioSanitario = []; // Memoria caché del inventario
 
-// --- Lógica de Carga (BLINDADA) ---
+// ==========================================
+// 1. CARGA DE DATOS
+// ==========================================
+
 async function cargarLotesForSelect() {
   try {
     const token = localStorage.getItem('token');
@@ -14,66 +17,16 @@ async function cargarLotesForSelect() {
     if (!select) return;
 
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
-
-    // FILTRO: Solo disponibles (o ocupados si lo prefieres)
-    // Mostramos estado para claridad
-    const lotesActivos = lotes.filter(l => l.estado !== 'vendido' && l.estado !== 'archivado');
+    // Mostrar lotes disponibles y ocupados (para que aparezcan los que tienen pollos)
+    const lotesActivos = lotes.filter(l => l.estado === 'disponible' || l.estado === 'ocupado');
 
     lotesActivos.forEach(lote => {
       const option = document.createElement('option');
       option.value = lote.id;
-      option.textContent = `${lote.loteId} (${lote.estado}) - Aves: ${lote.cantidadActual || lote.cantidad}`;
+      option.textContent = `${lote.loteId} (Aves: ${lote.cantidadActual || lote.cantidad})`;
       select.appendChild(option);
     });
   } catch (error) { console.error(error); }
-}
-
-async function cargarVacunasForSelect() {
-  try {
-    const token = localStorage.getItem('token');
-    const granjaId = getSelectedGranjaId();
-    if (!granjaId) return;
-
-    const res = await fetch(`${window.API_URL}/inventario?granjaId=${granjaId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const inventario = await res.json();
-    inventarioSanitario = inventario; // Guardamos en global para conversiones
-
-    const vacunaSelect = document.getElementById('vacunaSelect'); // Para Vacunación
-    const insumoSelect = document.getElementById('insumoSelect'); // Para Tratamiento
-
-    if (vacunaSelect) {
-      vacunaSelect.innerHTML = '<option value="">Selecciona Vacuna</option>';
-      const vacunas = inventario.filter(i => i.categoria === 'Vacuna' && i.cantidad > 0);
-      vacunas.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v.id;
-        opt.textContent = `${v.producto} (Stock: ${v.cantidad} ${v.unidadMedida})`;
-        // Datos para la conversión automática
-        opt.dataset.nombre = v.producto;
-        opt.dataset.stock = v.cantidad;
-        opt.dataset.unidad = v.unidadMedida;
-        vacunaSelect.appendChild(opt);
-      });
-    }
-
-    if (insumoSelect) {
-      insumoSelect.innerHTML = '<option value="">Selecciona Insumo</option>';
-      // Filtramos Medicina, Otro, etc.
-      const insumos = inventario.filter(i => (i.categoria === 'Medicina' || i.categoria === 'Otro') && i.cantidad > 0);
-      insumos.forEach(i => {
-        const opt = document.createElement('option');
-        opt.value = i.id;
-        opt.textContent = `${i.producto} (Stock: ${i.cantidad} ${i.unidadMedida})`;
-        opt.dataset.nombre = i.producto;
-        opt.dataset.stock = i.cantidad;
-        opt.dataset.unidad = i.unidadMedida;
-        insumoSelect.appendChild(opt);
-      });
-    }
-
-  } catch (error) { console.error('Error cargando inventario:', error); }
 }
 
 async function cargarSalud() {
@@ -81,269 +34,315 @@ async function cargarSalud() {
     const token = localStorage.getItem('token');
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
-
-    const res = await fetch(`${window.API_URL}/salud?granjaId=${granjaId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const registros = await res.json();
+    
+    const res = await fetch(`${window.API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
+    const salud = await res.json();
+    
     const tbody = document.getElementById('saludTableBody');
     if (!tbody) return;
     tbody.innerHTML = '';
+    
+    if (Array.isArray(salud) && salud.length > 0) {
+      salud.forEach(s => {
+        const tr = document.createElement('tr');
+        const fechaVisual = s.fecha ? new Date(s.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' }) : 'N/A';
+        const cantidadVisual = Number.isInteger(s.cantidad) ? s.cantidad : parseFloat(s.cantidad).toFixed(4);
 
-    registros.forEach(reg => {
-      const tr = document.createElement('tr');
-      // Intentamos mostrar la unidad original si el backend la devolviera, 
-      // pero por ahora mostramos lo que se guardó (cantidadBase)
-      const nombreLote = reg.Lote ? reg.Lote.loteId : 'General';
-
-      tr.innerHTML = `
-        <td>${nombreLote}</td>
-        <td><span class="badge" style="background:${getColorTipo(reg.tipo)}">${reg.tipo}</span></td>
-        <td>${reg.productoAplicado}</td>
-        <td>${reg.cantidad}</td> <!-- Mostramos la cantidad base -->
-        <td>${new Date(reg.fecha).toLocaleDateString()}</td>
-        <td>
-          <button onclick="eliminarSalud(${reg.id})" class="btn btn-sm btn-peligro">Eliminar</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
+        // CAMBIO 1: Eliminada la columna de 'Insumo/ProductoAplicado'
+        tr.innerHTML = `
+          <td>${s.loteId ? (s.Lote ? s.Lote.loteId : s.loteId) : 'N/A'}</td>
+          <td><span class="badge" style="background-color: ${getColorTipo(s.tipo)}">${s.tipo}</span></td>
+          <td>${s.nombre}</td>
+          <td>${cantidadVisual}</td>
+          <td>${fechaVisual}</td>
+          <td><button onclick="eliminarSalud(${s.id})" class="btn btn-sm btn-peligro">Eliminar</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } else { 
+        tbody.innerHTML = '<tr><td colspan="6">No hay registros.</td></tr>'; // Ajustado colspan a 6
+    }
   } catch (error) { console.error(error); }
 }
 
 function getColorTipo(tipo) {
-  if (tipo === 'Vacunacion') return '#3498db';
-  if (tipo === 'Tratamiento') return '#e67e22';
-  if (tipo === 'Mortalidad') return '#e74c3c';
-  return '#95a5a6';
+    if(tipo === 'Vacunación') return '#3498db';
+    if(tipo === 'Tratamiento') return '#e67e22';
+    if(tipo === 'Mortalidad') return '#e74c3c';
+    return '#95a5a6';
 }
 
-// --- CORE: Lógica de Conversión Robusta ---
-function calcularCantidadBase(cantidad, unidadUso, unidadBase) {
-  if (!unidadUso || !unidadBase) return cantidad;
+// ==========================================
+// 2. GESTIÓN DE INVENTARIO Y UI
+// ==========================================
 
-  // Normalizar texto (minusculas, sin espacios, quitar 's' final para plurales)
-  const uUso = unidadUso.toLowerCase().trim().replace(/s$/, ''); // gramos -> gramo
-  const uBase = unidadBase.toLowerCase().trim().replace(/s$/, ''); // libras -> libra
+async function precargarInventarioSanitario() {
+  try {
+    const token = localStorage.getItem('token');
+    const granjaId = getSelectedGranjaId();
+    const res = await fetch(`${window.API_URL}/inventario?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) {
+      const items = await res.json();
+      // Guardamos todo lo que sea sanitario para tenerlo listo
+      inventarioSanitario = items.filter(i => ['Vacuna', 'Medicina', 'Otro'].includes(i.categoria));
+    }
+  } catch (e) { console.error("Error cargando inventario sanitario", e); }
+}
 
-  // 1. Si son iguales, no tocar
-  if (uUso === uBase || uUso === 'unidad' || uBase === 'unidad') return parseFloat(cantidad);
+function filtrarYMostrarInsumos(tipoEvento) {
+  const select = document.getElementById('vacunaSelect');
+  if (!select) return;
+  
+  select.innerHTML = '<option value="">Seleccione Producto</option>';
 
-  // Mapeo de alias comunes a estándar
-  const mapUnit = (u) => {
-    if (['g', 'gr', 'gramo'].includes(u)) return 'g';
-    if (['kg', 'kilo', 'kilogramo'].includes(u)) return 'kg';
-    if (['lb', 'libra'].includes(u)) return 'lb';
-    if (['oz', 'onza'].includes(u)) return 'oz';
-    if (['l', 'lt', 'litro'].includes(u)) return 'l';
-    if (['ml', 'mililitro', 'cc'].includes(u)) return 'ml';
-    if (['gl', 'gal', 'galon'].includes(u)) return 'gal';
-    return u;
-  };
+  let filtrados = [];
+  
+  if (tipoEvento === 'Vacunación' || tipoEvento === 'Tratamiento') {
+    filtrados = inventarioSanitario.filter(i => ['Vacuna', 'Medicina', 'Otro'].includes(i.categoria));
+  } else {
+    return; 
+  }
 
-  const from = mapUnit(uUso);
-  const to = mapUnit(uBase);
-  const val = parseFloat(cantidad);
+  filtrados.forEach(item => {
+    const option = document.createElement('option');
+    option.value = item.id;
+    const unidad = item.unidadMedida || 'Unidades';
+    
+    // CAMBIO 2: Mostrar Stock en lugar de Categoría
+    option.textContent = `${item.producto} (Stock: ${item.cantidad} ${unidad})`;
+    
+    // Guardamos DATOS CLAVE en el dataset
+    option.dataset.stock = item.cantidad;
+    option.dataset.unidad = unidad;
+    option.dataset.nombre = item.producto;
+    
+    select.appendChild(option);
+  });
+}
 
-  console.log(`Convirtiendo ${val} ${from} -> ${to}`);
+// ==========================================
+// 3. CONVERSOR DE UNIDADES (CORREGIDO)
+// ==========================================
+
+function calcularCantidadBase(cantidadInput, unidadInput, unidadBase) {
+  if (!unidadBase || unidadInput === 'base') return cantidadInput;
+
+  const uIn = unidadInput.toLowerCase().trim().replace(/s$/, ''); 
+  const uBase = unidadBase.toLowerCase().trim().replace(/s$/, ''); 
+
+  if (uIn === uBase) return cantidadInput;
+
+  console.log(`Intentando convertir: ${cantidadInput} ${uIn} a ${uBase}`);
 
   // --- PESO ---
-  // Base Libra (lb)
-  if (to === 'lb') {
-    if (from === 'g') return val / 453.592;
-    if (from === 'kg') return val * 2.20462;
-    if (from === 'oz') return val / 16;
+  if (uBase === 'lb' || uBase === 'libra') {
+    if (uIn === 'kg' || uIn === 'kilo' || uIn === 'kilogramo') return cantidadInput * 2.20462;
+    if (uIn === 'g' || uIn === 'gr' || uIn === 'gramo') return cantidadInput / 453.592;
+    if (uIn === 'oz' || uIn === 'onza') return cantidadInput / 16;
+    if (uIn === 'qq') return cantidadInput * 100;
   }
-  // Base Kilogramo (kg)
-  if (to === 'kg') {
-    if (from === 'g') return val / 1000;
-    if (from === 'lb') return val / 2.20462;
-    if (from === 'oz') return val / 35.274;
+  if (uBase === 'kg' || uBase === 'kilo' || uBase === 'kilogramo') {
+    if (uIn === 'g' || uIn === 'gr' || uIn === 'gramo') return cantidadInput / 1000;
+    if (uIn === 'lb' || uIn === 'libra') return cantidadInput / 2.20462;
+    if (uIn === 'qq') return cantidadInput * 45.36;
   }
-  // Base Gramo (g)
-  if (to === 'g') {
-    if (from === 'kg') return val * 1000;
-    if (from === 'lb') return val * 453.592;
+  if (uBase === 'g' || uBase === 'gr' || uBase === 'gramo') {
+    if (uIn === 'kg' || uIn === 'kilo') return cantidadInput * 1000;
+    if (uIn === 'lb' || uIn === 'libra') return cantidadInput * 453.592;
   }
 
   // --- VOLUMEN ---
-  // Base Litro (l)
-  if (to === 'l') {
-    if (from === 'ml') return val / 1000;
-    if (from === 'gal') return val * 3.78541;
+  if (uBase === 'l' || uBase === 'litro' || uBase === 'lt') {
+    if (uIn === 'ml' || uIn === 'cc' || uIn === 'mililitro') return cantidadInput / 1000;
+    if (uIn === 'gal' || uIn === 'galon') return cantidadInput * 3.785;
   }
-  // Base Mililitro (ml)
-  if (to === 'ml') {
-    if (from === 'l') return val * 1000;
-    if (from === 'gal') return val * 3785.41;
-  }
-  // Base Galón (gal)
-  if (to === 'gal') {
-    if (from === 'l') return val / 3.78541;
-    if (from === 'ml') return val / 3785.41;
+  if (uBase === 'ml' || uBase === 'cc' || uBase === 'mililitro') {
+    if (uIn === 'l' || uIn === 'litro' || uIn === 'lt') return cantidadInput * 1000;
   }
 
-  // Si llegamos aquí, no se encontró conversión válida
-  console.warn(`⚠️ No existe conversión definida de ${from} a ${to}. Se enviará el valor original.`);
-  return val;
+  console.warn(`No se encontró conversión directa de ${uIn} a ${uBase}. Se envía valor original.`);
+  return cantidadInput;
 }
 
-// --- Guardar Registro ---
+// ==========================================
+// 4. FUNCIONES CRUD
+// ==========================================
+
 async function guardarSalud(e) {
   e.preventDefault();
-  const token = localStorage.getItem('token');
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
-  const tipo = document.getElementById('tipoEvento').value;
-  const loteId = document.getElementById('loteId').value;
-  const fecha = document.getElementById('fecha').value;
-  const diasRetiro = parseInt(document.getElementById('diasRetiro').value) || 0;
+  const tipo = document.getElementById('tipo').value;
+  let cantidadInput = parseFloat(document.getElementById('cantidad').value);
+  const unidadAplicacion = document.getElementById('unidadAplicacion').value;
+  
+  const vacunaSelect = document.getElementById('vacunaSelect');
+  
+  let vacunaId = null;
+  let productoAplicado = 'N/A';
+  let cantidadFinal = cantidadInput; 
 
-  // Calcular fecha de retiro
-  let fechaRetiro = null;
-  if (diasRetiro > 0 && fecha) {
-    const f = new Date(fecha);
-    f.setDate(f.getDate() + diasRetiro);
-    fechaRetiro = f.toISOString().split('T')[0];
+  if ((tipo === 'Vacunación' || tipo === 'Tratamiento') && vacunaSelect.value) {
+    
+    vacunaId = parseInt(vacunaSelect.value);
+    
+    const opcion = vacunaSelect.options[vacunaSelect.selectedIndex];
+    const unidadBase = opcion.dataset.unidad;
+    const stockActual = parseFloat(opcion.dataset.stock);
+    productoAplicado = opcion.dataset.nombre;
+
+    cantidadFinal = calcularCantidadBase(cantidadInput, unidadAplicacion, unidadBase);
+    
+    console.log(`Stock: ${stockActual} ${unidadBase} | Pedido: ${cantidadInput} ${unidadAplicacion} -> ${cantidadFinal.toFixed(4)} ${unidadBase}`);
+
+    if (cantidadFinal > (stockActual + 0.0001)) {
+        alert(`❌ Stock Insuficiente.\n\nInventario: ${stockActual} ${unidadBase}\nNecesitas: ${cantidadFinal.toFixed(4)} ${unidadBase}\n(${cantidadInput} ${unidadAplicacion})`);
+        return; 
+    }
   }
 
-  // Preparar payload
+  const diasRetiro = parseInt(document.getElementById('diasRetiro').value) || 0;
+  const fechaEvento = new Date(document.getElementById('fecha').value);
+  let fechaRetiroCalculada = null;
+  if (diasRetiro > 0) {
+    const f = new Date(fechaEvento);
+    f.setDate(f.getDate() + diasRetiro);
+    fechaRetiroCalculada = f.toISOString().split('T')[0];
+  }
+
   const payload = {
-    granjaId,
-    tipo,
-    loteId,
-    fecha,
-    diasRetiro,
-    fechaRetiro,
-    descripcion: document.getElementById('descripcion').value
+    loteId: parseInt(document.getElementById('loteId').value),
+    tipo: tipo,
+    nombre: document.getElementById('nombre').value,
+    cantidad: cantidadFinal, 
+    vacunaId: vacunaId,
+    productoAplicado: productoAplicado,
+    fecha: document.getElementById('fecha').value,
+    fechaRetiro: fechaRetiroCalculada,
+    granjaId: granjaId
   };
 
-  // Logica por tipo
-  if (tipo === 'Mortalidad') {
-    const cantidad = parseInt(document.getElementById('cantidad').value);
-    if (!cantidad || cantidad <= 0) return alert('Ingresa una cantidad válida');
-    payload.productoAplicado = 'N/A';
-    payload.cantidad = cantidad; // Cantidad de aves muertas
-    payload.costoTotal = 0; // La mortalidad es pérdida, no costo directo de bolsillo aquí
-  }
-  else {
-    // Vacunación o Tratamiento (Requiere Inventario)
-    let inventarioId, cantidadUso, unidadUso;
-
-    if (tipo === 'Vacunacion') {
-      inventarioId = document.getElementById('vacunaSelect').value;
-      cantidadUso = parseFloat(document.getElementById('dosis').value);
-      unidadUso = document.getElementById('unidadDosis').value;
-    } else {
-      inventarioId = document.getElementById('insumoSelect').value;
-      cantidadUso = parseFloat(document.getElementById('cantidadTratamiento').value);
-      unidadUso = document.getElementById('unidadTratamiento').value;
-    }
-
-    if (!inventarioId) return alert("Selecciona un producto del inventario");
-
-    // Buscar el item en memoria para saber su unidad base y stock
-    const item = inventarioSanitario.find(i => i.id == inventarioId);
-    if (!item) return alert("Error identificando el producto");
-
-    // --- AQUÍ OCURRE LA MAGIA MATEMÁTICA ---
-    const cantidadBase = calcularCantidadBase(cantidadUso, unidadUso, item.unidadMedida);
-
-    console.log(`Stock: ${item.cantidad} ${item.unidadMedida} | Uso: ${cantidadUso} ${unidadUso} => Base: ${cantidadBase.toFixed(4)} ${item.unidadMedida}`);
-
-    if (cantidadBase > item.cantidad) {
-      return alert(`Error: Stock insuficiente de ${item.producto}. Tienes ${item.cantidad} ${item.unidadMedida}, necesitas ${cantidadBase.toFixed(4)} ${item.unidadMedida}.`);
-    }
-
-    payload.productoAplicado = item.producto;
-    payload.inventarioId = parseInt(inventarioId);
-    payload.cantidad = cantidadBase; // Enviamos lo convertido al backend
-  }
-
   try {
+    const token = localStorage.getItem('token');
     const res = await fetch(`${window.API_URL}/salud`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload)
     });
 
     if (res.ok) {
-      alert('Registro guardado correctamente');
+      alert('Evento registrado con éxito');
       cerrarFormularioSalud();
-      cargarSalud();
-      // Recargar inventario para actualizar stocks en los selects
-      cargarVacunasForSelect();
+      await cargarSalud();
+      await precargarInventarioSanitario(); 
+      if (tipo === 'Mortalidad') await cargarLotesForSelect();
     } else {
-      const errData = await res.json();
-      alert('Error: ' + (errData.error || 'No se pudo guardar'));
+      const errorText = await res.json();
+      alert('Error del servidor: ' + (errorText.error || 'Desconocido'));
     }
-  } catch (error) {
-    console.error(error);
-    alert('Error de conexión');
-  }
+  } catch (error) { console.error(error); alert('Error de conexión'); }
 }
 
 async function eliminarSalud(id) {
-  if (!confirm("¿Eliminar este registro? (Nota: El stock no se devuelve automáticamente)")) return;
-  try {
-    const token = localStorage.getItem('token');
-    const granjaId = getSelectedGranjaId();
-    await fetch(`${window.API_URL}/salud/${id}?granjaId=${granjaId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    cargarSalud();
-  } catch (e) { console.error(e); }
+  if (confirm('¿Eliminar este evento? Nota: El stock NO se revierte automáticamente.')) {
+    try {
+      const token = localStorage.getItem('token');
+      const granjaId = getSelectedGranjaId();
+      await fetch(`${window.API_URL}/salud/${id}?granjaId=${granjaId}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
+      });
+      cargarSalud();
+    } catch (error) { alert('Error al eliminar'); }
+  }
 }
 
-// --- UI Helpers ---
+// ==========================================
+// 5. UI HELPERS E INICIALIZACIÓN
+// ==========================================
+
 function abrirFormularioSalud() {
-  document.getElementById('formContainer').classList.add('is-open');
-}
-function cerrarFormularioSalud() {
-  document.getElementById('formContainer').classList.remove('is-open');
+  const container = document.getElementById('formContainer');
+  if (container) container.classList.add('is-open');
+  const btn = document.getElementById('toggleFormBtn');
+  if (btn) btn.textContent = 'Cancelar';
 }
 
-// --- Event Listeners ---
+function cerrarFormularioSalud() {
+  const container = document.getElementById('formContainer');
+  if (container) container.classList.remove('is-open');
+  
+  const btn = document.getElementById('toggleFormBtn');
+  if (btn) btn.textContent = 'Registrar Nuevo Evento';
+
+  const form = document.getElementById('saludForm');
+  if (form) form.reset();
+  if (document.getElementById('saludId')) document.getElementById('saludId').value = '';
+
+  const vacunaGroup = document.getElementById('vacunaGroup');
+  if (vacunaGroup) vacunaGroup.style.display = 'none';
+  if (document.getElementById('stockInfo')) document.getElementById('stockInfo').textContent = '';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  const granja = JSON.parse(localStorage.getItem('selectedGranja'));
+  if (granja) {
+      const headerTitle = document.querySelector('header h1');
+      if(headerTitle) headerTitle.textContent = `Salud (${granja.nombre})`;
+  }
+
   const toggleBtn = document.getElementById('toggleFormBtn');
   const cancelBtn = document.getElementById('cancelBtn');
   const form = document.getElementById('saludForm');
-  const tipoEvento = document.getElementById('tipoEvento');
 
-  // Control dinámico del formulario
-  if (tipoEvento) {
-    tipoEvento.addEventListener('change', () => {
-      const val = tipoEvento.value;
-      document.getElementById('vacunaGroup').style.display = 'none';
-      document.getElementById('tratamientoGroup').style.display = 'none';
-      document.getElementById('mortalidadGroup').style.display = 'none';
-      document.getElementById('diasRetiroGroup').style.display = 'block'; // Default visible
+  const tipoSelect = document.getElementById('tipo');
+  const vacunaSelect = document.getElementById('vacunaSelect');
+  const nombreInput = document.getElementById('nombre');
+  const stockInfo = document.getElementById('stockInfo');
 
-      if (val === 'Vacunacion') document.getElementById('vacunaGroup').style.display = 'block';
-      else if (val === 'Tratamiento') document.getElementById('tratamientoGroup').style.display = 'block';
-      else if (val === 'Mortalidad') {
-        document.getElementById('mortalidadGroup').style.display = 'block';
-        document.getElementById('diasRetiroGroup').style.display = 'none';
+  if (tipoSelect) {
+    tipoSelect.addEventListener('change', () => {
+      const tipo = tipoSelect.value;
+      const vacunaGroup = document.getElementById('vacunaGroup');
+      
+      if (tipo === 'Vacunación' || tipo === 'Tratamiento') {
+        if(vacunaGroup) vacunaGroup.style.display = 'block';
+        if(vacunaSelect) vacunaSelect.required = true;
+        filtrarYMostrarInsumos(tipo);
+      } else {
+        if(vacunaGroup) vacunaGroup.style.display = 'none';
+        if(vacunaSelect) {
+            vacunaSelect.value = "";
+            vacunaSelect.required = false;
+        }
+        if (stockInfo) stockInfo.textContent = "";
+      }
+    });
+  }
+
+  if (vacunaSelect) {
+    vacunaSelect.addEventListener('change', () => {
+      const opt = vacunaSelect.options[vacunaSelect.selectedIndex];
+      if (opt && opt.dataset.nombre) {
+        if(nombreInput) nombreInput.value = opt.dataset.nombre;
+        if (stockInfo) {
+            stockInfo.textContent = `Stock: ${opt.dataset.stock} ${opt.dataset.unidad}`;
+            stockInfo.style.color = parseFloat(opt.dataset.stock) < 5 ? 'red' : 'var(--color-secundario)';
+        }
       }
     });
   }
 
   if (toggleBtn) toggleBtn.onclick = () => {
-    document.getElementById('saludForm').reset();
-    // Reset visual groups
-    tipoEvento.dispatchEvent(new Event('change'));
-    abrirFormularioSalud();
+      const isOpen = document.getElementById('formContainer').classList.contains('is-open');
+      if(isOpen) cerrarFormularioSalud();
+      else abrirFormularioSalud();
   };
 
   if (cancelBtn) cancelBtn.onclick = cerrarFormularioSalud;
   if (form) form.onsubmit = guardarSalud;
 
   cargarLotesForSelect();
-  cargarVacunasForSelect();
   cargarSalud();
+  precargarInventarioSanitario();
 });
