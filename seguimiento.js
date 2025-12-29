@@ -90,17 +90,8 @@ async function cargarSeguimientos() {
     data.forEach(s => {
       const tr = document.createElement('tr');
 
-      // FORMATO DECIMALES (Máx 4) para Peso
-      const pesoVisual = Number.isInteger(s.pesoPromedio) ? s.pesoPromedio : parseFloat(s.pesoPromedio).toFixed(4);
-
-      // FORMATO DECIMALES (Máx 4) para Consumo
-      let consumoVisual = '-';
-      if (s.consumoAlimento !== null && s.consumoAlimento !== undefined) {
-        consumoVisual = Number.isInteger(s.consumoAlimento) ? s.consumoAlimento : parseFloat(s.consumoAlimento).toFixed(4);
-      }
-
       // Intentar mostrar información del alimento si existe
-      let infoConsumo = consumoVisual !== '-' ? `${consumoVisual}` : '-';
+      let infoConsumo = s.consumoAlimento ? `${s.consumoAlimento}` : '-';
       if (s.Inventario) {
         infoConsumo += ` (${s.Inventario.producto})`; // Mostrar nombre del alimento
       }
@@ -108,7 +99,7 @@ async function cargarSeguimientos() {
       tr.innerHTML = `
         <td>${s.Lote ? s.Lote.loteId : 'N/A'}</td>
         <td>Semana ${s.semanaVida}</td>
-        <td>${pesoVisual} lb</td>
+        <td>${s.pesoPromedio} lb</td>
         <td>${infoConsumo}</td>
         <td>${s.observaciones || '-'}</td>
         <td>${new Date(s.fechaRegistro).toLocaleDateString()}</td>
@@ -305,10 +296,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (form) form.onsubmit = guardarSeguimiento;
 
   } else {
-    if (toggleBtn) toggleBtn.style.display = 'none';
+    if (toggleBtn) toggleBtn.style.display = 'none'; 
   }
 
   cargarLotesForSelect();
-  cargarAlimentosParaSelect();
+  cargarAlimentosParaSelect(); 
   cargarSeguimientos();
 });
