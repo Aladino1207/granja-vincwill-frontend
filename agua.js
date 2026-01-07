@@ -1,6 +1,8 @@
 // --- Variables Globales ---
 let inventarioTratamiento = []; // Solo Medicinas y Vacunas
 
+console.log("agua.js inicializado");
+
 // ==========================================
 // 1. CARGA DE DATOS E INVENTARIO
 // ==========================================
@@ -20,7 +22,10 @@ async function cargarLotesForSelect() {
 
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
 
-    const lotesActivos = lotes.filter(l => l.estado === 'disponible' || l.estado === 'ocupado');
+    // Filtramos lotes activos (array check por seguridad)
+    const lotesActivos = Array.isArray(lotes)
+      ? lotes.filter(l => l.estado === 'disponible' || l.estado === 'ocupado')
+      : [];
 
     if (lotesActivos.length === 0) {
       select.innerHTML = '<option value="">No hay lotes activos</option>';
@@ -49,18 +54,17 @@ async function cargarInventarioTratamiento() {
 
     if (res.ok) {
       const items = await res.json();
-      console.log("Inventario crudo cargado:", items); // DEBUG: Ver qué llega del backend
 
       // FILTRO ESTRICTO PERO ROBUSTO
-      // Normalizamos a minúsculas y quitamos espacios para evitar errores de tipeo
-      inventarioTratamiento = items.filter(i => {
-        if (!i.categoria) return false;
-        const cat = i.categoria.toLowerCase().trim();
-        // Aceptamos variantes comunes
-        return ['medicina', 'vacuna', 'medicamento', 'vacunación'].includes(cat) && i.cantidad > 0;
-      });
-
-      console.log("Inventario filtrado para tratamiento:", inventarioTratamiento); // DEBUG: Ver qué pasó el filtro
+      if (Array.isArray(items)) {
+        inventarioTratamiento = items.filter(i => {
+          if (!i.categoria) return false;
+          const cat = i.categoria.toLowerCase().trim();
+          // Aceptamos variantes comunes y aseguramos que haya stock
+          return ['medicina', 'vacuna', 'medicamento', 'vacunación', 'tratamiento'].includes(cat) && i.cantidad > 0;
+        });
+      }
+      console.log("Inventario Tratamiento (Cargado):", inventarioTratamiento.length, "items disponibles.");
     }
   } catch (e) { console.error("Error cargando inventario:", e); }
 }
@@ -71,17 +75,22 @@ async function cargarAgua() {
     const granjaId = getSelectedGranjaId();
     if (!granjaId) return;
 
-    console.log("Cargando historial de agua...");
     const res = await fetch(`${window.API_URL}/agua?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!res.ok) throw new Error("Error en la petición de agua");
+    const tbody = document.getElementById('aguaTableBody');
+    if (!tbody) {
+      console.error("CRÍTICO: No se encontró el elemento <tbody> con id='aguaTableBody'. Revisa el HTML.");
+      return;
+    }
+
+    if (!res.ok) {
+      tbody.innerHTML = '<tr><td colspan="4" style="color:red; text-align:center;">Error de conexión con el servidor.</td></tr>';
+      return;
+    }
 
     const data = await res.json();
-    const tbody = document.getElementById('aguaTableBody');
-    if (!tbody) { console.error("No se encontró tbody aguaTableBody"); return; }
-
     tbody.innerHTML = '';
 
     if (!Array.isArray(data) || data.length === 0) {
@@ -89,26 +98,45 @@ async function cargarAgua() {
       return;
     }
 
+    // Dibujar filas
     data.forEach(a => {
-      const tr = document.createElement('tr');
-      // Blindaje contra datos nulos
-      const loteNombre = (a.Lote && a.Lote.loteId) ? a.Lote.loteId : (a.loteId || 'Lote Desconocido');
-      const fechaStr = a.fecha ? new Date(a.fecha).toLocaleDateString() : 'Sin Fecha';
+      try {
+        const tr = document.createElement('tr');
 
-      tr.innerHTML = `
-        <td>${loteNombre}</td>
-        <td>${a.cantidad} L</td>
-        <td>${fechaStr}</td>
-        <td>
-          <button onclick="eliminarAgua(${a.id})" class="btn btn-sm btn-peligro">Eliminar</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
+        // Blindaje contra datos nulos o estructuras antiguas
+        let loteNombre = 'Lote Eliminado';
+        if (a.Lote && a.Lote.loteId) {
+          loteNombre = a.Lote.loteId;
+        } else if (a.loteId) {
+          loteNombre = `ID: ${a.loteId}`;
+        }
+
+        // Formato Fecha Seguro
+        let fechaStr = 'Fecha Inválida';
+        if (a.fecha) {
+          const d = new Date(a.fecha);
+          if (!isNaN(d.getTime())) {
+            fechaStr = d.toLocaleDateString();
+          }
+        }
+
+        tr.innerHTML = `
+            <td>${loteNombre}</td>
+            <td>${a.cantidad || 0} L</td>
+            <td>${fechaStr}</td>
+            <td>
+              <button onclick="eliminarAgua(${a.id})" class="btn btn-sm btn-peligro">Eliminar</button>
+            </td>
+          `;
+        tbody.appendChild(tr);
+      } catch (errRow) {
+        console.error("Error pintando una fila de agua:", errRow, a);
+      }
     });
   } catch (error) {
-    console.error("Error cargando agua:", error);
+    console.error("Error FATAL cargando agua:", error);
     const tbody = document.getElementById('aguaTableBody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="color:red;">Error cargando datos. Revisa la consola.</td></tr>';
+    if (tbody) tbody.innerHTML = `<tr><td colspan="4" style="color:red;">Error interno: ${error.message}</td></tr>`;
   }
 }
 
@@ -118,6 +146,8 @@ async function cargarAgua() {
 
 function agregarFilaTratamiento() {
   const container = document.getElementById('treatmentContainer');
+  if (!container) return;
+
   const rowId = Date.now(); // ID único temporal
 
   const div = document.createElement('div');
@@ -128,15 +158,16 @@ function agregarFilaTratamiento() {
   let options = '<option value="">Seleccione...</option>';
   if (inventarioTratamiento.length > 0) {
     inventarioTratamiento.forEach(item => {
+      const unidad = item.unidadMedida || 'Unidades';
       options += `<option value="${item.id}" 
-                                data-unidad="${item.unidadMedida || 'Unidades'}" 
+                                data-unidad="${unidad}" 
                                 data-stock="${item.cantidad}"
                                 data-nombre="${item.producto}">
-                            ${item.producto} (Stock: ${item.cantidad} ${item.unidadMedida || ''})
+                            ${item.producto} (Stock: ${item.cantidad} ${unidad})
                         </option>`;
     });
   } else {
-    options = '<option value="">Sin inventario médico</option>';
+    options = '<option value="" disabled>Sin inventario disponible (Medicina/Vacuna)</option>';
   }
 
   div.innerHTML = `
@@ -188,7 +219,9 @@ function actualizarFila(rowId) {
   const row = document.getElementById(`row-${rowId}`);
   if (!row) return;
 
-  const litrosAgua = parseFloat(document.getElementById('cantidadAgua').value) || 0;
+  const inputAgua = document.getElementById('cantidadAgua');
+  const litrosAgua = parseFloat(inputAgua ? inputAgua.value : 0) || 0;
+
   const dosis = parseFloat(row.querySelector('.dosis-input').value) || 0;
   const unidadDosis = row.querySelector('.unit-select').value;
   const totalDisplay = row.querySelector('.total-display');
@@ -275,7 +308,8 @@ async function guardarTodo(e) {
   // --- A. VALIDACIÓN PREVIA ---
   const granjaId = getSelectedGranjaId();
   const token = localStorage.getItem('token');
-  const loteId = document.getElementById('loteSelect').value;
+  const loteSelect = document.getElementById('loteSelect');
+  const loteId = loteSelect ? loteSelect.value : null;
   const cantidadAgua = parseFloat(document.getElementById('cantidadAgua').value);
   const fecha = document.getElementById('fecha').value;
 
@@ -290,7 +324,7 @@ async function guardarTodo(e) {
     const dosisVal = parseFloat(row.querySelector('.dosis-input').value);
     const unidadDosis = row.querySelector('.unit-select').value;
 
-    if (select.value && dosisVal > 0) {
+    if (select && select.value && dosisVal > 0) {
       const opt = select.options[select.selectedIndex];
       const stock = parseFloat(opt.dataset.stock);
       const unidadBase = opt.dataset.unidad;
@@ -317,8 +351,7 @@ async function guardarTodo(e) {
   // --- B. ENVIAR DATOS ---
   try {
     const btn = document.querySelector('button[type="submit"]');
-    btn.textContent = "Guardando...";
-    btn.disabled = true;
+    if (btn) { btn.textContent = "Guardando..."; btn.disabled = true; }
 
     // 1. Guardar Agua
     const aguaPayload = { granjaId, loteId, cantidad: cantidadAgua, fecha };
@@ -328,7 +361,10 @@ async function guardarTodo(e) {
       body: JSON.stringify(aguaPayload)
     });
 
-    if (!resAgua.ok) throw new Error("Error guardando el agua");
+    if (!resAgua.ok) {
+      const err = await resAgua.json();
+      throw new Error("Error guardando el agua: " + (err.error || resAgua.statusText));
+    }
 
     // 2. Guardar Tratamientos (Iterativo)
     for (let trat of tratamientosAProcesar) {
@@ -383,19 +419,32 @@ async function eliminarAgua(id) {
 
 // --- UI Helpers ---
 function abrirFormulario() {
-  document.getElementById('formContainer').classList.add('is-open');
-  document.getElementById('toggleFormBtn').textContent = 'Cancelar';
-  // Poner fecha hoy por defecto
-  document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+  const container = document.getElementById('formContainer');
+  if (container) container.classList.add('is-open');
+
+  const btn = document.getElementById('toggleFormBtn');
+  if (btn) btn.textContent = 'Cancelar';
+
+  const fechaInput = document.getElementById('fecha');
+  if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
 }
 
 function cerrarFormulario() {
-  document.getElementById('formContainer').classList.remove('is-open');
-  document.getElementById('toggleFormBtn').textContent = 'Registrar Consumo';
-  document.getElementById('aguaForm').reset();
-  document.getElementById('aguaId').value = '';
+  const container = document.getElementById('formContainer');
+  if (container) container.classList.remove('is-open');
+
+  const btn = document.getElementById('toggleFormBtn');
+  if (btn) btn.textContent = 'Registrar Consumo';
+
+  const form = document.getElementById('aguaForm');
+  if (form) form.reset();
+
+  const idField = document.getElementById('aguaId');
+  if (idField) idField.value = '';
+
   // Limpiar filas dinámicas
-  document.getElementById('treatmentContainer').innerHTML = '';
+  const tContainer = document.getElementById('treatmentContainer');
+  if (tContainer) tContainer.innerHTML = '';
 }
 
 // --- Event Listener Principal ---
@@ -418,7 +467,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggleBtn) {
       toggleBtn.style.display = 'block';
       toggleBtn.addEventListener('click', () => {
-        const isOpen = document.getElementById('formContainer').classList.contains('is-open');
+        const container = document.getElementById('formContainer');
+        const isOpen = container && container.classList.contains('is-open');
         if (isOpen) cerrarFormulario();
         else abrirFormulario();
       });
