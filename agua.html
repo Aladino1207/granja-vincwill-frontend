@@ -6,12 +6,52 @@
     <title>Consumo de Agua por Lote</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <style>
+        /* Estilos específicos para las filas dinámicas de tratamiento */
+        .treatment-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr auto;
+            gap: 10px;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 8px;
+        }
+
+        .treatment-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr auto;
+            gap: 10px;
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 5px;
+            padding: 0 10px;
+        }
+
+        @media (max-width: 768px) {
+
+            .treatment-row,
+            .treatment-header {
+                grid-template-columns: 1fr;
+                /* Apilar en móviles */
+                gap: 5px;
+            }
+
+            .treatment-header {
+                display: none;
+            }
+
+            /* Ocultar headers en móvil */
+        }
+    </style>
 </head>
 
 <body>
     <header>
         <div style="display: flex; align-items: center; gap: 15px;">
-            <img src="" class="app-logo-img" alt="Logo" style="max-height: 40px;">
+            <img src="default-logo.png" class="app-logo-img" alt="Logo" style="max-height: 40px;">
             <h1 id="pageTitle">Dashboard</h1>
         </div>
         <div class="user-profile-container">
@@ -89,30 +129,66 @@
     </aside>
     <main class="main-content">
 
+        <!-- FORMULARIO -->
         <div id="formContainer" class="form-desplegable-container">
             <section class="card">
                 <h2 id="formTitle">Registrar Consumo de Agua</h2>
-                <form id="aguaForm" class="form-grid form-grid-3-col">
+                <form id="aguaForm" class="form-grid form-grid-2-col">
                     <input type="hidden" id="aguaId" value="">
 
+                    <!-- 1. DATOS DEL AGUA -->
                     <div class="form-group">
                         <label for="loteSelect">Lote</label>
-                        <select id="loteSelect" class="form-control" required></select>
+                        <select id="loteSelect" class="form-control" required>
+                            <option value="">Cargando...</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
-                        <label for="cantidad">Cantidad (Litros)</label>
-                        <input type="number" id="cantidad" class="form-control" step="0.01" min="0"
-                            placeholder="Ej: 50.5" required>
+                        <label for="cantidadAgua">Cantidad de Agua (Litros)</label>
+                        <input type="number" id="cantidadAgua" class="form-control" step="0.01" min="0" required
+                            placeholder="Ej: 365">
                     </div>
 
-                    <div class="form-group">
-                        <label for="fecha">Fecha</label>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="fecha">Fecha de Registro</label>
                         <input type="date" id="fecha" class="form-control" required>
                     </div>
 
-                    <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
-                        <button type="submit" class="btn btn-primario">Guardar</button>
+                    <!-- 2. SECCIÓN DE TRATAMIENTO (DINÁMICA) -->
+                    <div style="grid-column: 1 / -1; margin-top: 1rem; border-top: 1px dashed #ccc; padding-top: 1rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h3 style="font-size: 1.1rem; color: #2980b9; margin: 0;">💊 Tratamiento / Medicación al
+                                Agua</h3>
+                            <button type="button" id="btnAddTreatment" class="btn btn-sm"
+                                style="background: #27ae60; color: white;">
+                                + Agregar Producto
+                            </button>
+                        </div>
+
+                        <!-- Encabezados de la tabla dinámica -->
+                        <div class="treatment-header">
+                            <span>Producto (Medicina/Vacuna)</span>
+                            <span>Dosis por Litro</span>
+                            <span>Unidad Dosis</span>
+                            <span>Total Calculado</span>
+                            <span></span>
+                        </div>
+
+                        <!-- Contenedor donde se insertan las filas -->
+                        <div id="treatmentContainer">
+                            <!-- Las filas se agregan aquí con JS -->
+                        </div>
+
+                        <small style="color: #7f8c8d; display: block; margin-top: 5px;">
+                            * El total se calcula automáticamente: <b>Litros Agua × Dosis</b>. Se descontará del
+                            inventario al guardar.
+                        </small>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem; margin-top: 1rem;">
+                        <button type="submit" class="btn btn-primario">Guardar Todo</button>
                         <button type="button" id="cancelBtn" class="btn btn-peligro"
                             style="background-color: #7f8c8d;">Cancelar</button>
                     </div>
@@ -120,6 +196,7 @@
             </section>
         </div>
 
+        <!-- LISTA -->
         <section class="card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2>Historial de Consumo de Agua</h2>
@@ -136,7 +213,7 @@
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="aguaTableBody"></tbody>
+                    <tbody id=\"aguaTableBody\"></tbody>
                 </table>
             </div>
         </section>
