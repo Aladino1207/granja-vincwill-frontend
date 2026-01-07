@@ -20,7 +20,6 @@ async function cargarLotesForSelect() {
 
     select.innerHTML = '<option value="">Selecciona un Lote</option>';
 
-    // FILTRO: Disponibles u Ocupados
     const lotesActivos = lotes.filter(l => l.estado === 'disponible' || l.estado === 'ocupado');
 
     if (lotesActivos.length === 0) {
@@ -50,8 +49,18 @@ async function cargarInventarioTratamiento() {
 
     if (res.ok) {
       const items = await res.json();
-      // FILTRO ESTRICTO: Solo Medicina y Vacuna (Excluye 'Otro', 'Alimento', etc.)
-      inventarioTratamiento = items.filter(i => ['Medicina', 'Vacuna'].includes(i.categoria));
+      console.log("Inventario crudo cargado:", items); // DEBUG: Ver qué llega del backend
+
+      // FILTRO ESTRICTO PERO ROBUSTO
+      // Normalizamos a minúsculas y quitamos espacios para evitar errores de tipeo
+      inventarioTratamiento = items.filter(i => {
+        if (!i.categoria) return false;
+        const cat = i.categoria.toLowerCase().trim();
+        // Aceptamos variantes comunes
+        return ['medicina', 'vacuna', 'medicamento', 'vacunación'].includes(cat) && i.cantidad > 0;
+      });
+
+      console.log("Inventario filtrado para tratamiento:", inventarioTratamiento); // DEBUG: Ver qué pasó el filtro
     }
   } catch (e) { console.error("Error cargando inventario:", e); }
 }
@@ -60,34 +69,47 @@ async function cargarAgua() {
   try {
     const token = localStorage.getItem('token');
     const granjaId = getSelectedGranjaId();
+    if (!granjaId) return;
+
+    console.log("Cargando historial de agua...");
     const res = await fetch(`${window.API_URL}/agua?granjaId=${granjaId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+
+    if (!res.ok) throw new Error("Error en la petición de agua");
+
     const data = await res.json();
     const tbody = document.getElementById('aguaTableBody');
+    if (!tbody) { console.error("No se encontró tbody aguaTableBody"); return; }
+
     tbody.innerHTML = '';
 
-    if (data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4">No hay registros.</td></tr>';
+    if (!Array.isArray(data) || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay registros de consumo de agua.</td></tr>';
       return;
     }
 
     data.forEach(a => {
       const tr = document.createElement('tr');
-      // Intentamos mostrar el nombre del lote si viene populado
-      const loteNombre = a.Lote ? a.Lote.loteId : (a.loteId || 'N/A');
+      // Blindaje contra datos nulos
+      const loteNombre = (a.Lote && a.Lote.loteId) ? a.Lote.loteId : (a.loteId || 'Lote Desconocido');
+      const fechaStr = a.fecha ? new Date(a.fecha).toLocaleDateString() : 'Sin Fecha';
 
       tr.innerHTML = `
         <td>${loteNombre}</td>
         <td>${a.cantidad} L</td>
-        <td>${new Date(a.fecha).toLocaleDateString()}</td>
+        <td>${fechaStr}</td>
         <td>
           <button onclick="eliminarAgua(${a.id})" class="btn btn-sm btn-peligro">Eliminar</button>
         </td>
       `;
       tbody.appendChild(tr);
     });
-  } catch (error) { console.error(error); }
+  } catch (error) {
+    console.error("Error cargando agua:", error);
+    const tbody = document.getElementById('aguaTableBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="color:red;">Error cargando datos. Revisa la consola.</td></tr>';
+  }
 }
 
 // ==========================================
@@ -102,17 +124,20 @@ function agregarFilaTratamiento() {
   div.className = 'treatment-row';
   div.id = `row-${rowId}`;
 
-  // 1. Selector de Producto
+  // 1. Selector de Producto (Validar si hay items)
   let options = '<option value="">Seleccione...</option>';
-  inventarioTratamiento.forEach(item => {
-    // Guardamos datos clave en dataset
-    options += `<option value="${item.id}" 
-                            data-unidad="${item.unidadMedida || 'Unidades'}" 
-                            data-stock="${item.cantidad}"
-                            data-nombre="${item.producto}">
-                        ${item.producto} (Stock: ${item.cantidad} ${item.unidadMedida || ''})
-                    </option>`;
-  });
+  if (inventarioTratamiento.length > 0) {
+    inventarioTratamiento.forEach(item => {
+      options += `<option value="${item.id}" 
+                                data-unidad="${item.unidadMedida || 'Unidades'}" 
+                                data-stock="${item.cantidad}"
+                                data-nombre="${item.producto}">
+                            ${item.producto} (Stock: ${item.cantidad} ${item.unidadMedida || ''})
+                        </option>`;
+    });
+  } else {
+    options = '<option value="">Sin inventario médico</option>';
+  }
 
   div.innerHTML = `
         <!-- Producto -->
@@ -125,7 +150,7 @@ function agregarFilaTratamiento() {
 
         <!-- Dosis -->
         <div>
-            <input type="number" class="form-control dosis-input" step="0.001" placeholder="0.00" oninput="actualizarFila(${rowId})">
+            <input type="number" class="form-control dosis-input" step="0.001" placeholder="Dosis/L" oninput="actualizarFila(${rowId})">
         </div>
 
         <!-- Unidad Dosis -->
@@ -142,7 +167,7 @@ function agregarFilaTratamiento() {
 
         <!-- Total Calculado (Read Only) -->
         <div>
-            <input type="text" class="form-control total-display" readonly placeholder="0.00" style="background: #e9ecef;">
+            <input type="text" class="form-control total-display" readonly placeholder="Total" style="background: #e9ecef;">
         </div>
 
         <!-- Botón Borrar -->
@@ -173,7 +198,10 @@ function actualizarFila(rowId) {
   // 1. Mostrar Stock seleccionado
   if (selectProd.selectedIndex > 0) {
     const opt = selectProd.options[selectProd.selectedIndex];
-    stockInfo.textContent = `Disp: ${opt.dataset.stock} ${opt.dataset.unidad}`;
+    // Seguridad por si dataset falla
+    if (opt.dataset.stock) {
+      stockInfo.textContent = `Disp: ${opt.dataset.stock} ${opt.dataset.unidad}`;
+    }
   } else {
     stockInfo.textContent = '';
   }
@@ -200,7 +228,7 @@ function recalcularTodosTotales() {
 }
 
 // ==========================================
-// 3. CONVERSOR DE UNIDADES (Reutilizado de Salud)
+// 3. CONVERSOR DE UNIDADES (Reutilizado)
 // ==========================================
 function calcularCantidadBase(cantidadInput, unidadInput, unidadBase) {
   if (!unidadBase || unidadInput === 'base') return cantidadInput;
@@ -222,7 +250,7 @@ function calcularCantidadBase(cantidadInput, unidadInput, unidadBase) {
   }
   if (uBase === 'g' || uBase === 'gramo') {
     if (uIn === 'kg') return cantidadInput * 1000;
-    if (uIn === 'lb') return cantidadInput * 453.592;
+    if (uIn === 'lb' || uIn === 'libra') return cantidadInput * 453.592;
   }
 
   // --- VOLUMEN ---
@@ -303,7 +331,6 @@ async function guardarTodo(e) {
     if (!resAgua.ok) throw new Error("Error guardando el agua");
 
     // 2. Guardar Tratamientos (Iterativo)
-    // Nota: Idealmente el backend soportaría bulkCreate, pero usaremos un loop seguro por ahora
     for (let trat of tratamientosAProcesar) {
       const saludPayload = {
         granjaId,
@@ -398,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (cancelBtn) cancelBtn.addEventListener('click', cerrarFormulario);
-    if (form) form.onsubmit = guardarTodo; // Usamos la nueva función maestra
+    if (form) form.onsubmit = guardarTodo;
 
     // Botón para agregar fila
     if (btnAdd) btnAdd.onclick = agregarFilaTratamiento;
