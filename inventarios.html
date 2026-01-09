@@ -89,78 +89,72 @@
     </aside>
 
     <main class="main-content">
-        <!-- Contenedor Desplegable -->
+
+        <!-- FORMULARIO DE CREACIÓN (Solo para productos NUEVOS) -->
         <div id="formContainer" class="form-desplegable-container">
             <section class="card">
-                <h2 id="formTitle">Registrar Compra de Insumo</h2>
+                <h2 id="formTitle">Registrar Nuevo Producto</h2>
                 <form id="inventarioForm" class="form-grid form-grid-3-col">
                     <input type="hidden" id="inventarioId" value="">
 
                     <div class="form-group">
                         <label for="producto">Nombre del Producto</label>
-                        <input type="text" id="producto" class="form-control" placeholder="Ej: Vacuna Newcastle Líquida"
-                            required>
+                        <input type="text" id="producto" class="form-control" required
+                            placeholder="Ej: Balanceado Inicial">
                     </div>
 
                     <div class="form-group">
                         <label for="categoria">Categoría</label>
-                        <select id="categoria" class="form-control">
+                        <select id="categoria" class="form-control" required>
                             <option value="Alimento">Alimento</option>
-                            <option value="Vacuna">Vacuna (Preventivo)</option>
-                            <option value="Medicina">Medicina (Curativo)</option>
-                            <option value="Cama">Cama / Sustrato</option>
+                            <option value="Medicina">Medicina</option>
+                            <option value="Vacuna">Vacuna</option>
                             <option value="Otro">Otro</option>
                         </select>
                     </div>
 
-                    <!-- Buscador Proveedor -->
                     <div class="form-group">
-                        <label for="proveedorSearch">Proveedor</label>
-                        <div class="searchable-dropdown" id="proveedorDropdown">
-                            <input type="text" id="proveedorSearch" class="form-control"
-                                placeholder="Buscar Proveedor...">
-                            <input type="hidden" id="proveedorId" value="">
-                            <button type="button" id="openQuickAddProveedor" class="btn-add-quick">+</button>
-                            <div class="search-results" id="proveedorResults"></div>
+                        <label for="proveedorSelect">Proveedor</label>
+                        <div style="display: flex; gap: 5px;">
+                            <select id="proveedorSelect" class="form-control">
+                                <option value="">Selecciona Proveedor</option>
+                            </select>
+                            <button type="button" class="btn btn-sm btn-secundario" id="btnQuickAddProveedor"
+                                title="Nuevo Proveedor">+</button>
                         </div>
                     </div>
 
-                    <!-- Selector de Unidad -->
                     <div class="form-group">
-                        <label for="unidadMedida">Unidad de Medida</label>
-                        <select id="unidadMedida" class="form-control" required>
-                            <option value="Unidades">Unidades (Generico)</option>
-                            <option value="kg">Kilogramos (kg)</option>
-                            <option value="lb">Libras (lb)</option>
+                        <label for="cantidad">Cantidad Inicial</label>
+                        <input type="number" id="cantidad" class="form-control" step="0.01" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="unidadMedida">Unidad</label>
+                        <select id="unidadMedida" class="form-control">
                             <option value="qq">Quintales (qq)</option>
-                            <option value="L">Litros (L)</option>
+                            <option value="lb">Libras (lb)</option>
+                            <option value="kg">Kilogramos (kg)</option>
+                            <option value="l">Litros (l)</option>
                             <option value="ml">Mililitros (ml)</option>
-                            <option value="Dosis">Dosis</option>
-                            <option value="Sacos">Sacos</option>
-                            <option value="Canecas">Canecas</option>
+                            <option value="unidades">Unidades</option>
+                            <option value="saco">Sacos</option>
                         </select>
                     </div>
 
                     <div class="form-group">
-                        <label for="cantidad">Cantidad Total</label>
-                        <input type="number" id="cantidad" class="form-control" min="0.01" step="0.01"
-                            placeholder="Ej: 40" required>
-                        <small style="color: #e67e22;">* Cantidad en la unidad seleccionada.</small>
+                        <label for="costo">Costo Unitario ($)</label>
+                        <input type="number" id="costo" class="form-control" step="0.01" required
+                            placeholder="Por unidad/kilo/litro">
                     </div>
 
                     <div class="form-group">
-                        <label for="costoTotal">Costo Total Factura ($)</label>
-                        <input type="number" id="costoTotal" class="form-control" min="0" step="0.01"
-                            placeholder="Ej: 150.00" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="fecha">Fecha de Compra</label>
+                        <label for="fecha">Fecha Ingreso</label>
                         <input type="date" id="fecha" class="form-control" required>
                     </div>
 
                     <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
-                        <button type="submit" class="btn btn-primario">Guardar Insumo</button>
+                        <button type="submit" class="btn btn-primario">Guardar Producto</button>
                         <button type="button" id="cancelBtn" class="btn btn-peligro"
                             style="background-color: #7f8c8d;">Cancelar</button>
                     </div>
@@ -168,11 +162,11 @@
             </section>
         </div>
 
-        <!-- Lista de Inventario -->
+        <!-- LISTA DE INVENTARIO -->
         <section class="card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2>Inventario Actual</h2>
-                <button id="toggleFormBtn" class="btn btn-primario">Registrar Nueva Compra</button>
+                <button id="toggleFormBtn" class="btn btn-primario">Nuevo Producto</button>
             </div>
 
             <div class="tabla-responsive-wrapper">
@@ -182,10 +176,10 @@
                             <th>Producto</th>
                             <th>Proveedor</th>
                             <th>Categoría</th>
-                            <th>Stock Actual</th>
-                            <th>Costo Unit.</th>
-                            <th>Valor Total</th>
-                            <th>Fecha</th>
+                            <th>Cantidad</th>
+                            <th>Costo Prom.</th>
+                            <th>Total Valor</th>
+                            <th>Fecha Ingreso</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -199,10 +193,53 @@
         </footer>
     </main>
 
-    <!-- Modal de Proveedor -->
+    <!-- MODAL REABASTECER (NUEVO) -->
+    <div id="reabastecerModal" class="modal-wrapper">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header" style="background: #27ae60; color: white;">
+                <h3 style="margin: 0;">🛒 Agregar Stock / Compra</h3>
+                <span class="modal-close-btn" id="closeReabastecerModal">&times;</span>
+            </div>
+            <form id="reabastecerForm" style="padding: 20px;">
+                <input type="hidden" id="reabastecerId">
+
+                <p id="reabastecerInfo" style="margin-bottom: 15px; font-weight: bold; color: #2c3e50;"></p>
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Cantidad a Comprar (<span id="reabastecerUnidad"></span>)</label>
+                    <input type="number" id="reab_cantidad" class="form-control" step="0.01" required min="0.01">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Costo TOTAL de la Compra ($)</label>
+                    <input type="number" id="reab_costoTotal" class="form-control" step="0.01" required min="0"
+                        placeholder="Ej: 500.00 (Total Factura)">
+                    <small style="color: #666;">El sistema recalculará el costo unitario promedio.</small>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Proveedor (Opcional)</label>
+                    <select id="reab_proveedor" class="form-control">
+                        <option value="">Mantener actual...</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>N° Factura / Referencia</label>
+                    <input type="text" id="reab_factura" class="form-control" placeholder="Opcional">
+                </div>
+
+                <button type="submit" class="btn btn-primario" style="width: 100%; background: #27ae60;">
+                    Confirmar Compra e Ingreso
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Proveedor (Existente) -->
     <div id="quickAddModal" class="modal-wrapper">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class=\"modal-header\">
                 <h2>Crear Nuevo Proveedor</h2>
                 <span class="modal-close-btn" id="closeQuickAddModal">&times;</span>
             </div>
