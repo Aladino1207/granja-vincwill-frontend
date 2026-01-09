@@ -1,73 +1,47 @@
 window.API_URL = 'https://granja-vincwill-backend.onrender.com';
 
-// --- FUNCIÓN PARA CARGAR EL LOGO ---
+// ==================================================
+// 1. CONFIGURACIÓN Y UTILIDADES GLOBALES
+// ==================================================
+
+// --- LOGO ---
 async function cargarLogoSistema() {
   const granjaId = getSelectedGranjaId();
-  if (!granjaId) return; // En login no hay granja seleccionada aún (ver nota abajo)
-
+  if (!granjaId) return;
   try {
-    // Intentamos leer de localStorage primero para velocidad
     const configLocal = JSON.parse(localStorage.getItem('granjaConfig'));
+    const aplicarLogo = (url) => document.querySelectorAll('.app-logo-img').forEach(img => img.src = url);
 
-    // Función interna para aplicar
-    const aplicarLogo = (url) => {
-      const logoEls = document.querySelectorAll('.app-logo-img'); // Clase para todas las imgs de logo
-      logoEls.forEach(img => {
-        if (url) img.src = url;
-      });
-    };
+    if (configLocal && configLocal.logoUrl) aplicarLogo(configLocal.logoUrl);
 
-    if (configLocal && configLocal.logoUrl) {
-      aplicarLogo(configLocal.logoUrl);
-    }
-
-    // De todas formas validamos con el servidor (segundo plano)
     const token = localStorage.getItem('token');
     const res = await fetch(`${API_URL}/config?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) {
       const config = await res.json();
-      localStorage.setItem('granjaConfig', JSON.stringify(config)); // Guardar caché
+      localStorage.setItem('granjaConfig', JSON.stringify(config));
       if (config.logoUrl) aplicarLogo(config.logoUrl);
     }
   } catch (e) { console.error("Error cargando logo", e); }
 }
 
-// ==================================================
-// 1. CONFIGURACIÓN DE PERMISOS (RBAC)
-// ==================================================
+// --- PERMISOS (RBAC) ---
 const PERMISOS = {
-  admin: {
-    acceso: ['*'], // Todo
-    sidebar: ['operaciones', 'finanzas', 'admin'] // IDs de los grupos del sidebar
-  },
+  admin: { acceso: ['*'], sidebar: ['operaciones', 'finanzas', 'admin'] },
   empleado: {
-    acceso: [
-      'index.html', 'granjas.html', 'login.html',
-      'galpones.html', 'lotes.html', 'salud.html',
-      'agua.html', 'seguimiento.html', 'inventarios.html'
-    ],
-    sidebar: ['operaciones'] // Solo ve operaciones
+    acceso: ['index.html', 'granjas.html', 'login.html', 'galpones.html', 'lotes.html', 'salud.html', 'agua.html', 'seguimiento.html', 'inventarios.html'],
+    sidebar: ['operaciones']
   },
-  viewer: {
-    acceso: ['index.html', 'granjas.html', 'login.html'],
-    sidebar: [] // No ve ningún grupo (solo dashboard que está fuera de grupo)
-  }
+  viewer: { acceso: ['index.html', 'granjas.html', 'login.html'], sidebar: [] }
 };
 
-// ==================================================
-// 2. UTILIDADES Y SEGURIDAD
-// ==================================================
-
+// --- AYUDAS ---
 function getSelectedGranjaId() {
   try {
     const granja = JSON.parse(localStorage.getItem('selectedGranja'));
     if (granja && granja.id) return granja.id;
   } catch (e) { console.error(e); }
-
   const path = window.location.pathname.split('/').pop();
-  if (path !== 'login.html' && path !== 'granjas.html') {
-    window.location.href = 'granjas.html';
-  }
+  if (path !== 'login.html' && path !== 'granjas.html') window.location.href = 'granjas.html';
   return null;
 }
 
@@ -82,16 +56,18 @@ async function handleJsonResponse(res) {
   return await res.json();
 }
 
+// ==================================================
+// 2. AUTENTICACIÓN
+// ==================================================
+
 async function login(e) {
   e.preventDefault();
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   const errorMessage = document.getElementById('errorMessage');
 
-  if (!email || !password) {
-    if (errorMessage) errorMessage.textContent = 'Datos incompletos.';
-    return;
-  }
+  if (!email || !password) { if (errorMessage) errorMessage.textContent = 'Datos incompletos.'; return; }
+
   try {
     const res = await fetch(`${API_URL}/login`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -107,10 +83,7 @@ async function login(e) {
     localStorage.setItem('token', data.token);
     localStorage.setItem('currentUser', JSON.stringify(data.user));
     window.location.href = 'granjas.html';
-  } catch (error) {
-    if (errorMessage) errorMessage.textContent = 'Error de conexión.';
-    console.error(error);
-  }
+  } catch (error) { if (errorMessage) errorMessage.textContent = 'Error de conexión.'; }
 }
 
 function logout() {
@@ -124,41 +97,23 @@ async function checkAccess() {
   const token = localStorage.getItem('token');
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const selectedGranja = localStorage.getItem('selectedGranja');
-  const path = window.location.pathname.split('/').pop() || 'index.html'; // Default index
+  const path = window.location.pathname.split('/').pop() || 'index.html';
 
   if (path === 'login.html') return;
-
-  // 1. Validación Básica
   if (!token || !currentUser) { logout(); return; }
   if (!selectedGranja && path !== 'granjas.html') { window.location.href = 'granjas.html'; return; }
   if ((path === 'login.html' || path === 'granjas.html') && selectedGranja) { window.location.href = 'index.html'; return; }
 
-  // 2. Validación de Token con Backend
-  try {
-    const res = await fetch(`${API_URL}/mis-granjas`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) { logout(); return; }
-  } catch (error) { logout(); return; }
-
-  // 3. VALIDACIÓN ESTRICTA DE ROLES (V 4.2)
+  // Validación Roles
   const rol = currentUser.role;
   const reglas = PERMISOS[rol];
-
-  if (reglas && !reglas.acceso.includes('*')) {
-    // Si no tiene acceso total (*), verificamos si la página está en su lista
-    if (!reglas.acceso.includes(path)) {
-      document.querySelector('main').innerHTML = `
-            <section class="card" style="text-align: center; padding: 50px;">
-              <h2 style="color: var(--color-peligro);">⛔ Acceso Denegado</h2>
-              <p>Tu perfil de <strong>${rol.toUpperCase()}</strong> no tiene permisos para ver el módulo <em>${path}</em>.</p>
-              <a href="index.html" class="btn btn-primario">Volver al Dashboard</a>
-            </section>`;
-      // Ocultar sidebar para que no intente navegar
-      document.querySelector('.sidebar').style.display = 'none';
-      throw new Error("Acceso denegado por rol"); // Detener ejecución de scripts posteriores
-    }
+  if (reglas && !reglas.acceso.includes('*') && !reglas.acceso.includes(path)) {
+    document.querySelector('main').innerHTML = `<section class="card" style="text-align: center; padding: 50px;"><h2 style="color: var(--color-peligro);">⛔ Acceso Denegado</h2><a href="index.html" class="btn btn-primario">Volver</a></section>`;
+    document.querySelector('.sidebar').style.display = 'none';
+    throw new Error("Acceso denegado");
   }
 
-  // Permisos de Viewer específicos (UI)
+  // UI Viewer
   if (rol === 'viewer') {
     document.querySelectorAll('.form-desplegable-container, #toggleFormBtn, .btn-peligro, .btn-primario').forEach(el => {
       if (el.tagName === 'BUTTON' || el.classList.contains('form-desplegable-container')) el.style.display = 'none';
@@ -167,34 +122,20 @@ async function checkAccess() {
 }
 
 // ==================================================
-// 3. UI & SIDEBAR
+// 3. UI, SIDEBAR Y MENÚS
 // ==================================================
 
 function filtrarMenuPorRol() {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   if (!currentUser) return;
+  const reglas = PERMISOS[currentUser.role];
 
-  const rol = currentUser.role;
-  const reglas = PERMISOS[rol];
-
-  // Si es admin, ve todo. Si no, filtramos.
   if (reglas && !reglas.acceso.includes('*')) {
-
-    // 1. Grupos del Sidebar (Operaciones, Finanzas, Admin)
-    const gruposPermitidos = reglas.sidebar; // ej: ['operaciones']
-
-    // Ocultar grupos no permitidos
-    const todosLosGrupos = document.querySelectorAll('.nav-group');
-
-    todosLosGrupos.forEach(grupo => {
+    document.querySelectorAll('.nav-group').forEach(grupo => {
       const titulo = grupo.querySelector('.nav-category-title');
       if (titulo) {
-        const targetId = titulo.dataset.target; // ej: #operaciones-links
-        const idLimpio = targetId.replace('#', '').replace('-links', ''); // operaciones
-
-        if (!gruposPermitidos.includes(idLimpio)) {
-          grupo.style.display = 'none'; // OCULTAR GRUPO COMPLETO
-        }
+        const idLimpio = titulo.dataset.target.replace('#', '').replace('-links', '');
+        if (!reglas.sidebar.includes(idLimpio)) grupo.style.display = 'none';
       }
     });
   }
@@ -211,41 +152,27 @@ function initializeUserProfile() {
 
   const nombre = currentUser.name || 'Usuario';
   const inicial = nombre.charAt(0).toUpperCase();
-  const nombreGranja = currentGranja ? currentGranja.nombre : 'Sin Asignar';
 
-  if (document.getElementById('userInitials')) document.getElementById('userInitials').textContent = inicial;
-  if (document.getElementById('dropdownInitials')) document.getElementById('dropdownInitials').textContent = inicial;
+  const initialsEls = [document.getElementById('userInitials'), document.getElementById('dropdownInitials')];
+  initialsEls.forEach(el => { if (el) el.textContent = inicial; });
+
   if (document.getElementById('dropdownName')) document.getElementById('dropdownName').textContent = nombre;
-  if (document.getElementById('dropdownBranch')) document.getElementById('dropdownBranch').textContent = nombreGranja;
+  if (document.getElementById('dropdownBranch') && currentGranja) document.getElementById('dropdownBranch').textContent = currentGranja.nombre;
 
-  // Toggle Menú
-  userBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    dropdown.classList.toggle('is-active');
+  userBtn.addEventListener('click', (e) => { e.stopPropagation(); dropdown.classList.toggle('is-active'); });
+  document.addEventListener('click', (e) => { if (!userBtn.contains(e.target)) dropdown.classList.remove('is-active'); });
+
+  if (changeBranchBtn) changeBranchBtn.addEventListener('click', () => {
+    localStorage.removeItem('selectedGranja');
+    window.location.href = 'granjas.html';
   });
-
-  // Cerrar al hacer clic fuera
-  document.addEventListener('click', (e) => {
-    if (!userBtn.contains(e.target) && !dropdown.contains(e.target)) {
-      dropdown.classList.remove('is-active');
-    }
-  });
-
-  // Botón Cambiar Almacén
-  if (changeBranchBtn) {
-    changeBranchBtn.addEventListener('click', () => {
-      localStorage.removeItem('selectedGranja');
-      window.location.href = 'granjas.html';
-    });
-  }
 }
 
 function initializeSidebar() {
   document.querySelectorAll('.nav-category-title').forEach(title => {
     title.addEventListener('click', () => {
-      const targetId = title.dataset.target;
-      const targetContainer = document.querySelector(targetId);
-      if (targetContainer) targetContainer.classList.toggle('is-collapsed');
+      const target = document.querySelector(title.dataset.target);
+      if (target) target.classList.toggle('is-collapsed');
     });
   });
 
@@ -265,34 +192,29 @@ function initializeSidebar() {
 
 function setupMobileMenu() {
   const header = document.querySelector('header');
-  if (!header) return;
+  if (!header || document.getElementById('mobileMenuBtn')) return;
 
-  if (!document.getElementById('mobileMenuBtn')) {
-    const btn = document.createElement('button');
-    btn.id = 'mobileMenuBtn';
-    btn.className = 'mobile-menu-btn';
-    btn.innerHTML = '☰';
-    header.insertBefore(btn, header.firstChild);
+  const btn = document.createElement('button');
+  btn.id = 'mobileMenuBtn'; btn.className = 'mobile-menu-btn'; btn.innerHTML = '☰';
+  header.insertBefore(btn, header.firstChild);
 
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const sidebar = document.querySelector('.sidebar');
-      if (sidebar) sidebar.classList.toggle('is-mobile-open');
-    });
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelector('.sidebar').classList.toggle('is-mobile-open');
+  });
 
-    document.addEventListener('click', (e) => {
-      const sidebar = document.querySelector('.sidebar');
-      const btn = document.getElementById('mobileMenuBtn');
-      if (sidebar && sidebar.classList.contains('is-mobile-open')) {
-        if (!sidebar.contains(e.target) && !btn.contains(e.target)) {
-          sidebar.classList.remove('is-mobile-open');
-        }
-      }
-    });
-  }
+  document.addEventListener('click', (e) => {
+    const sb = document.querySelector('.sidebar');
+    if (sb && sb.classList.contains('is-mobile-open') && !sb.contains(e.target) && !btn.contains(e.target)) {
+      sb.classList.remove('is-mobile-open');
+    }
+  });
 }
 
-// --- 4. DASHBOARD ---
+// ==================================================
+// 4. LÓGICA DEL DASHBOARD (GRÁFICOS Y DATOS)
+// ==================================================
+
 async function actualizarDashboard() {
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
@@ -307,81 +229,62 @@ async function actualizarDashboard() {
       fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
     ]);
 
-    // --- 1. CÁLCULOS ZOOTÉCNICOS (Producción) ---
+    // --- CÁLCULOS ZOOTÉCNICOS ---
     let totalAvesInicial = 0;
     let totalMuertes = 0;
     let ultimosPesos = [];
 
     if (lotes) {
       lotes.forEach(lote => {
-        // Sumamos la población inicial
         totalAvesInicial += lote.cantidadInicial || lote.cantidad;
-
-        // Sumamos mortalidad
         const muertesLote = salud ? salud.filter(s => s.loteId === lote.id && s.tipo.toLowerCase() === 'mortalidad').reduce((sum, s) => sum + s.cantidad, 0) : 0;
         totalMuertes += muertesLote;
 
-        // Buscamos el peso más reciente
         const seguimientosLote = seguimiento ? seguimiento.filter(s => s.loteId === lote.id).sort((a, b) => b.semana - a.semana) : [];
-        if (seguimientosLote.length > 0) {
-          ultimosPesos.push(seguimientosLote[0].peso);
-        }
+        if (seguimientosLote.length > 0) ultimosPesos.push(seguimientosLote[0].peso);
       });
     }
+
     const totalVivos = lotes ? lotes.filter(l => l.estado === 'disponible').reduce((sum, l) => sum + l.cantidad, 0) : 0;
-    // Promedio simple de los pesos actuales de los lotes activos
+    // Peso promedio simple de lotes activos
     const pesoPromedioActual = ultimosPesos.length ? (ultimosPesos.reduce((a, b) => a + b, 0) / ultimosPesos.length).toFixed(2) : 0;
     const mortalidadPromedio = (totalAvesInicial > 0) ? ((totalMuertes / totalAvesInicial) * 100).toFixed(2) : 0;
-    // Cálculo de Conversión Alimenticia (Global)
+
+    // CA (Conversión Alimenticia)
     const conversiones = [];
     if (seguimiento && lotes) {
       seguimiento.forEach(reg => {
         const lote = lotes.find(l => l.id === reg.loteId);
         if (lote && reg.peso > lote.pesoInicial) {
           const pesoGanado = reg.peso - lote.pesoInicial;
-          if (pesoGanado > 0) {
-            const conversion = reg.consumo / pesoGanado;
-            conversiones.push(conversion);
-          }
+          if (pesoGanado > 0) conversiones.push(reg.consumo / pesoGanado);
         }
       });
     }
     const promedioConversion = conversiones.length ? (conversiones.reduce((a, b) => a + b, 0) / conversiones.length).toFixed(2) : '0';
 
-    // --- 2. CÁLCULOS FINANCIEROS (Dinero) ---
-    // A. Costos Operativos (Registrados en módulo Costos + Automáticos de Alimento/Vacunas)
+    // --- CÁLCULOS FINANCIEROS ---
     const costosOperativos = costos ? costos.reduce((sum, c) => sum + c.monto, 0) : 0;
-
-    // B. Inversión en Lotes (Compra de Pollitos - NUEVO)
-    // Sumamos el 'costoInicial' de todos los lotes cargados
     const inversionLotes = lotes ? lotes.reduce((sum, l) => sum + (l.costoInicial || 0), 0) : 0;
-    // C. Costo Total Real
     const totalCostos = costosOperativos + inversionLotes;
-    // D. Ingresos
     const totalIngresos = ventas ? ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0) : 0;
-    // E. Rentabilidad
     const utilidadNeta = totalIngresos - totalCostos;
-    // --- 3. ACTUALIZACIÓN DEL DOM ---
+
+    // --- DOM UPDATE ---
     if (document.getElementById('totalVivos')) {
       document.getElementById('totalVivos').textContent = totalVivos;
       document.getElementById('pesoPromedio').textContent = `${pesoPromedioActual} kg`;
       document.getElementById('conversionPromedio').textContent = promedioConversion;
       document.getElementById('mortalidadPromedio').textContent = `${mortalidadPromedio}%`;
-
-      // Financieros
       document.getElementById('costosTotales').textContent = `$${totalCostos.toFixed(2)}`;
       document.getElementById('ingresosTotales').textContent = `$${totalIngresos.toFixed(2)}`;
 
-      // Color para rentabilidad (Verde si ganas, Rojo si pierdes)
       const rentabilidadEl = document.getElementById('rentabilidad');
       rentabilidadEl.textContent = `$${utilidadNeta.toFixed(2)}`;
       rentabilidadEl.style.color = utilidadNeta >= 0 ? '#27ae60' : '#e74c3c';
-      rentabilidadEl.style.fontWeight = 'bold';
     }
 
-  } catch (error) {
-    console.error('Error al actualizar dashboard:', error);
-  }
+  } catch (error) { console.error('Error dashboard:', error); }
 }
 
 async function mostrarCalendario() {
@@ -400,22 +303,15 @@ async function mostrarCalendario() {
 
     if (window.flatpickr) {
       flatpickr("#calendario-container", {
-        inline: true,
-        locale: "es",
+        inline: true, locale: "es",
         enable: [{ from: "today", to: "today" }, ...eventosMapa.map(e => e.date)],
         onDayCreate: function (dObj, dStr, fp, dayElem) {
           const fechaStr = dayElem.dateObj.toISOString().split('T')[0];
           const eventosDelDia = eventosMapa.filter(e => e.date === fechaStr);
-
           if (eventosDelDia.length > 0) {
-            // Limpiamos clases previas
             dayElem.classList.remove('evento-retiro', 'evento-pendiente');
-
-            if (eventosDelDia.some(e => e.tipo === 'retiro')) {
-              dayElem.classList.add('evento-retiro');
-            } else {
-              dayElem.classList.add('evento-pendiente');
-            }
+            if (eventosDelDia.some(e => e.tipo === 'retiro')) dayElem.classList.add('evento-retiro');
+            else dayElem.classList.add('evento-pendiente');
             dayElem.title = eventosDelDia.map(e => e.title).join('\n');
           }
         },
@@ -424,37 +320,14 @@ async function mostrarCalendario() {
           if (eventosHoy.length > 0) alert(`📅 ${dateStr}:\n\n${eventosHoy.map(e => `• ${e.title}`).join('\n')}`);
         }
       });
-      // INYECCIÓN CSS REFORZADA
+      // Inyección CSS
       if (!document.getElementById('estilos-calendario-vincwill')) {
         const style = document.createElement('style');
         style.id = 'estilos-calendario-vincwill';
         style.innerHTML = `
-        /* Estilo Base para días con evento */
-        .flatpickr-day.evento-retiro, 
-        .flatpickr-day.evento-pendiente {
-            color: white !important;
-            border: 0 !important;
-            font-weight: bold;
-        }
-        
-        /* ROJO: Retiros de Bioseguridad */
-        .flatpickr-day.evento-retiro {
-            background: #e74c3c !important; 
-            box-shadow: inset 0 0 0 2px #c0392b !important;
-        }
-        
-        /* NARANJA: Agenda Manual */
-        .flatpickr-day.evento-pendiente {
-            background: #f39c12 !important;
-        }
-        
-        /* HOVER: Que se note al pasar el mouse */
-        .flatpickr-day.evento-retiro:hover,
-        .flatpickr-day.evento-pendiente:hover {
-            opacity: 0.8;
-            transform: scale(1.1);
-            z-index: 2;
-        }`;
+        .flatpickr-day.evento-retiro { background: #e74c3c !important; color: white !important; border: 0 !important; }
+        .flatpickr-day.evento-pendiente { background: #f39c12 !important; color: white !important; border: 0 !important; }
+        .flatpickr-day.evento-retiro:hover, .flatpickr-day.evento-pendiente:hover { transform: scale(1.1); z-index: 2; }`;
         document.head.appendChild(style);
       }
     }
@@ -493,15 +366,9 @@ function mostrarGraficosDashboard() {
         return pesos.length ? pesos.reduce((a, b) => a + b) / pesos.length : 0;
       });
       const ctx = document.getElementById('produccionChart');
-      if (ctx) {
-        new Chart(ctx.getContext('2d'), {
-          type: 'line',
-          data: { labels, datasets: [{ label: 'Peso Promedio (kg)', data: dataPeso, borderColor: 'blue', tension: 0.1 }] },
-          options: { scales: { y: { beginAtZero: true } } }
-        });
-      }
+      if (ctx) new Chart(ctx.getContext('2d'), { type: 'line', data: { labels, datasets: [{ label: 'Peso Promedio (kg)', data: dataPeso, borderColor: 'blue', tension: 0.1 }] }, options: { scales: { y: { beginAtZero: true } } } });
     })
-    .catch(error => console.error('Error en gráfico de seguimiento:', error));
+    .catch(error => console.error('Error gráfico prod:', error));
 }
 
 function mostrarCostosPieChart() {
@@ -513,18 +380,9 @@ function mostrarCostosPieChart() {
       if (!costos) return;
       const categories = {};
       costos.forEach(c => { categories[c.categoria] = (categories[c.categoria] || 0) + c.monto; });
-      const labels = Object.keys(categories);
-      const data = Object.values(categories);
       const ctx = document.getElementById('costosPieChart');
-      if (ctx) {
-        new Chart(ctx.getContext('2d'), {
-          type: 'pie',
-          data: { labels, datasets: [{ data, backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'] }] },
-          options: { responsive: true }
-        });
-      }
-    })
-    .catch(error => console.error('Error en gráfico de costos:', error));
+      if (ctx) new Chart(ctx.getContext('2d'), { type: 'pie', data: { labels: Object.keys(categories), datasets: [{ data: Object.values(categories), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'] }] } });
+    });
 }
 
 function mostrarIngresosCostosBarChart() {
@@ -534,32 +392,16 @@ function mostrarIngresosCostosBarChart() {
     fetch(`${API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
     fetch(`${API_URL}/ventas?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
     fetch(`${API_URL}/costos?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
-  ])
-    .then(([lotes, ventas, costos]) => {
-      if (!lotes || !ventas || !costos) return;
-      const dataIngresos = {}, dataCostos = {};
-      lotes.forEach(l => {
-        dataIngresos[l.loteId] = ventas.filter(v => v.loteId === l.id).reduce((sum, v) => sum + (v.peso * v.precio), 0);
-        dataCostos[l.loteId] = costos.filter(c => c.loteId === l.id).reduce((sum, c) => sum + c.monto, 0);
-      });
-      const labels = Object.keys(dataIngresos);
-      const ingresosData = Object.values(dataIngresos);
-      const costosData = Object.values(dataCostos);
-      const ctx = document.getElementById('ingresosCostosBarChart');
-      if (ctx) {
-        new Chart(ctx.getContext('2d'), {
-          type: 'bar',
-          data: {
-            labels, datasets: [
-              { label: 'Ingresos ($)', data: ingresosData, backgroundColor: '#36A2EB' },
-              { label: 'Costos ($)', data: costosData, backgroundColor: '#FF6384' }
-            ]
-          },
-          options: { responsive: true, scales: { y: { beginAtZero: true } } }
-        });
-      }
-    })
-    .catch(error => console.error('Error en gráfico de ingresos/costos:', error));
+  ]).then(([lotes, ventas, costos]) => {
+    if (!lotes || !ventas || !costos) return;
+    const dataIngresos = {}, dataCostos = {};
+    lotes.forEach(l => {
+      dataIngresos[l.loteId] = ventas.filter(v => v.loteId === l.id).reduce((sum, v) => sum + (v.peso * v.precio), 0);
+      dataCostos[l.loteId] = costos.filter(c => c.loteId === l.id).reduce((sum, c) => sum + c.monto, 0);
+    });
+    const ctx = document.getElementById('ingresosCostosBarChart');
+    if (ctx) new Chart(ctx.getContext('2d'), { type: 'bar', data: { labels: Object.keys(dataIngresos), datasets: [{ label: 'Ingresos ($)', data: Object.values(dataIngresos), backgroundColor: '#36A2EB' }, { label: 'Costos ($)', data: Object.values(dataCostos), backgroundColor: '#FF6384' }] } });
+  });
 }
 
 function mostrarAlertasProduccion() {
@@ -573,34 +415,84 @@ function mostrarAlertasProduccion() {
       if (alertasList) {
         alertasList.innerHTML = '';
         const mortalidadAlta = salud.filter(s => s.tipo.toLowerCase() === 'mortalidad' && s.cantidad > 10);
-        if (mortalidadAlta.length > 0) {
-          mortalidadAlta.forEach(s => {
-            const li = document.createElement('li');
-            li.textContent = `Alerta: Alta mortalidad Lote ${s.loteId} (${s.cantidad} aves, ${new Date(s.fecha).toLocaleDateString()})`;
-            alertasList.appendChild(li);
-          });
-        } else {
-          alertasList.innerHTML = '<li>No hay alertas de mortalidad.</li>';
-        }
+        if (mortalidadAlta.length > 0) mortalidadAlta.forEach(s => { const li = document.createElement('li'); li.textContent = `Alerta: Alta mortalidad Lote ${s.loteId} (${s.cantidad} aves)`; alertasList.appendChild(li); });
+        else alertasList.innerHTML = '<li>No hay alertas.</li>';
       }
-    })
-    .catch(error => console.error('Error en alertas:', error));
+    });
 }
 
+// ==================================================
+// 🔥 5. SISTEMA AUTOMÁTICO DE TABLAS (ORDENAR Y FILTRAR)
+// ==================================================
 
-// --- 5. INICIALIZACIÓN PRINCIPAL ---
+// Ordenar al hacer clic en TH
+document.addEventListener('click', function (e) {
+  const th = e.target.closest('table.tabla-moderna th');
+  if (th) {
+    if (th.innerText.toLowerCase().includes('acciones') || th.classList.contains('no-sort')) return;
+    const table = th.closest('table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const index = Array.from(th.parentNode.children).indexOf(th);
+    const isAsc = !th.classList.contains('asc');
 
-// --- INICIALIZACIÓN PRINCIPAL (app.js) ---
+    table.querySelectorAll('th').forEach(h => h.classList.remove('asc', 'desc'));
+    th.classList.toggle('asc', isAsc); th.classList.toggle('desc', !isAsc);
+
+    rows.sort((rowA, rowB) => {
+      const cellA = rowA.children[index]?.innerText.trim() || '';
+      const cellB = rowB.children[index]?.innerText.trim() || '';
+      return compareCells(cellA, cellB, isAsc);
+    });
+    tbody.append(...rows);
+  }
+});
+
+// Filtrar al escribir en .table-search
+document.addEventListener('input', function (e) {
+  if (e.target.matches('.table-search')) {
+    const input = e.target;
+    const tableId = input.dataset.table;
+    const table = document.getElementById(tableId);
+    if (table) {
+      const term = input.value.toLowerCase();
+      const rows = table.querySelectorAll('tbody tr');
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(term) ? '' : 'none';
+      });
+    }
+  }
+});
+
+function compareCells(a, b, isAsc) {
+  const clean = (val) => val.replace(/[$,]/g, '').trim();
+  const valA = clean(a); const valB = clean(b);
+  const numA = parseFloat(valA); const numB = parseFloat(valB);
+
+  if (!isNaN(numA) && !isNaN(numB) && /^\d/.test(valA) && /^\d/.test(valB)) return isAsc ? numA - numB : numB - numA;
+  if (valA.includes('/') && valB.includes('/')) {
+    const [dA, mA, yA] = valA.split('/'); const [dB, mB, yB] = valB.split('/');
+    const dateA = new Date(`${yA}-${mA}-${dA}`); const dateB = new Date(`${yB}-${mB}-${dB}`);
+    if (!isNaN(dateA) && !isNaN(dateB)) return isAsc ? dateA - dateB : dateB - dateA;
+  }
+  return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+}
+
+// ==================================================
+// 6. INICIALIZACIÓN
+// ==================================================
+
 document.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname.split('/').pop();
 
   if (path === 'login.html') {
-    const loginForm = document.getElementById('loginForm');
-    if (loginForm) loginForm.onsubmit = login;
+    const lf = document.getElementById('loginForm');
+    if (lf) lf.onsubmit = login;
     return;
   }
 
-  checkAccess(); // Valida permisos y redirige si no tiene acceso
+  checkAccess();
 
   if (path !== 'login.html' && path !== 'granjas.html') {
     initializeUserProfile();
@@ -616,7 +508,6 @@ document.addEventListener('DOMContentLoaded', () => {
     actualizarDashboard();
     mostrarCalendario();
     mostrarGraficoAgua();
-    // Llamar al resto de gráficos
     if (typeof mostrarGraficosDashboard === 'function') mostrarGraficosDashboard();
     if (typeof mostrarCostosPieChart === 'function') mostrarCostosPieChart();
     if (typeof mostrarIngresosCostosBarChart === 'function') mostrarIngresosCostosBarChart();
@@ -624,91 +515,5 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-function enableTableLogic(tableId, searchInputId = null) {
-  const table = document.getElementById(tableId);
-  if (!table) return;
-
-  // 1. LÓGICA DE ORDENAMIENTO
-  const headers = table.querySelectorAll('th');
-  const tbody = table.querySelector('tbody');
-
-  headers.forEach((header, index) => {
-    // Ignorar columna Acciones o las marcadas como no-sort
-    if (header.innerText.toLowerCase().includes('acciones') || header.classList.contains('no-sort')) {
-      header.classList.add('no-sort');
-      return;
-    }
-
-    header.classList.add('sortable');
-
-    header.addEventListener('click', () => {
-      const rows = Array.from(tbody.querySelectorAll('tr'));
-      const isAsc = !header.classList.contains('asc');
-
-      // Limpiar clases de otros headers
-      headers.forEach(h => h.classList.remove('asc', 'desc'));
-      header.classList.toggle('asc', isAsc);
-      header.classList.toggle('desc', !isAsc);
-
-      rows.sort((rowA, rowB) => {
-        const cellA = rowA.children[index].innerText.trim();
-        const cellB = rowB.children[index].innerText.trim();
-
-        return compareCells(cellA, cellB, isAsc);
-      });
-
-      // Re-inyectar filas ordenadas
-      tbody.append(...rows);
-    });
-  });
-
-  // 2. LÓGICA DE BÚSQUEDA (FILTRO)
-  if (searchInputId) {
-    const input = document.getElementById(searchInputId);
-    if (input) {
-      input.addEventListener('keyup', (e) => {
-        const term = e.target.value.toLowerCase();
-        const rows = tbody.querySelectorAll('tr');
-
-        rows.forEach(row => {
-          // Unimos todo el texto de la fila para buscar
-          const text = row.innerText.toLowerCase();
-          row.style.display = text.includes(term) ? '' : 'none';
-        });
-      });
-    }
-  }
-}
-
-/**
- * Compara dos valores inteligentemente (Moneda, Fecha, Número o Texto)
- */
-function compareCells(a, b, isAsc) {
-  // 1. Limpieza de datos (Quitar $, comas, espacios extra)
-  const clean = (val) => val.replace(/[$,]/g, '').trim();
-
-  const valA = clean(a);
-  const valB = clean(b);
-
-  // 2. Intentar como Número
-  const numA = parseFloat(valA);
-  const numB = parseFloat(valB);
-
-  if (!isNaN(numA) && !isNaN(numB)) {
-    return isAsc ? numA - numB : numB - numA;
-  }
-
-  // 3. Intentar como Fecha (Formato esperado dd/mm/yyyy o yyyy-mm-dd)
-  // Simple detección: contiene '/' o '-'
-  const dateA = new Date(valA);
-  const dateB = new Date(valB);
-
-  if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime()) && (valA.includes('/') || valA.includes('-'))) {
-    return isAsc ? dateA - dateB : dateB - dateA;
-  }
-
-  // 4. Fallback: Texto normal
-  return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-}
-
+// Fix para caché de navegador en botón atrás
 window.addEventListener('pageshow', (event) => { if (event.persisted) window.location.reload(); });
