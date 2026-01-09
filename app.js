@@ -240,17 +240,17 @@ async function actualizarDashboard() {
         const muertesLote = salud ? salud.filter(s => s.loteId === lote.id && s.tipo.toLowerCase() === 'mortalidad').reduce((sum, s) => sum + s.cantidad, 0) : 0;
         totalMuertes += muertesLote;
 
+        // Buscar el último peso registrado para este lote
         const seguimientosLote = seguimiento ? seguimiento.filter(s => s.loteId === lote.id).sort((a, b) => b.semana - a.semana) : [];
         if (seguimientosLote.length > 0) ultimosPesos.push(seguimientosLote[0].peso);
       });
     }
 
     const totalVivos = lotes ? lotes.filter(l => l.estado === 'disponible').reduce((sum, l) => sum + l.cantidad, 0) : 0;
-    // Peso promedio simple de lotes activos
     const pesoPromedioActual = ultimosPesos.length ? (ultimosPesos.reduce((a, b) => a + b, 0) / ultimosPesos.length).toFixed(2) : 0;
     const mortalidadPromedio = (totalAvesInicial > 0) ? ((totalMuertes / totalAvesInicial) * 100).toFixed(2) : 0;
 
-    // CA (Conversión Alimenticia)
+    // CA (Conversión)
     const conversiones = [];
     if (seguimiento && lotes) {
       seguimiento.forEach(reg => {
@@ -263,19 +263,40 @@ async function actualizarDashboard() {
     }
     const promedioConversion = conversiones.length ? (conversiones.reduce((a, b) => a + b, 0) / conversiones.length).toFixed(2) : '0';
 
-    // --- CÁLCULOS FINANCIEROS ---
+    // --- CÁLCULOS FINANCIEROS (AHORA INCLUYEN ALIMENTO) ---
+
+    // A. Costos Operativos (Tabla Costos)
     const costosOperativos = costos ? costos.reduce((sum, c) => sum + c.monto, 0) : 0;
+
+    // B. Inversión Inicial (Lotes)
     const inversionLotes = lotes ? lotes.reduce((sum, l) => sum + (l.costoInicial || 0), 0) : 0;
-    const totalCostos = costosOperativos + inversionLotes;
+
+    // C. Costo de Alimento Consumido (Calculado al vuelo)
+    // Multiplicamos la cantidad consumida por el precio del inventario en ese momento
+    let costoAlimento = 0;
+    if (seguimiento) {
+      costoAlimento = seguimiento.reduce((sum, s) => {
+        // Nota: s.consumo es la cantidad. s.Inventario.costo es el precio promedio
+        const cantidad = s.consumo || 0;
+        const precio = s.Inventario ? (s.Inventario.costo || 0) : 0;
+        return sum + (cantidad * precio);
+      }, 0);
+    }
+
+    // D. Costo Total Real
+    const totalCostos = costosOperativos + inversionLotes + costoAlimento;
+
+    // E. Ingresos
     const totalIngresos = ventas ? ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0) : 0;
     const utilidadNeta = totalIngresos - totalCostos;
 
     // --- DOM UPDATE ---
     if (document.getElementById('totalVivos')) {
       document.getElementById('totalVivos').textContent = totalVivos;
-      document.getElementById('pesoPromedio').textContent = `${pesoPromedioActual} kg`;
+      document.getElementById('pesoPromedio').textContent = `${pesoPromedioActual} lb`; // Ajustado a lb
       document.getElementById('conversionPromedio').textContent = promedioConversion;
       document.getElementById('mortalidadPromedio').textContent = `${mortalidadPromedio}%`;
+
       document.getElementById('costosTotales').textContent = `$${totalCostos.toFixed(2)}`;
       document.getElementById('ingresosTotales').textContent = `$${totalIngresos.toFixed(2)}`;
 
