@@ -87,52 +87,74 @@
         </nav>
     </aside>
     <main class="main-content">
-
+        <!-- FORMULARIO DE SEGUIMIENTO -->
         <div id="formContainer" class="form-desplegable-container">
             <section class="card">
-                <h2 id="formTitle">Registrar Seguimiento</h2>
-                <form id="seguimientoForm" class="form-grid form-grid-3-col">
+                <h2 id="formTitle">Registrar Seguimiento Semanal</h2>
+                <form id="seguimientoForm" class="form-grid form-grid-2-col">
                     <input type="hidden" id="seguimientoId" value="">
 
                     <div class="form-group">
                         <label for="loteSelect">Lote</label>
-                        <select id="loteSelect" class="form-control" required></select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="alimentoSelect">Alimento Consumido</label>
-                        <select id="alimentoSelect" class="form-control" required>
-                            <option value="">Selecciona un Alimento</option>
+                        <select id="loteSelect" class="form-control" required>
+                            <option value="">Cargando...</option>
                         </select>
                     </div>
 
                     <div class="form-group">
-                        <label for="semana">Semana #</label>
-                        <input type="number" id="semana" class="form-control" min="1" required>
+                        <!-- ID CORREGIDO: semanaVida -->
+                        <label for="semanaVida">Semana de Vida</label>
+                        <input type="number" id="semanaVida" class="form-control" required min="1" max="20"
+                            placeholder="Ej: 1">
                     </div>
 
                     <div class="form-group">
-                        <label for="peso">Peso Promedio (kg)</label>
-                        <input type="number" id="peso" class="form-control" min="0" step="0.01" required>
+                        <!-- ID CORREGIDO: pesoPromedio -->
+                        <label for="pesoPromedio">Peso Promedio (lb)</label>
+                        <input type="number" id="pesoPromedio" class="form-control" step="0.0001"
+                            placeholder="Ej: 0.4500">
                     </div>
 
                     <div class="form-group">
-                        <label for="consumo">Consumo de Alimento (kg)</label>
-                        <input type="number" id="consumo" class="form-control" min="0" step="0.01" required>
+                        <!-- ID CORREGIDO: fechaRegistro -->
+                        <label for="fechaRegistro">Fecha de Registro</label>
+                        <input type="date" id="fechaRegistro" class="form-control" required>
                     </div>
 
-                    <div class="form-group">
-                        <label for="fecha">Fecha</label>
-                        <input type="date" id="fecha" class="form-control" required>
+                    <!-- Sección de Alimentación -->
+                    <div
+                        style="grid-column: 1 / -1; background: #fdfefe; padding: 15px; border: 1px dashed #bdc3c7; border-radius: 6px; margin-top: 10px;">
+                        <h4 style="margin-top: 0; color: #7f8c8d;">Consumo de Alimento (Opcional)</h4>
+                        <div class="form-grid-2-col" style="display: grid; gap: 1rem; margin-top: 10px;">
+
+                            <div class="form-group">
+                                <label for="alimentoSelect">Producto (Inventario)</label>
+                                <select id="alimentoSelect" class="form-control">
+                                    <option value="">Selecciona Alimento...</option>
+                                    <!-- Se llena con JS -->
+                                </select>
+                                <small id="stockInfo" style="color: #e67e22; font-weight: bold;"></small>
+                            </div>
+
+                            <div class="form-group">
+                                <!-- ID CORREGIDO: consumoAlimento -->
+                                <label for="consumoAlimento">Cantidad Consumida</label>
+                                <input type="number" id="consumoAlimento" class="form-control" step="0.01"
+                                    placeholder="Cantidad">
+                                <small style="color: #7f8c8d;">Se usará la misma unidad del inventario (ej: qq,
+                                    sacos)</small>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group" style="grid-column: 1 / -1;">
                         <label for="observaciones">Observaciones</label>
-                        <input type="text" id="observaciones" class="form-control">
+                        <textarea id="observaciones" class="form-control" rows="2"
+                            placeholder="Notas sobre el lote..."></textarea>
                     </div>
 
                     <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
-                        <button type="submit" class="btn btn-primario">Guardar</button>
+                        <button type="submit" class="btn btn-primario">Guardar Registro</button>
                         <button type="button" id="cancelBtn" class="btn btn-peligro"
                             style="background-color: #7f8c8d;">Cancelar</button>
                     </div>
@@ -140,6 +162,7 @@
             </section>
         </div>
 
+        <!-- LISTA -->
         <section class="card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2>Historial de Seguimiento</h2>
@@ -152,9 +175,9 @@
                         <tr>
                             <th>Lote</th>
                             <th>Semana</th>
-                            <th>Peso</th>
-                            <th>Consumo</th>
-                            <th>Observaciones</th>
+                            <th>Peso (lb)</th>
+                            <th>Alimento</th>
+                            <th>Obs.</th>
                             <th>Fecha</th>
                             <th>Acciones</th>
                         </tr>
