@@ -20,7 +20,7 @@ async function cargarInventario() {
     tbody.innerHTML = '';
 
     if (inventario.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay inventario registrado.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay inventario registrado en esta granja.</td></tr>';
       return;
     }
 
@@ -28,7 +28,13 @@ async function cargarInventario() {
       const tr = document.createElement('tr');
       const unidad = item.unidadMedida || 'Unidades';
       const totalEstimado = (item.cantidad * item.costo).toFixed(2);
-      const fechaVisual = new Date(item.fecha).toLocaleDateString();
+
+      // Fecha corregida
+      const fechaVisual = item.fecha ? new Date(item.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' }) : '-';
+
+      // --- CORRECCIÓN VISUAL DE DECIMALES ---
+      // Si tiene decimales largos, corta a 4. Si termina en ceros (ej: 10.0000), los quita.
+      const cantidadVisual = parseFloat(item.cantidad).toFixed(4).replace(/\.?0+$/, "");
 
       // Botón "Agregar Stock" (+)
       const btnReabastecer = `
@@ -49,7 +55,8 @@ async function cargarInventario() {
         <td><strong>${item.producto}</strong></td>
         <td>${item.Proveedor ? item.Proveedor.nombreCompania : '-'}</td>
         <td><span class="badge">${item.categoria}</span></td>
-        <td style="font-weight: bold; color: #2c3e50;">${item.cantidad} ${unidad}</td>
+        <!-- AQUÍ SE APLICA LA VISUALIZACIÓN LIMPIA -->
+        <td style="font-weight: bold; color: #2c3e50;">${cantidadVisual} ${unidad}</td>
         <td>$${parseFloat(item.costo).toFixed(2)}</td>
         <td>$${totalEstimado}</td>
         <td>${fechaVisual}</td>
@@ -205,7 +212,9 @@ async function guardarReabastecimiento(e) {
 
     if (res.ok) {
       const data = await res.json();
-      alert(`Stock actualizado.\nNuevo Stock: ${data.nuevoStock}\nNuevo Costo Promedio: $${parseFloat(data.nuevoCosto).toFixed(2)}`);
+      // También redondeamos aquí para el mensaje de alerta
+      const stockVisual = parseFloat(data.nuevoStock).toFixed(4).replace(/\.?0+$/, "");
+      alert(`Stock actualizado.\nNuevo Stock: ${stockVisual}\nNuevo Costo Promedio: $${parseFloat(data.nuevoCosto).toFixed(2)}`);
       cerrarModalReabastecer();
       cargarInventario();
     } else {
@@ -247,7 +256,6 @@ function setupQuickAddModal() {
     form.onsubmit = async (e) => {
       e.preventDefault();
       // ... (Lógica existente de quick add - simplificada aquí)
-      // Asumimos que esta parte ya la tenías implementada o es similar a Lotes
       alert("Función Proveedor Rápido pendiente de integrar con backend global");
       modal.classList.remove('is-open');
     };
