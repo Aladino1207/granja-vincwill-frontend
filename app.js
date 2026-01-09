@@ -220,338 +220,412 @@ async function actualizarDashboard() {
   if (!granjaId) return;
 
   try {
-    const [lotes, salud, costos, seguimiento, ventas, agua] = await Promise.all([
+    // 1. Carga de Datos Paralela
+    const [lotes, salud, costos, seguimiento, ventas, agua, inventario] = await Promise.all([
       fetch(`${API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
       fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
       fetch(`${API_URL}/costos?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
       fetch(`${API_URL}/seguimiento?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
       fetch(`${API_URL}/ventas?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-      fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
+      fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+      fetch(`${API_URL}/inventario?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse) // Necesitamos saber precios actuales si faltan en el histórico
     ]);
 
-    // --- CÁLCULOS ZOOTÉCNICOS ---
-    let totalAvesInicial = 0;
-    let totalMuertes = 0;
-    let ultimosPesos = [];
+    // Variables Globales
+    let totalCostosGlobal = 0;
+    let totalIngresosGlobal = ventas ? ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0) : 0;
+    let totalVivosGlobal = 0;
 
-    if (lotes) {
-      lotes.forEach(lote => {
-        totalAvesInicial += lote.cantidadInicial || lote.cantidad;
-        const muertesLote = salud ? salud.filter(s => s.loteId === lote.id && s.tipo.toLowerCase() === 'mortalidad').reduce((sum, s) => sum + s.cantidad, 0) : 0;
-        totalMuertes += muertesLote;
+    const lotesContainer = document.getElementById('lotesContainer');
+    if (lotesContainer) lotesContainer.innerHTML = ''; // Limpiar
 
-        // Buscar el último peso registrado para este lote
-        const seguimientosLote = seguimiento ? seguimiento.filter(s => s.loteId === lote.id).sort((a, b) => b.semana - a.semana) : [];
-        if (seguimientosLote.length > 0) ultimosPesos.push(seguimientosLote[0].peso);
-      });
-    }
+    // --- PROCESAMIENTO POR LOTE ---
+    if (lotes && lotes.length > 0) {
+      const lotesActivos = lotes.filter(l => l.estado === 'disponible' || l.estado === 'ocupado');
 
-    const totalVivos = lotes ? lotes.filter(l => l.estado === 'disponible').reduce((sum, l) => sum + l.cantidad, 0) : 0;
-    const pesoPromedioActual = ultimosPesos.length ? (ultimosPesos.reduce((a, b) => a + b, 0) / ultimosPesos.length).toFixed(2) : 0;
-    const mortalidadPromedio = (totalAvesInicial > 0) ? ((totalMuertes / totalAvesInicial) * 100).toFixed(2) : 0;
+      if (lotesActivos.length === 0 && lotesContainer) {
+        lotesContainer.innerHTML = '<div class="card">No hay lotes activos.</div>';
+      }
 
-    // CA (Conversión)
-    const conversiones = [];
-    if (seguimiento && lotes) {
-      seguimiento.forEach(reg => {
-        const lote = lotes.find(l => l.id === reg.loteId);
-        if (lote && reg.peso > lote.pesoInicial) {
-          const pesoGanado = reg.peso - lote.pesoInicial;
-          if (pesoGanado > 0) conversiones.push(reg.consumo / pesoGanado);
-        }
-      });
-    }
-    const promedioConversion = conversiones.length ? (conversiones.reduce((a, b) => a + b, 0) / conversiones.length).toFixed(2) : '0';
+      lotesActivos.forEach(lote => {
+        // A. DATOS BÁSICOS
+        const diasEdad = Math.floor((new Date() - new Date(lote.fechaIngreso)) / (1000 * 60 * 60 * 24));
+        const semanasEdad = Math.ceil(diasEdad / 7);
 
-    // --- CÁLCULOS FINANCIEROS (AHORA INCLUYEN ALIMENTO) ---
+        // B. MORTALIDAD
+        const muertes = salud ? salud.filter(s => s.loteId === lote.id && s.tipo.toLowerCase() === 'mortalidad').reduce((sum, s) => sum + s.cantidad, 0) : 0;
+        const vivos = (lote.cantidadInicial || lote.cantidad) - muertes;
+        totalVivosGlobal += vivos;
+        const viabilidad = (lote.cantidadInicial > 0) ? ((vivos / lote.cantidadInicial) * 100) : 0;
 
-    // A. Costos Operativos (Tabla Costos)
-    const costosOperativos = costos ? costos.reduce((sum, c) => sum + c.monto, 0) : 0;
+        // C. PESO Y CONSUMO
+        const regsLote = seguimiento ? seguimiento.filter(s => s.loteId === lote.id) : [];
+        // Ordenar por fecha desc
+        regsLote.sort((a, b) => new Date(b.fechaRegistro || b.fecha) - new Date(a.fechaRegistro || a.fecha));
 
-    // B. Inversión Inicial (Lotes)
-    const inversionLotes = lotes ? lotes.reduce((sum, l) => sum + (l.costoInicial || 0), 0) : 0;
+        const pesoActual = regsLote.length > 0 ? regsLote[0].pesoPromedio : lote.pesoInicial; // lb
+        const consumoTotalLote = regsLote.reduce((sum, r) => sum + (r.consumoAlimento || 0), 0); // Unidades base
 
-    // C. Costo de Alimento Consumido (Calculado al vuelo)
-    // Multiplicamos la cantidad consumida por el precio del inventario en ese momento
-    let costoAlimento = 0;
-    if (seguimiento) {
-      costoAlimento = seguimiento.reduce((sum, s) => {
-        // Nota: s.consumo es la cantidad. s.Inventario.costo es el precio promedio
-        const cantidad = s.consumo || 0;
-        const precio = s.Inventario ? (s.Inventario.costo || 0) : 0;
-        return sum + (cantidad * precio);
-      }, 0);
-    }
+        // D. FINANZAS DEL LOTE (CÁLCULO DEL COSTO REAL)
 
-    // D. Costo Total Real
-    const totalCostos = costosOperativos + inversionLotes + costoAlimento;
+        // 1. Inversión Inicial (Pollitos)
+        const costoInicial = lote.costoInicial || 0;
 
-    // E. Ingresos
-    const totalIngresos = ventas ? ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0) : 0;
-    const utilidadNeta = totalIngresos - totalCostos;
+        // 2. Gastos Operativos Directos (Tabla Costos)
+        const gastosDirectos = costos ? costos.filter(c => c.loteId === lote.id).reduce((sum, c) => sum + c.monto, 0) : 0;
 
-    // --- DOM UPDATE ---
-    if (document.getElementById('totalVivos')) {
-      document.getElementById('totalVivos').textContent = totalVivos;
-      document.getElementById('pesoPromedio').textContent = `${pesoPromedioActual} lb`; // Ajustado a lb
-      document.getElementById('conversionPromedio').textContent = promedioConversion;
-      document.getElementById('mortalidadPromedio').textContent = `${mortalidadPromedio}%`;
+        // 3. Costo Alimentación (El Gigante)
+        let costoAlimentoLote = 0;
+        regsLote.forEach(r => {
+          // Si el registro tiene el costo guardado (futuro ideal), úsalo. 
+          // Si no, usa el costo actual del inventario vinculado.
+          let precioUnitario = 0;
+          if (r.Inventario && r.Inventario.costo) precioUnitario = r.Inventario.costo;
 
-      document.getElementById('costosTotales').textContent = `$${totalCostos.toFixed(2)}`;
-      document.getElementById('ingresosTotales').textContent = `$${totalIngresos.toFixed(2)}`;
+          costoAlimentoLote += (r.consumoAlimento || 0) * precioUnitario;
+        });
 
-      const rentabilidadEl = document.getElementById('rentabilidad');
-      rentabilidadEl.textContent = `$${utilidadNeta.toFixed(2)}`;
-      rentabilidadEl.style.color = utilidadNeta >= 0 ? '#27ae60' : '#e74c3c';
-    }
-
-  } catch (error) { console.error('Error dashboard:', error); }
-}
-
-async function mostrarCalendario() {
-  const granjaId = getSelectedGranjaId();
-  if (!granjaId) return;
-  try {
-    const [agendaRes, saludRes] = await Promise.all([
-      fetch(`${API_URL}/agenda?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
-      fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
-    ]);
-    const agendaData = await handleJsonResponse(agendaRes);
-    const saludData = await handleJsonResponse(saludRes);
-    const eventosMapa = [];
-    if (agendaData) agendaData.forEach(ev => eventosMapa.push({ date: ev.fecha, title: `AGENDA: ${ev.descripcion}`, tipo: 'pendiente' }));
-    if (saludData) saludData.forEach(s => { if (s.fechaRetiro) eventosMapa.push({ date: s.fechaRetiro.split('T')[0], title: `BIOSEGURIDAD: Fin Retiro ${s.nombre}`, tipo: 'retiro' }); });
-
-    if (window.flatpickr) {
-      flatpickr("#calendario-container", {
-        inline: true, locale: "es",
-        enable: [{ from: "today", to: "today" }, ...eventosMapa.map(e => e.date)],
-        onDayCreate: function (dObj, dStr, fp, dayElem) {
-          const fechaStr = dayElem.dateObj.toISOString().split('T')[0];
-          const eventosDelDia = eventosMapa.filter(e => e.date === fechaStr);
-          if (eventosDelDia.length > 0) {
-            dayElem.classList.remove('evento-retiro', 'evento-pendiente');
-            if (eventosDelDia.some(e => e.tipo === 'retiro')) dayElem.classList.add('evento-retiro');
-            else dayElem.classList.add('evento-pendiente');
-            dayElem.title = eventosDelDia.map(e => e.title).join('\n');
+        // 4. Costo Sanitario (Vacunas/Medicinas)
+        // Buscamos en Salud los eventos que tienen vacunaId y calculamos precio * cantidad
+        const saludLote = salud ? salud.filter(s => s.loteId === lote.id && (s.tipo === 'Vacunación' || s.tipo === 'Tratamiento')) : [];
+        let costoSanitarioLote = 0;
+        saludLote.forEach(s => {
+          // Necesitamos buscar el precio en el inventario actual porque Salud no guarda el costo histórico (aún)
+          // Nota: Esto es una estimación si el precio cambió, pero es mejor que nada.
+          if (s.vacunaId && inventario) {
+            const itemInv = inventario.find(i => i.id === s.vacunaId);
+            if (itemInv) costoSanitarioLote += (s.cantidad * itemInv.costo);
           }
-        },
-        onChange: function (selectedDates, dateStr) {
-          const eventosHoy = eventosMapa.filter(e => e.date === dateStr);
-          if (eventosHoy.length > 0) alert(`📅 ${dateStr}:\n\n${eventosHoy.map(e => `• ${e.title}`).join('\n')}`);
+        });
+
+        // TOTAL LOTE
+        const costoTotalLote = costoInicial + gastosDirectos + costoAlimentoLote + costoSanitarioLote;
+        totalCostosGlobal += costoTotalLote;
+
+        // E. KPIs AVANZADOS
+
+        // 1. Costo de Producción (Break-even)
+        // Biomasa = Vivos * Peso Promedio
+        const biomasaLbs = vivos * pesoActual;
+        const costoPorLb = biomasaLbs > 0 ? (costoTotalLote / biomasaLbs).toFixed(2) : '0.00';
+
+        // 2. Conversión Alimenticia (CA) = Alimento Total / Carne Producida (Biomasa ganada)
+        // Simplificado: Consumo / Biomasa Total
+        const conversion = biomasaLbs > 0 ? (consumoTotalLote / biomasaLbs).toFixed(2) : '0.00';
+
+        // 3. EPEF (European Production Efficiency Factor)
+        // Fórmula: (Viabilidad % * Peso kg * 100) / (Edad dias * CA)
+        // Nota: EPEF usa Kg. Si pesoActual es Lb, convertir.
+        const pesoKg = pesoActual / 2.20462;
+        let epef = 0;
+        if (diasEdad > 0 && conversion > 0) {
+          epef = ((viabilidad * pesoKg) / (diasEdad * conversion)) * 100;
+        }
+
+        // --- RENDERIZADO DE TARJETA ---
+        if (lotesContainer) {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.style.borderTop = `4px solid ${epef > 300 ? '#27ae60' : (epef > 200 ? '#f1c40f' : '#e74c3c')}`;
+
+          card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <h3 style="margin:0; color:#2c3e50;">${lote.loteId}</h3>
+                    <span class="badge" style="background:#ecf0f1; color:#333;">Semana ${semanasEdad}</span>
+                </div>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:0.9rem;">
+                    <div>
+                        <p style="color:#7f8c8d; margin:0;">Vivos</p>
+                        <strong style="font-size:1.1rem;">${vivos}</strong>
+                        <small style="color:${viabilidad < 95 ? 'red' : 'green'}">(${viabilidad.toFixed(1)}%)</small>
+                    </div>
+                    <div>
+                        <p style="color:#7f8c8d; margin:0;">Peso (lb)</p>
+                        <strong style="font-size:1.1rem;">${pesoActual}</strong>
+                    </div>
+                </div>
+
+                <hr style="margin: 10px 0; border:0; border-top:1px solid #eee;">
+
+                <div style="font-size:0.85rem; color:#555;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>Inversión Inicial:</span> <span>$${costoInicial.toFixed(0)}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>Alimento:</span> <span>$${costoAlimentoLote.toFixed(0)}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>Sanidad/Otros:</span> <span>$${(gastosDirectos + costoSanitarioLote).toFixed(0)}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-weight:bold; margin-top:5px; color:#2c3e50;">
+                        <span>TOTAL GASTADO:</span> <span>$${costoTotalLote.toFixed(2)}</span>
+                    </div>
+                </div>
+
+                <div style="background:#f8f9fa; margin-top:10px; padding:10px; border-radius:6px; text-align:center;">
+                    <p style="margin:0; font-size:0.8rem; color:#7f8c8d;">COSTO PRODUCCIÓN</p>
+                    <p style="margin:0; font-size:1.4rem; font-weight:bold; color:#2980b9;">$${costoPorLb}<span style="font-size:0.9rem">/lb</span></p>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; margin-top:10px;">
+                    <div title="Conversión Alimenticia" style="text-align:center; width:48%; background:#fff; border:1px solid #eee; padding:5px; border-radius:4px;">
+                        <small>C.A.</small><br><strong>${conversion}</strong>
+                    </div>
+                    <div title="Eficiencia Europea" style="text-align:center; width:48%; background:#fff; border:1px solid #eee; padding:5px; border-radius:4px;">
+                        <small>EPEF</small><br><strong style="color:${epef > 300 ? '#27ae60' : '#e74c3c'}">${epef.toFixed(0)}</strong>
+                    </div>
+                </div>
+            `;
+          lotesContainer.appendChild(card);
         }
       });
-      // Inyección CSS
-      if (!document.getElementById('estilos-calendario-vincwill')) {
-        const style = document.createElement('style');
-        style.id = 'estilos-calendario-vincwill';
-        style.innerHTML = `
+    }
+
+    async function mostrarCalendario() {
+      const granjaId = getSelectedGranjaId();
+      if (!granjaId) return;
+      try {
+        const [agendaRes, saludRes] = await Promise.all([
+          fetch(`${API_URL}/agenda?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
+          fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+        ]);
+        const agendaData = await handleJsonResponse(agendaRes);
+        const saludData = await handleJsonResponse(saludRes);
+        const eventosMapa = [];
+        if (agendaData) agendaData.forEach(ev => eventosMapa.push({ date: ev.fecha, title: `AGENDA: ${ev.descripcion}`, tipo: 'pendiente' }));
+        if (saludData) saludData.forEach(s => { if (s.fechaRetiro) eventosMapa.push({ date: s.fechaRetiro.split('T')[0], title: `BIOSEGURIDAD: Fin Retiro ${s.nombre}`, tipo: 'retiro' }); });
+
+        if (window.flatpickr) {
+          flatpickr("#calendario-container", {
+            inline: true, locale: "es",
+            enable: [{ from: "today", to: "today" }, ...eventosMapa.map(e => e.date)],
+            onDayCreate: function (dObj, dStr, fp, dayElem) {
+              const fechaStr = dayElem.dateObj.toISOString().split('T')[0];
+              const eventosDelDia = eventosMapa.filter(e => e.date === fechaStr);
+              if (eventosDelDia.length > 0) {
+                dayElem.classList.remove('evento-retiro', 'evento-pendiente');
+                if (eventosDelDia.some(e => e.tipo === 'retiro')) dayElem.classList.add('evento-retiro');
+                else dayElem.classList.add('evento-pendiente');
+                dayElem.title = eventosDelDia.map(e => e.title).join('\n');
+              }
+            },
+            onChange: function (selectedDates, dateStr) {
+              const eventosHoy = eventosMapa.filter(e => e.date === dateStr);
+              if (eventosHoy.length > 0) alert(`📅 ${dateStr}:\n\n${eventosHoy.map(e => `• ${e.title}`).join('\n')}`);
+            }
+          });
+          // Inyección CSS
+          if (!document.getElementById('estilos-calendario-vincwill')) {
+            const style = document.createElement('style');
+            style.id = 'estilos-calendario-vincwill';
+            style.innerHTML = `
         .flatpickr-day.evento-retiro { background: #e74c3c !important; color: white !important; border: 0 !important; }
         .flatpickr-day.evento-pendiente { background: #f39c12 !important; color: white !important; border: 0 !important; }
         .flatpickr-day.evento-retiro:hover, .flatpickr-day.evento-pendiente:hover { transform: scale(1.1); z-index: 2; }`;
-        document.head.appendChild(style);
-      }
+            document.head.appendChild(style);
+          }
+        }
+      } catch (error) { console.error(error); }
     }
-  } catch (error) { console.error(error); }
-}
 
-async function mostrarGraficoAgua() {
-  const granjaId = getSelectedGranjaId();
-  if (!granjaId) return;
-  try {
-    const res = await fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-    const aguaData = await handleJsonResponse(res);
-    if (!aguaData) return;
-    const hoy = new Date(); const dataPorDia = {};
-    for (let i = 6; i >= 0; i--) {
-      const f = new Date(hoy); f.setDate(hoy.getDate() - i);
-      dataPorDia[f.toISOString().split('T')[0]] = 0;
+    async function mostrarGraficoAgua() {
+      const granjaId = getSelectedGranjaId();
+      if (!granjaId) return;
+      try {
+        const res = await fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+        const aguaData = await handleJsonResponse(res);
+        if (!aguaData) return;
+        const hoy = new Date(); const dataPorDia = {};
+        for (let i = 6; i >= 0; i--) {
+          const f = new Date(hoy); f.setDate(hoy.getDate() - i);
+          dataPorDia[f.toISOString().split('T')[0]] = 0;
+        }
+        aguaData.forEach(r => { const f = r.fecha.split('T')[0]; if (dataPorDia[f] !== undefined) dataPorDia[f] += r.cantidad; });
+        const ctx = document.getElementById('aguaChart');
+        if (ctx) new Chart(ctx.getContext('2d'), { type: 'bar', data: { labels: Object.keys(dataPorDia), datasets: [{ label: 'Agua (L)', data: Object.values(dataPorDia), backgroundColor: '#3498db' }] } });
+      } catch (e) { }
     }
-    aguaData.forEach(r => { const f = r.fecha.split('T')[0]; if (dataPorDia[f] !== undefined) dataPorDia[f] += r.cantidad; });
-    const ctx = document.getElementById('aguaChart');
-    if (ctx) new Chart(ctx.getContext('2d'), { type: 'bar', data: { labels: Object.keys(dataPorDia), datasets: [{ label: 'Agua (L)', data: Object.values(dataPorDia), backgroundColor: '#3498db' }] } });
-  } catch (e) { }
-}
 
-function mostrarGraficosDashboard() {
-  const granjaId = getSelectedGranjaId();
-  if (!granjaId) return;
-  fetch(`${API_URL}/seguimiento?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
-    .then(handleJsonResponse)
-    .then(seguimiento => {
-      if (!seguimiento) return;
-      const labels = [...new Set(seguimiento.map(reg => `Semana ${reg.semana}`))].sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
-      const dataPeso = labels.map(label => {
-        const semana = parseInt(label.split(' ')[1]);
-        const pesos = seguimiento.filter(reg => reg.semana === semana).map(reg => reg.peso);
-        return pesos.length ? pesos.reduce((a, b) => a + b) / pesos.length : 0;
-      });
-      const ctx = document.getElementById('produccionChart');
-      if (ctx) new Chart(ctx.getContext('2d'), { type: 'line', data: { labels, datasets: [{ label: 'Peso Promedio (kg)', data: dataPeso, borderColor: 'blue', tension: 0.1 }] }, options: { scales: { y: { beginAtZero: true } } } });
-    })
-    .catch(error => console.error('Error gráfico prod:', error));
-}
+    function mostrarGraficosDashboard() {
+      const granjaId = getSelectedGranjaId();
+      if (!granjaId) return;
+      fetch(`${API_URL}/seguimiento?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+        .then(handleJsonResponse)
+        .then(seguimiento => {
+          if (!seguimiento) return;
+          const labels = [...new Set(seguimiento.map(reg => `Semana ${reg.semana}`))].sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
+          const dataPeso = labels.map(label => {
+            const semana = parseInt(label.split(' ')[1]);
+            const pesos = seguimiento.filter(reg => reg.semana === semana).map(reg => reg.peso);
+            return pesos.length ? pesos.reduce((a, b) => a + b) / pesos.length : 0;
+          });
+          const ctx = document.getElementById('produccionChart');
+          if (ctx) new Chart(ctx.getContext('2d'), { type: 'line', data: { labels, datasets: [{ label: 'Peso Promedio (kg)', data: dataPeso, borderColor: 'blue', tension: 0.1 }] }, options: { scales: { y: { beginAtZero: true } } } });
+        })
+        .catch(error => console.error('Error gráfico prod:', error));
+    }
 
-function mostrarCostosPieChart() {
-  const granjaId = getSelectedGranjaId();
-  if (!granjaId) return;
-  fetch(`${API_URL}/costos?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
-    .then(handleJsonResponse)
-    .then(costos => {
-      if (!costos) return;
-      const categories = {};
-      costos.forEach(c => { categories[c.categoria] = (categories[c.categoria] || 0) + c.monto; });
-      const ctx = document.getElementById('costosPieChart');
-      if (ctx) new Chart(ctx.getContext('2d'), { type: 'pie', data: { labels: Object.keys(categories), datasets: [{ data: Object.values(categories), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'] }] } });
-    });
-}
+    function mostrarCostosPieChart() {
+      const granjaId = getSelectedGranjaId();
+      if (!granjaId) return;
+      fetch(`${API_URL}/costos?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+        .then(handleJsonResponse)
+        .then(costos => {
+          if (!costos) return;
+          const categories = {};
+          costos.forEach(c => { categories[c.categoria] = (categories[c.categoria] || 0) + c.monto; });
+          const ctx = document.getElementById('costosPieChart');
+          if (ctx) new Chart(ctx.getContext('2d'), { type: 'pie', data: { labels: Object.keys(categories), datasets: [{ data: Object.values(categories), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'] }] } });
+        });
+    }
 
-function mostrarIngresosCostosBarChart() {
-  const granjaId = getSelectedGranjaId();
-  if (!granjaId) return;
-  Promise.all([
-    fetch(`${API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-    fetch(`${API_URL}/ventas?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-    fetch(`${API_URL}/costos?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
-  ]).then(([lotes, ventas, costos]) => {
-    if (!lotes || !ventas || !costos) return;
-    const dataIngresos = {}, dataCostos = {};
-    lotes.forEach(l => {
-      dataIngresos[l.loteId] = ventas.filter(v => v.loteId === l.id).reduce((sum, v) => sum + (v.peso * v.precio), 0);
-      dataCostos[l.loteId] = costos.filter(c => c.loteId === l.id).reduce((sum, c) => sum + c.monto, 0);
-    });
-    const ctx = document.getElementById('ingresosCostosBarChart');
-    if (ctx) new Chart(ctx.getContext('2d'), { type: 'bar', data: { labels: Object.keys(dataIngresos), datasets: [{ label: 'Ingresos ($)', data: Object.values(dataIngresos), backgroundColor: '#36A2EB' }, { label: 'Costos ($)', data: Object.values(dataCostos), backgroundColor: '#FF6384' }] } });
-  });
-}
-
-function mostrarAlertasProduccion() {
-  const granjaId = getSelectedGranjaId();
-  if (!granjaId) return;
-  fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
-    .then(handleJsonResponse)
-    .then(salud => {
-      if (!salud) return;
-      const alertasList = document.getElementById('alertasList');
-      if (alertasList) {
-        alertasList.innerHTML = '';
-        const mortalidadAlta = salud.filter(s => s.tipo.toLowerCase() === 'mortalidad' && s.cantidad > 10);
-        if (mortalidadAlta.length > 0) mortalidadAlta.forEach(s => { const li = document.createElement('li'); li.textContent = `Alerta: Alta mortalidad Lote ${s.loteId} (${s.cantidad} aves)`; alertasList.appendChild(li); });
-        else alertasList.innerHTML = '<li>No hay alertas.</li>';
-      }
-    });
-}
-
-// ==================================================
-// 🔥 5. SISTEMA AUTOMÁTICO DE TABLAS (ORDENAR Y FILTRAR)
-// ==================================================
-
-// Ordenar al hacer clic en TH
-document.addEventListener('click', function (e) {
-  const th = e.target.closest('table.tabla-moderna th');
-  if (th) {
-    if (th.innerText.toLowerCase().includes('acciones') || th.classList.contains('no-sort')) return;
-    const table = th.closest('table');
-    const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    const index = Array.from(th.parentNode.children).indexOf(th);
-    const isAsc = !th.classList.contains('asc');
-
-    table.querySelectorAll('th').forEach(h => h.classList.remove('asc', 'desc'));
-    th.classList.toggle('asc', isAsc); th.classList.toggle('desc', !isAsc);
-
-    rows.sort((rowA, rowB) => {
-      const cellA = rowA.children[index]?.innerText.trim() || '';
-      const cellB = rowB.children[index]?.innerText.trim() || '';
-      return compareCells(cellA, cellB, isAsc);
-    });
-    tbody.append(...rows);
-  }
-});
-
-// Filtrar al escribir en .table-search
-document.addEventListener('input', function (e) {
-  if (e.target.matches('.table-search')) {
-    const input = e.target;
-    const tableId = input.dataset.table;
-    const table = document.getElementById(tableId);
-    if (table) {
-      const term = input.value.toLowerCase();
-      const rows = table.querySelectorAll('tbody tr');
-      rows.forEach(row => {
-        const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(term) ? '' : 'none';
+    function mostrarIngresosCostosBarChart() {
+      const granjaId = getSelectedGranjaId();
+      if (!granjaId) return;
+      Promise.all([
+        fetch(`${API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+        fetch(`${API_URL}/ventas?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+        fetch(`${API_URL}/costos?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
+      ]).then(([lotes, ventas, costos]) => {
+        if (!lotes || !ventas || !costos) return;
+        const dataIngresos = {}, dataCostos = {};
+        lotes.forEach(l => {
+          dataIngresos[l.loteId] = ventas.filter(v => v.loteId === l.id).reduce((sum, v) => sum + (v.peso * v.precio), 0);
+          dataCostos[l.loteId] = costos.filter(c => c.loteId === l.id).reduce((sum, c) => sum + c.monto, 0);
+        });
+        const ctx = document.getElementById('ingresosCostosBarChart');
+        if (ctx) new Chart(ctx.getContext('2d'), { type: 'bar', data: { labels: Object.keys(dataIngresos), datasets: [{ label: 'Ingresos ($)', data: Object.values(dataIngresos), backgroundColor: '#36A2EB' }, { label: 'Costos ($)', data: Object.values(dataCostos), backgroundColor: '#FF6384' }] } });
       });
     }
-  }
-});
 
-// --- FUNCIÓN CORREGIDA PARA FECHAS ESTRICTAS (DD/MM/AAAA) ---
-function compareCells(a, b, isAsc) {
-  const clean = (val) => val.replace(/[$,]/g, '').trim();
-  const valA = clean(a); const valB = clean(b);
+    function mostrarAlertasProduccion() {
+      const granjaId = getSelectedGranjaId();
+      if (!granjaId) return;
+      fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+        .then(handleJsonResponse)
+        .then(salud => {
+          if (!salud) return;
+          const alertasList = document.getElementById('alertasList');
+          if (alertasList) {
+            alertasList.innerHTML = '';
+            const mortalidadAlta = salud.filter(s => s.tipo.toLowerCase() === 'mortalidad' && s.cantidad > 10);
+            if (mortalidadAlta.length > 0) mortalidadAlta.forEach(s => { const li = document.createElement('li'); li.textContent = `Alerta: Alta mortalidad Lote ${s.loteId} (${s.cantidad} aves)`; alertasList.appendChild(li); });
+            else alertasList.innerHTML = '<li>No hay alertas.</li>';
+          }
+        });
+    }
 
-  // 1. DETECCIÓN MANUAL DE FECHA (DD/MM/YYYY)
-  // Evitamos new Date(string) porque confunde Mes con Día
-  const partsA = valA.split('/');
-  const partsB = valB.split('/');
+    // ==================================================
+    // 🔥 5. SISTEMA AUTOMÁTICO DE TABLAS (ORDENAR Y FILTRAR)
+    // ==================================================
 
-  // Si tiene 3 partes y el último parece un año (4 dígitos)
-  if (partsA.length === 3 && partsB.length === 3 && partsA[2].length === 4 && partsB[2].length === 4) {
-    // Convertimos a entero YYYYMMDD para comparar matemáticamente
-    // Ejemplo: 25/04/2024 -> 20240425
-    const numA = parseInt(partsA[2] + partsA[1].padStart(2, '0') + partsA[0].padStart(2, '0'));
-    const numB = parseInt(partsB[2] + partsB[1].padStart(2, '0') + partsB[0].padStart(2, '0'));
-    return isAsc ? numA - numB : numB - numA;
-  }
+    // Ordenar al hacer clic en TH
+    document.addEventListener('click', function (e) {
+      const th = e.target.closest('table.tabla-moderna th');
+      if (th) {
+        if (th.innerText.toLowerCase().includes('acciones') || th.classList.contains('no-sort')) return;
+        const table = th.closest('table');
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const index = Array.from(th.parentNode.children).indexOf(th);
+        const isAsc = !th.classList.contains('asc');
 
-  // 2. Números
-  const numA = parseFloat(valA);
-  const numB = parseFloat(valB);
-  // Solo si es un número válido y NO parece una fecha
-  if (!isNaN(numA) && !isNaN(numB) && /^[0-9.,$]+$/.test(valA) && /^[0-9.,$]+$/.test(valB)) {
-    return isAsc ? numA - numB : numB - numA;
-  }
+        table.querySelectorAll('th').forEach(h => h.classList.remove('asc', 'desc'));
+        th.classList.toggle('asc', isAsc); th.classList.toggle('desc', !isAsc);
 
-  // 3. Texto
-  return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-}
+        rows.sort((rowA, rowB) => {
+          const cellA = rowA.children[index]?.innerText.trim() || '';
+          const cellB = rowB.children[index]?.innerText.trim() || '';
+          return compareCells(cellA, cellB, isAsc);
+        });
+        tbody.append(...rows);
+      }
+    });
 
-// ==================================================
-// 6. INICIALIZACIÓN
-// ==================================================
+    // Filtrar al escribir en .table-search
+    document.addEventListener('input', function (e) {
+      if (e.target.matches('.table-search')) {
+        const input = e.target;
+        const tableId = input.dataset.table;
+        const table = document.getElementById(tableId);
+        if (table) {
+          const term = input.value.toLowerCase();
+          const rows = table.querySelectorAll('tbody tr');
+          rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(term) ? '' : 'none';
+          });
+        }
+      }
+    });
 
-document.addEventListener('DOMContentLoaded', () => {
-  const path = window.location.pathname.split('/').pop();
+    // --- FUNCIÓN CORREGIDA PARA FECHAS ESTRICTAS (DD/MM/AAAA) ---
+    function compareCells(a, b, isAsc) {
+      const clean = (val) => val.replace(/[$,]/g, '').trim();
+      const valA = clean(a); const valB = clean(b);
 
-  if (path === 'login.html') {
-    const lf = document.getElementById('loginForm');
-    if (lf) lf.onsubmit = login;
-    return;
-  }
+      // 1. DETECCIÓN MANUAL DE FECHA (DD/MM/YYYY)
+      // Evitamos new Date(string) porque confunde Mes con Día
+      const partsA = valA.split('/');
+      const partsB = valB.split('/');
 
-  checkAccess();
+      // Si tiene 3 partes y el último parece un año (4 dígitos)
+      if (partsA.length === 3 && partsB.length === 3 && partsA[2].length === 4 && partsB[2].length === 4) {
+        // Convertimos a entero YYYYMMDD para comparar matemáticamente
+        // Ejemplo: 25/04/2024 -> 20240425
+        const numA = parseInt(partsA[2] + partsA[1].padStart(2, '0') + partsA[0].padStart(2, '0'));
+        const numB = parseInt(partsB[2] + partsB[1].padStart(2, '0') + partsB[0].padStart(2, '0'));
+        return isAsc ? numA - numB : numB - numA;
+      }
 
-  if (path !== 'login.html' && path !== 'granjas.html') {
-    initializeUserProfile();
-    initializeSidebar();
-    setupMobileMenu();
-    cargarLogoSistema();
-    filtrarMenuPorRol();
-  }
+      // 2. Números
+      const numA = parseFloat(valA);
+      const numB = parseFloat(valB);
+      // Solo si es un número válido y NO parece una fecha
+      if (!isNaN(numA) && !isNaN(numB) && /^[0-9.,$]+$/.test(valA) && /^[0-9.,$]+$/.test(valB)) {
+        return isAsc ? numA - numB : numB - numA;
+      }
 
-  if (path === 'index.html') {
-    const granja = JSON.parse(localStorage.getItem('selectedGranja'));
-    if (granja) document.querySelector('header h1').textContent = `Dashboard (${granja.nombre})`;
-    actualizarDashboard();
-    mostrarCalendario();
-    mostrarGraficoAgua();
-    if (typeof mostrarGraficosDashboard === 'function') mostrarGraficosDashboard();
-    if (typeof mostrarCostosPieChart === 'function') mostrarCostosPieChart();
-    if (typeof mostrarIngresosCostosBarChart === 'function') mostrarIngresosCostosBarChart();
-    if (typeof mostrarAlertasProduccion === 'function') mostrarAlertasProduccion();
-  }
-});
+      // 3. Texto
+      return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    }
 
-// Fix para caché de navegador en botón atrás
-window.addEventListener('pageshow', (event) => { if (event.persisted) window.location.reload(); });
+    // ==================================================
+    // 6. INICIALIZACIÓN
+    // ==================================================
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const path = window.location.pathname.split('/').pop();
+
+      if (path === 'login.html') {
+        const lf = document.getElementById('loginForm');
+        if (lf) lf.onsubmit = login;
+        return;
+      }
+
+      checkAccess();
+
+      if (path !== 'login.html' && path !== 'granjas.html') {
+        initializeUserProfile();
+        initializeSidebar();
+        setupMobileMenu();
+        cargarLogoSistema();
+        filtrarMenuPorRol();
+      }
+
+      if (path === 'index.html') {
+        const granja = JSON.parse(localStorage.getItem('selectedGranja'));
+        if (granja) document.querySelector('header h1').textContent = `Dashboard (${granja.nombre})`;
+        actualizarDashboard();
+        mostrarCalendario();
+        mostrarGraficoAgua();
+        if (typeof mostrarGraficosDashboard === 'function') mostrarGraficosDashboard();
+        if (typeof mostrarCostosPieChart === 'function') mostrarCostosPieChart();
+        if (typeof mostrarIngresosCostosBarChart === 'function') mostrarIngresosCostosBarChart();
+        if (typeof mostrarAlertasProduccion === 'function') mostrarAlertasProduccion();
+      }
+    });
+
+    // Fix para caché de navegador en botón atrás
+    window.addEventListener('pageshow', (event) => { if (event.persisted) window.location.reload(); });
