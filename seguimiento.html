@@ -102,26 +102,23 @@
                     </div>
 
                     <div class="form-group">
-                        <!-- ID CORREGIDO: semanaVida -->
                         <label for="semanaVida">Semana de Vida</label>
                         <input type="number" id="semanaVida" class="form-control" required min="1" max="20"
                             placeholder="Ej: 1">
                     </div>
 
                     <div class="form-group">
-                        <!-- ID CORREGIDO: pesoPromedio -->
                         <label for="pesoPromedio">Peso Promedio (lb)</label>
                         <input type="number" id="pesoPromedio" class="form-control" step="0.0001"
                             placeholder="Ej: 0.4500">
                     </div>
 
                     <div class="form-group">
-                        <!-- ID CORREGIDO: fechaRegistro -->
                         <label for="fechaRegistro">Fecha de Registro</label>
                         <input type="date" id="fechaRegistro" class="form-control" required>
                     </div>
 
-                    <!-- Sección de Alimentación -->
+                    <!-- Sección de Alimentación Mejorada -->
                     <div
                         style="grid-column: 1 / -1; background: #fdfefe; padding: 15px; border: 1px dashed #bdc3c7; border-radius: 6px; margin-top: 10px;">
                         <h4 style="margin-top: 0; color: #7f8c8d;">Consumo de Alimento (Opcional)</h4>
@@ -137,12 +134,23 @@
                             </div>
 
                             <div class="form-group">
-                                <!-- ID CORREGIDO: consumoAlimento -->
                                 <label for="consumoAlimento">Cantidad Consumida</label>
-                                <input type="number" id="consumoAlimento" class="form-control" step="0.01"
-                                    placeholder="Cantidad">
-                                <small style="color: #7f8c8d;">Se usará la misma unidad del inventario (ej: qq,
-                                    sacos)</small>
+                                <div style="display: flex; gap: 5px;">
+                                    <!-- Input Numérico -->
+                                    <input type="number" id="consumoAlimento" class="form-control" step="0.01"
+                                        placeholder="0.00" style="flex: 2;">
+
+                                    <!-- Selector de Unidad (NUEVO) -->
+                                    <select id="unidadConsumo" class="form-control" style="flex: 1; min-width: 80px;">
+                                        <option value="lb">Libras (lb)</option>
+                                        <option value="qq">Quintales (qq)</option>
+                                        <option value="kg">Kilos (kg)</option>
+                                        <option value="saco">Sacos</option>
+                                        <option value="g">Gramos</option>
+                                    </select>
+                                </div>
+                                <small style="color: #7f8c8d;">El sistema convertirá automáticamente al
+                                    descontar.</small>
                             </div>
                         </div>
                     </div>
@@ -176,7 +184,7 @@
                             <th>Lote</th>
                             <th>Semana</th>
                             <th>Peso (lb)</th>
-                            <th>Alimento</th>
+                            <th>Consumo</th>
                             <th>Obs.</th>
                             <th>Fecha</th>
                             <th>Acciones</th>
