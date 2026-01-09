@@ -220,7 +220,7 @@ async function actualizarDashboard() {
   if (!granjaId) return;
 
   try {
-    // 1. Carga de Datos Paralela
+    // 1. Carga Masiva de Datos
     const [lotes, salud, costos, seguimiento, ventas, agua, inventario] = await Promise.all([
       fetch(`${API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
       fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
@@ -228,153 +228,166 @@ async function actualizarDashboard() {
       fetch(`${API_URL}/seguimiento?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
       fetch(`${API_URL}/ventas?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
       fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-      fetch(`${API_URL}/inventario?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse) // Necesitamos saber precios actuales si faltan en el histórico
+      fetch(`${API_URL}/inventario?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
     ]);
 
-    // Variables Globales
+    // Variables para Totales Globales
     let totalCostosGlobal = 0;
     let totalIngresosGlobal = ventas ? ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0) : 0;
     let totalVivosGlobal = 0;
 
+    // Preparar contenedor de tarjetas
     const lotesContainer = document.getElementById('lotesContainer');
-    if (lotesContainer) lotesContainer.innerHTML = ''; // Limpiar
+    if (lotesContainer) lotesContainer.innerHTML = '';
 
     // --- PROCESAMIENTO POR LOTE ---
     if (lotes && lotes.length > 0) {
       const lotesActivos = lotes.filter(l => l.estado === 'disponible' || l.estado === 'ocupado');
 
       if (lotesActivos.length === 0 && lotesContainer) {
-        lotesContainer.innerHTML = '<div class="card">No hay lotes activos.</div>';
+        lotesContainer.innerHTML = '<div class="card" style="padding: 1.5rem; text-align: center; color: #7f8c8d;">No hay lotes en producción actualmente.</div>';
       }
 
       lotesActivos.forEach(lote => {
-        // A. DATOS BÁSICOS
-        const diasEdad = Math.floor((new Date() - new Date(lote.fechaIngreso)) / (1000 * 60 * 60 * 24));
+        // A. DATOS BÁSICOS & TIEMPO
+        const fechaIngreso = new Date(lote.fechaIngreso);
+        const hoy = new Date();
+        const diasEdad = Math.floor((hoy - fechaIngreso) / (1000 * 60 * 60 * 24)) || 1; // Evitar división por 0
         const semanasEdad = Math.ceil(diasEdad / 7);
 
-        // B. MORTALIDAD
+        // B. MORTALIDAD & VIABILIDAD
         const muertes = salud ? salud.filter(s => s.loteId === lote.id && s.tipo.toLowerCase() === 'mortalidad').reduce((sum, s) => sum + s.cantidad, 0) : 0;
-        const vivos = (lote.cantidadInicial || lote.cantidad) - muertes;
+        const iniciales = lote.cantidadInicial || lote.cantidad;
+        const vivos = iniciales - muertes;
         totalVivosGlobal += vivos;
-        const viabilidad = (lote.cantidadInicial > 0) ? ((vivos / lote.cantidadInicial) * 100) : 0;
+        const viabilidad = (iniciales > 0) ? ((vivos / iniciales) * 100) : 0;
 
-        // C. PESO Y CONSUMO
+        // C. PESO Y CONSUMO (SEGUIMIENTO)
         const regsLote = seguimiento ? seguimiento.filter(s => s.loteId === lote.id) : [];
-        // Ordenar por fecha desc
-        regsLote.sort((a, b) => new Date(b.fechaRegistro || b.fecha) - new Date(a.fechaRegistro || a.fecha));
+        // Ordenar por fecha descendente para obtener el último peso registrado
+        regsLote.sort((a, b) => new Date(b.fecha || b.fechaRegistro) - new Date(a.fecha || a.fechaRegistro));
 
-        const pesoActual = regsLote.length > 0 ? regsLote[0].pesoPromedio : lote.pesoInicial; // lb
-        const consumoTotalLote = regsLote.reduce((sum, r) => sum + (r.consumoAlimento || 0), 0); // Unidades base
+        const pesoActualLb = regsLote.length > 0 ? regsLote[0].peso : lote.pesoInicial; // Peso actual en LIBRAS
+        const consumoTotalLote = regsLote.reduce((sum, r) => sum + (r.consumo || 0), 0); // Consumo acumulado (unidades base)
 
         // D. FINANZAS DEL LOTE (CÁLCULO DEL COSTO REAL)
 
-        // 1. Inversión Inicial (Pollitos)
+        // 1. Inversión Inicial (Costo de los pollitos)
         const costoInicial = lote.costoInicial || 0;
 
-        // 2. Gastos Operativos Directos (Tabla Costos)
+        // 2. Gastos Operativos Directos (Tabla Costos: Gas, Viruta, etc asignados al lote)
         const gastosDirectos = costos ? costos.filter(c => c.loteId === lote.id).reduce((sum, c) => sum + c.monto, 0) : 0;
 
         // 3. Costo Alimentación (El Gigante)
         let costoAlimentoLote = 0;
         regsLote.forEach(r => {
-          // Si el registro tiene el costo guardado (futuro ideal), úsalo. 
-          // Si no, usa el costo actual del inventario vinculado.
           let precioUnitario = 0;
-          if (r.Inventario && r.Inventario.costo) precioUnitario = r.Inventario.costo;
-
-          costoAlimentoLote += (r.consumoAlimento || 0) * precioUnitario;
+          // Si el registro guardó el costo (futuro), o lo sacamos del inventario actual
+          if (r.Inventario && r.Inventario.costo) {
+            precioUnitario = r.Inventario.costo;
+          } else if (r.alimentoId && inventario) {
+            // Fallback: buscar precio actual en inventario si el histórico no existe
+            const item = inventario.find(i => i.id === r.alimentoId);
+            if (item) precioUnitario = item.costo;
+          }
+          costoAlimentoLote += (r.consumo || 0) * precioUnitario;
         });
 
-        // 4. Costo Sanitario (Vacunas/Medicinas)
-        // Buscamos en Salud los eventos que tienen vacunaId y calculamos precio * cantidad
+        // 4. Costo Sanitario (Vacunas/Medicinas calculadas desde módulo Salud)
         const saludLote = salud ? salud.filter(s => s.loteId === lote.id && (s.tipo === 'Vacunación' || s.tipo === 'Tratamiento')) : [];
         let costoSanitarioLote = 0;
         saludLote.forEach(s => {
-          // Necesitamos buscar el precio en el inventario actual porque Salud no guarda el costo histórico (aún)
-          // Nota: Esto es una estimación si el precio cambió, pero es mejor que nada.
           if (s.vacunaId && inventario) {
             const itemInv = inventario.find(i => i.id === s.vacunaId);
             if (itemInv) costoSanitarioLote += (s.cantidad * itemInv.costo);
           }
         });
 
-        // TOTAL LOTE
+        // TOTAL GASTADO EN ESTE LOTE
         const costoTotalLote = costoInicial + gastosDirectos + costoAlimentoLote + costoSanitarioLote;
         totalCostosGlobal += costoTotalLote;
 
         // E. KPIs AVANZADOS
 
-        // 1. Costo de Producción (Break-even)
-        // Biomasa = Vivos * Peso Promedio
-        const biomasaLbs = vivos * pesoActual;
+        // 1. Biomasa Total (Carne en pie)
+        const biomasaLbs = vivos * pesoActualLb;
+
+        // 2. Costo de Producción (Break-even Point)
+        // ¿Cuánto me cuesta producir 1 libra de carne hoy?
         const costoPorLb = biomasaLbs > 0 ? (costoTotalLote / biomasaLbs).toFixed(2) : '0.00';
 
-        // 2. Conversión Alimenticia (CA) = Alimento Total / Carne Producida (Biomasa ganada)
-        // Simplificado: Consumo / Biomasa Total
+        // 3. Conversión Alimenticia (CA)
+        // Cuánto alimento comieron para producir esa carne
+        // Nota: Si el consumo está en Quintales, convertir a Libras para que la división sea Lb/Lb
+        // Asumimos que consumoTotalLote está en la unidad base del inventario. Si es qq, multiplicamos por 100.
+        // *Mejora futura: Estandarizar unidad de consumo. Por ahora asumimos ratio directo si es Lb o Kg.*
+        // Para simplificar visualización:
         const conversion = biomasaLbs > 0 ? (consumoTotalLote / biomasaLbs).toFixed(2) : '0.00';
+        // Nota: Este cálculo de CA es aproximado si las unidades de alimento no son libras. 
 
-        // 3. EPEF (European Production Efficiency Factor)
+        // 4. EPEF (European Production Efficiency Factor)
         // Fórmula: (Viabilidad % * Peso kg * 100) / (Edad dias * CA)
-        // Nota: EPEF usa Kg. Si pesoActual es Lb, convertir.
-        const pesoKg = pesoActual / 2.20462;
+        const pesoKg = pesoActualLb / 2.20462;
         let epef = 0;
-        if (diasEdad > 0 && conversion > 0) {
-          epef = ((viabilidad * pesoKg) / (diasEdad * conversion)) * 100;
+        // Validación anti-división por cero
+        if (diasEdad > 0 && parseFloat(conversion) > 0) {
+          epef = ((viabilidad * pesoKg) / (diasEdad * parseFloat(conversion))) * 100;
         }
 
         // --- RENDERIZADO DE TARJETA ---
         if (lotesContainer) {
           const card = document.createElement('div');
           card.className = 'card';
-          card.style.borderTop = `4px solid ${epef > 300 ? '#27ae60' : (epef > 200 ? '#f1c40f' : '#e74c3c')}`;
+          // Borde superior de color según eficiencia (Semáforo EPEF)
+          const colorEstado = epef > 300 ? '#27ae60' : (epef > 220 ? '#f1c40f' : '#e74c3c');
+          card.style.borderTop = `5px solid ${colorEstado}`;
+          card.style.position = 'relative';
 
           card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <h3 style="margin:0; color:#2c3e50;">${lote.loteId}</h3>
-                    <span class="badge" style="background:#ecf0f1; color:#333;">Semana ${semanasEdad}</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0; color:#2c3e50; font-size:1.2rem;">${lote.loteId}</h3>
+                    <span class="badge" style="background:#ecf0f1; color:#555; padding: 4px 8px; border-radius:4px; font-size:0.8rem;">
+                        Semana ${semanasEdad}
+                    </span>
                 </div>
                 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:0.9rem;">
-                    <div>
-                        <p style="color:#7f8c8d; margin:0;">Vivos</p>
-                        <strong style="font-size:1.1rem;">${vivos}</strong>
-                        <small style="color:${viabilidad < 95 ? 'red' : 'green'}">(${viabilidad.toFixed(1)}%)</small>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+                    <div style="background:#f8f9fa; padding:8px; border-radius:6px; text-align:center;">
+                        <small style="color:#7f8c8d; display:block;">Población</small>
+                        <span style="font-weight:bold; color:#2c3e50;">${vivos}</span>
+                        <span style="font-size:0.8rem; color:${viabilidad < 95 ? '#e74c3c' : '#27ae60'}">
+                            (${viabilidad.toFixed(1)}%)
+                        </span>
                     </div>
-                    <div>
-                        <p style="color:#7f8c8d; margin:0;">Peso (lb)</p>
-                        <strong style="font-size:1.1rem;">${pesoActual}</strong>
-                    </div>
-                </div>
-
-                <hr style="margin: 10px 0; border:0; border-top:1px solid #eee;">
-
-                <div style="font-size:0.85rem; color:#555;">
-                    <div style="display:flex; justify-content:space-between;">
-                        <span>Inversión Inicial:</span> <span>$${costoInicial.toFixed(0)}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between;">
-                        <span>Alimento:</span> <span>$${costoAlimentoLote.toFixed(0)}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between;">
-                        <span>Sanidad/Otros:</span> <span>$${(gastosDirectos + costoSanitarioLote).toFixed(0)}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; font-weight:bold; margin-top:5px; color:#2c3e50;">
-                        <span>TOTAL GASTADO:</span> <span>$${costoTotalLote.toFixed(2)}</span>
+                    <div style="background:#f8f9fa; padding:8px; border-radius:6px; text-align:center;">
+                        <small style="color:#7f8c8d; display:block;">Peso Actual</small>
+                        <span style="font-weight:bold; color:#2980b9;">${parseFloat(pesoActualLb).toFixed(2)} lb</span>
                     </div>
                 </div>
 
-                <div style="background:#f8f9fa; margin-top:10px; padding:10px; border-radius:6px; text-align:center;">
-                    <p style="margin:0; font-size:0.8rem; color:#7f8c8d;">COSTO PRODUCCIÓN</p>
-                    <p style="margin:0; font-size:1.4rem; font-weight:bold; color:#2980b9;">$${costoPorLb}<span style="font-size:0.9rem">/lb</span></p>
+                <div style="margin-bottom:15px;">
+                    <small style="color:#95a5a6; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px;">Finanzas Acumuladas</small>
+                    <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-top:5px; border-bottom:1px dashed #eee; padding-bottom:2px;">
+                        <span>Inversión + Gastos:</span> <span>$${(costoInicial + gastosDirectos).toFixed(0)}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-top:5px; border-bottom:1px dashed #eee; padding-bottom:2px;">
+                        <span>Alimentación:</span> <span>$${costoAlimentoLote.toFixed(0)}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:1rem; margin-top:8px; color:#2c3e50; font-weight:bold;">
+                        <span>TOTAL INVERTIDO:</span> <span>$${costoTotalLote.toFixed(2)}</span>
+                    </div>
                 </div>
 
-                <div style="display:flex; justify-content:space-between; margin-top:10px;">
-                    <div title="Conversión Alimenticia" style="text-align:center; width:48%; background:#fff; border:1px solid #eee; padding:5px; border-radius:4px;">
-                        <small>C.A.</small><br><strong>${conversion}</strong>
-                    </div>
-                    <div title="Eficiencia Europea" style="text-align:center; width:48%; background:#fff; border:1px solid #eee; padding:5px; border-radius:4px;">
-                        <small>EPEF</small><br><strong style="color:${epef > 300 ? '#27ae60' : '#e74c3c'}">${epef.toFixed(0)}</strong>
-                    </div>
+                <div style="background:${colorEstado}15; padding:10px; border-radius:6px; text-align:center; border: 1px solid ${colorEstado}30;">
+                    <p style="margin:0; font-size:0.8rem; color:${colorEstado}; font-weight:bold;">COSTO DE PRODUCCIÓN</p>
+                    <p style="margin:5px 0 0 0; font-size:1.5rem; font-weight:bold; color:#2c3e50;">
+                        $${costoPorLb}<span style="font-size:0.9rem; color:#7f8c8d;"> / lb</span>
+                    </p>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; margin-top:15px; font-size:0.85rem; color:#7f8c8d;">
+                    <div title="Conversión Alimenticia: Cuánto comen para ganar peso">C.A. Estimada: <strong>${conversion}</strong></div>
+                    <div title="Factor de Eficiencia Europeo">EPEF: <strong style="color:${colorEstado}">${epef.toFixed(0)}</strong></div>
                 </div>
             `;
           lotesContainer.appendChild(card);
@@ -383,7 +396,7 @@ async function actualizarDashboard() {
     }
 
     // --- KPI GLOBALES ACTUALIZADOS ---
-    // (Actualizamos las tarjetas superiores con la suma real calculada abajo)
+    // Actualizamos los contadores superiores con la suma real de todos los lotes
     if (document.getElementById('costosTotales')) {
       document.getElementById('costosTotales').textContent = `$${totalCostosGlobal.toFixed(2)}`;
       document.getElementById('ingresosTotales').textContent = `$${totalIngresosGlobal.toFixed(2)}`;

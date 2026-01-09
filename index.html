@@ -133,12 +133,16 @@
         </div>
 
         <section style="margin-top: 2rem;">
-            <h2 style="color: #2c3e50; margin-bottom: 1rem;">Estado de Lotes Activos</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="color: #2c3e50; margin: 0;">Estado de Lotes Activos</h2>
+                <small style="color: #7f8c8d;">Calculado en tiempo real</small>
+            </div>
+
+            <!-- Aquí se inyectarán las tarjetas con JS -->
             <div id="lotesContainer"
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
-                <!-- Aquí se inyectan las tarjetas con JS -->
-                <div class="card" style="text-align: center; color: #7f8c8d;">
-                    <p>Cargando información de lotes...</p>
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+                <div class="card" style="text-align: center; color: #95a5a6; padding: 2rem;">
+                    <p>Cargando análisis financiero...</p>
                 </div>
             </div>
         </section>
