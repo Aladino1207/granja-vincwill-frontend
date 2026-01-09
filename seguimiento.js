@@ -63,7 +63,7 @@ async function cargarAlimentosParaSelect() {
       const unidad = item.unidadMedida || 'Unidades';
 
       option.textContent = `${item.producto}`;
-      // Guardamos datos para validación
+      // Guardamos datos para validación y visualización
       option.dataset.stock = item.cantidad;
       option.dataset.unidad = unidad;
 
@@ -95,14 +95,17 @@ async function cargarSeguimientos() {
     data.forEach(s => {
       const tr = document.createElement('tr');
 
-      // Formato Decimales
+      // Formato Decimales (4 dígitos, sin ceros extra)
       const pesoVisual = s.pesoPromedio ? Number(s.pesoPromedio).toFixed(4).replace(/\.?0+$/, "") : '-';
 
       let infoConsumo = '-';
       if (s.consumoAlimento > 0) {
-        const consumoVal = Number(s.consumoAlimento).toFixed(2).replace(/\.?0+$/, "");
+        // Nota: Aquí mostramos lo que se guardó en BD (que es la unidad base del inventario)
+        const consumoVal = Number(s.consumoAlimento).toFixed(4).replace(/\.?0+$/, "");
         const prodNombre = s.Inventario ? s.Inventario.producto : 'Alimento';
-        infoConsumo = `${consumoVal} (${prodNombre})`;
+        // Idealmente deberíamos saber la unidad, pero asumimos la del producto
+        const unidadDisplay = s.Inventario ? (s.Inventario.unidadMedida || '') : '';
+        infoConsumo = `${consumoVal} ${unidadDisplay} (${prodNombre})`;
       }
 
       tr.innerHTML = `
@@ -122,7 +125,57 @@ async function cargarSeguimientos() {
 }
 
 // ==========================================
-// 2. GUARDADO
+// 2. CONVERSOR DE UNIDADES (El Cerebro Matemático)
+// ==========================================
+
+function calcularCantidadBase(cantidadInput, unidadInput, unidadBase) {
+  if (!unidadBase || !unidadInput) return cantidadInput;
+
+  // Normalizar strings
+  const uIn = unidadInput.toLowerCase().trim().replace(/s$/, '');
+  const uBase = unidadBase.toLowerCase().trim().replace(/s$/, '');
+
+  if (uIn === uBase) return cantidadInput;
+
+  console.log(`Convirtiendo Alimento: ${cantidadInput} ${uIn} a ${uBase}`);
+
+  // --- PESO (Lo más común en alimentos) ---
+
+  // DESTINO: QUINTALES (qq) - Muy común en balanceado
+  if (uBase === 'qq' || uBase === 'quintal') {
+    if (uIn === 'lb' || uIn === 'libra') return cantidadInput / 100; // 1 qq = 100 lb
+    if (uIn === 'kg' || uIn === 'kilo') return cantidadInput / 45.36;
+    if (uIn === 'saco') return cantidadInput; // Asumimos 1 saco = 1 qq si no se especifica
+    if (uIn === 'g' || uIn === 'gramo') return cantidadInput / 45360;
+  }
+
+  // DESTINO: LIBRAS (lb)
+  if (uBase === 'lb' || uBase === 'libra') {
+    if (uIn === 'kg' || uIn === 'kilo') return cantidadInput * 2.20462;
+    if (uIn === 'qq' || uIn === 'quintal') return cantidadInput * 100;
+    if (uIn === 'g' || uIn === 'gramo') return cantidadInput / 453.592;
+    if (uIn === 'saco') return cantidadInput * 100; // Asumiendo saco de 100lb
+  }
+
+  // DESTINO: KILOGRAMOS (kg)
+  if (uBase === 'kg' || uBase === 'kilo') {
+    if (uIn === 'lb' || uIn === 'libra') return cantidadInput / 2.20462;
+    if (uIn === 'qq' || uIn === 'quintal') return cantidadInput * 45.36;
+    if (uIn === 'g' || uIn === 'gramo') return cantidadInput / 1000;
+    if (uIn === 'saco') return cantidadInput * 45.36;
+  }
+
+  // DESTINO: SACOS (Si la base es 'saco')
+  if (uBase === 'saco') {
+    if (uIn === 'qq' || uIn === 'quintal') return cantidadInput;
+    if (uIn === 'lb') return cantidadInput / 100; // Asumiendo saco estandar 100lb
+  }
+
+  return cantidadInput; // Fallback
+}
+
+// ==========================================
+// 3. LOGICA DE GUARDADO
 // ==========================================
 
 async function guardarSeguimiento(e) {
@@ -130,7 +183,7 @@ async function guardarSeguimiento(e) {
   const token = localStorage.getItem('token');
   const granjaId = getSelectedGranjaId();
 
-  // --- VALIDACIÓN DE DOM (Para evitar el error null value) ---
+  // --- VALIDACIÓN DE DOM ---
   const elLote = document.getElementById('loteSelect');
   const elSemana = document.getElementById('semanaVida');
   const elPeso = document.getElementById('pesoPromedio');
@@ -138,10 +191,11 @@ async function guardarSeguimiento(e) {
   const elFecha = document.getElementById('fechaRegistro');
   const elAlimento = document.getElementById('alimentoSelect');
   const elConsumo = document.getElementById('consumoAlimento');
+  const elUnidadConsumo = document.getElementById('unidadConsumo'); // NUEVO
 
-  if (!elLote || !elSemana || !elFecha) {
-    console.error("Faltan elementos ID en el HTML. IDs Esperados: loteSelect, semanaVida, fechaRegistro");
-    return alert("Error interno del formulario (IDs faltantes). Revisa la consola.");
+  if (!elLote || !elSemana || !elFecha || !elUnidadConsumo) {
+    console.error("Faltan elementos ID en el HTML.");
+    return alert("Error interno del formulario (IDs faltantes).");
   }
 
   // --- OBTENCIÓN DE VALORES ---
@@ -153,25 +207,33 @@ async function guardarSeguimiento(e) {
 
   // Lógica de Alimento
   const alimentoIdVal = elAlimento ? elAlimento.value : "";
-  const consumoVal = elConsumo ? (parseFloat(elConsumo.value) || 0) : 0;
+  const consumoInput = elConsumo ? (parseFloat(elConsumo.value) || 0) : 0;
+  const unidadInput = elUnidadConsumo.value; // Unidad que eligió el usuario
 
   let alimentoId = null;
-  let consumoFinal = 0;
+  let consumoFinal = 0; // Esto será lo que se guarde (convertido a unidad base)
 
-  if (alimentoIdVal && consumoVal > 0) {
+  if (alimentoIdVal && consumoInput > 0) {
     alimentoId = parseInt(alimentoIdVal);
-    consumoFinal = consumoVal;
 
-    // Validación de Stock
+    // Obtener datos del inventario (Base)
     const opcion = elAlimento.options[elAlimento.selectedIndex];
     if (opcion && opcion.dataset.stock) {
       const stock = parseFloat(opcion.dataset.stock);
-      const unidad = opcion.dataset.unidad;
+      const unidadBase = opcion.dataset.unidad;
 
-      // Margen de error pequeño por flotantes
+      // CONVERSIÓN MAGISTRAL
+      consumoFinal = calcularCantidadBase(consumoInput, unidadInput, unidadBase);
+
+      console.log(`Validación: Stock ${stock} ${unidadBase} vs Pedido ${consumoFinal.toFixed(4)} ${unidadBase} (Input: ${consumoInput} ${unidadInput})`);
+
+      // Validación de Stock (con margen float)
       if (consumoFinal > (stock + 0.0001)) {
-        return alert(`❌ Stock Insuficiente.\nTienes: ${stock} ${unidad}\nIntentas registrar: ${consumoFinal}`);
+        return alert(`❌ Stock Insuficiente.\nInventario: ${stock} ${unidadBase}\nNecesitas: ${consumoFinal.toFixed(4)} ${unidadBase}\n(${consumoInput} ${unidadInput})`);
       }
+    } else {
+      // Si por alguna razón no hay datos de unidad, pasamos directo
+      consumoFinal = consumoInput;
     }
   }
 
@@ -180,7 +242,7 @@ async function guardarSeguimiento(e) {
     loteId: parseInt(loteId),
     semanaVida: parseInt(semanaVida),
     pesoPromedio: pesoPromedio,
-    consumoAlimento: consumoFinal,
+    consumoAlimento: consumoFinal, // Se guarda el valor convertido a la unidad del inventario
     alimentoId: alimentoId,
     observaciones,
     fechaRegistro
@@ -234,7 +296,6 @@ function abrirFormulario() {
   const btn = document.getElementById('toggleFormBtn');
   if (btn) btn.textContent = 'Cancelar';
 
-  // Fecha hoy por defecto
   const fechaIn = document.getElementById('fechaRegistro');
   if (fechaIn && !fechaIn.value) fechaIn.value = new Date().toISOString().split('T')[0];
 }
@@ -277,6 +338,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const lbl = document.getElementById('stockInfo');
       if (opt && opt.dataset.stock && lbl) {
         lbl.textContent = `Disponible: ${opt.dataset.stock} ${opt.dataset.unidad}`;
+
+        // Intentar pre-seleccionar la unidad correcta en el input
+        const unidadStock = opt.dataset.unidad.toLowerCase();
+        const unidadSelect = document.getElementById('unidadConsumo');
+        if (unidadSelect) {
+          // Mapeo simple para autoselección
+          if (unidadStock.includes('qq') || unidadStock.includes('quintal')) unidadSelect.value = 'qq';
+          else if (unidadStock.includes('lb') || unidadStock.includes('libra')) unidadSelect.value = 'lb';
+          else if (unidadStock.includes('kg') || unidadStock.includes('kilo')) unidadSelect.value = 'kg';
+          else if (unidadStock.includes('saco')) unidadSelect.value = 'saco';
+        }
       } else if (lbl) {
         lbl.textContent = '';
       }
