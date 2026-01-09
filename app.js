@@ -246,11 +246,10 @@ async function actualizarDashboard() {
     }
 
     const totalVivos = lotes ? lotes.filter(l => l.estado === 'disponible').reduce((sum, l) => sum + l.cantidad, 0) : 0;
-    // Peso promedio simple de lotes activos
     const pesoPromedioActual = ultimosPesos.length ? (ultimosPesos.reduce((a, b) => a + b, 0) / ultimosPesos.length).toFixed(2) : 0;
     const mortalidadPromedio = (totalAvesInicial > 0) ? ((totalMuertes / totalAvesInicial) * 100).toFixed(2) : 0;
 
-    // CA (Conversión Alimenticia)
+    // CA (Conversión)
     const conversiones = [];
     if (seguimiento && lotes) {
       seguimiento.forEach(reg => {
@@ -465,6 +464,7 @@ document.addEventListener('input', function (e) {
   }
 });
 
+// --- FUNCIÓN CORREGIDA PARA FECHAS (PRIORIDAD DD/MM/AAAA) ---
 function compareCells(a, b, isAsc) {
   const clean = (val) => val.replace(/[$,]/g, '').trim();
   const valA = clean(a); const valB = clean(b);
