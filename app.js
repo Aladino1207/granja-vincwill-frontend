@@ -246,10 +246,11 @@ async function actualizarDashboard() {
     }
 
     const totalVivos = lotes ? lotes.filter(l => l.estado === 'disponible').reduce((sum, l) => sum + l.cantidad, 0) : 0;
+    // Peso promedio simple de lotes activos
     const pesoPromedioActual = ultimosPesos.length ? (ultimosPesos.reduce((a, b) => a + b, 0) / ultimosPesos.length).toFixed(2) : 0;
     const mortalidadPromedio = (totalAvesInicial > 0) ? ((totalMuertes / totalAvesInicial) * 100).toFixed(2) : 0;
 
-    // CA (Conversión)
+    // CA (Conversión Alimenticia)
     const conversiones = [];
     if (seguimiento && lotes) {
       seguimiento.forEach(reg => {
@@ -464,34 +465,34 @@ document.addEventListener('input', function (e) {
   }
 });
 
-// --- FUNCIÓN CORREGIDA PARA FECHAS (PRIORIDAD DD/MM/AAAA) ---
+// --- FUNCIÓN CORREGIDA PARA FECHAS ESTRICTAS (DD/MM/AAAA) ---
 function compareCells(a, b, isAsc) {
   const clean = (val) => val.replace(/[$,]/g, '').trim();
   const valA = clean(a); const valB = clean(b);
 
-  // 1. DETECCIÓN PRIORITARIA DE FECHAS (DD/MM/YYYY)
-  // Regex estricto para fechas como 25/04/2025
-  const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
-  const matchA = valA.match(dateRegex);
-  const matchB = valB.match(dateRegex);
+  // 1. DETECCIÓN MANUAL DE FECHA (DD/MM/YYYY)
+  // Evitamos new Date(string) porque confunde Mes con Día
+  const partsA = valA.split('/');
+  const partsB = valB.split('/');
 
-  if (matchA && matchB) {
-    // match[1]=Día, match[2]=Mes, match[3]=Año
-    // new Date(Año, Mes-1, Día)
-    const dateA = new Date(matchA[3], matchA[2] - 1, matchA[1]);
-    const dateB = new Date(matchB[3], matchB[2] - 1, matchB[1]);
-    return isAsc ? dateA - dateB : dateB - dateA;
+  // Si tiene 3 partes y el último parece un año (4 dígitos)
+  if (partsA.length === 3 && partsB.length === 3 && partsA[2].length === 4 && partsB[2].length === 4) {
+    // Convertimos a entero YYYYMMDD para comparar matemáticamente
+    // Ejemplo: 25/04/2024 -> 20240425
+    const numA = parseInt(partsA[2] + partsA[1].padStart(2, '0') + partsA[0].padStart(2, '0'));
+    const numB = parseInt(partsB[2] + partsB[1].padStart(2, '0') + partsB[0].padStart(2, '0'));
+    return isAsc ? numA - numB : numB - numA;
   }
 
-  // 2. Números (Validación estricta para no confundir con fechas parciales)
-  // Solo aceptamos números, puntos y signos de moneda
-  if (/^[0-9.,$]+$/.test(valA) && /^[0-9.,$]+$/.test(valB)) {
-    const numA = parseFloat(valA);
-    const numB = parseFloat(valB);
-    if (!isNaN(numA) && !isNaN(numB)) return isAsc ? numA - numB : numB - numA;
+  // 2. Números
+  const numA = parseFloat(valA);
+  const numB = parseFloat(valB);
+  // Solo si es un número válido y NO parece una fecha
+  if (!isNaN(numA) && !isNaN(numB) && /^[0-9.,$]+$/.test(valA) && /^[0-9.,$]+$/.test(valB)) {
+    return isAsc ? numA - numB : numB - numA;
   }
 
-  // 3. Texto fallback
+  // 3. Texto
   return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
 }
 
