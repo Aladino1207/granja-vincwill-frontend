@@ -327,7 +327,8 @@ h2 {
 }
 
 .form-desplegable-container .card {
-  margin: 5px; /* Pequeño margen para que la sombra no se corte */
+  margin: 5px;
+  /* Pequeño margen para que la sombra no se corte */
 }
 
 .modal-wrapper {
@@ -723,4 +724,64 @@ body.login-page main {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* --- ESTILOS PARA TABLAS ORDENABLES Y BUSCADOR --- */
+
+.table-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 10px;
+}
+
+.table-search {
+  padding: 8px 12px;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--borde-radio);
+  width: 250px;
+  font-size: 0.9rem;
+}
+
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding-right: 20px;
+  /* Espacio para la flecha */
+}
+
+th.sortable:hover {
+  background-color: #f1f2f6;
+  /* Un gris muy suave */
+}
+
+th.sortable::after {
+  content: '↕';
+  position: absolute;
+  right: 5px;
+  opacity: 0.3;
+  font-size: 0.8em;
+}
+
+th.sortable.asc::after {
+  content: '▲';
+  opacity: 1;
+  color: var(--color-secundario);
+}
+
+th.sortable.desc::after {
+  content: '▼';
+  opacity: 1;
+  color: var(--color-secundario);
+}
+
+/* Columna de acciones no se ordena */
+th.no-sort {
+  cursor: default;
+}
+
+th.no-sort::after {
+  content: none !important;
 }

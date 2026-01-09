@@ -624,4 +624,91 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+function enableTableLogic(tableId, searchInputId = null) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+
+  // 1. LÓGICA DE ORDENAMIENTO
+  const headers = table.querySelectorAll('th');
+  const tbody = table.querySelector('tbody');
+
+  headers.forEach((header, index) => {
+    // Ignorar columna Acciones o las marcadas como no-sort
+    if (header.innerText.toLowerCase().includes('acciones') || header.classList.contains('no-sort')) {
+      header.classList.add('no-sort');
+      return;
+    }
+
+    header.classList.add('sortable');
+
+    header.addEventListener('click', () => {
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const isAsc = !header.classList.contains('asc');
+
+      // Limpiar clases de otros headers
+      headers.forEach(h => h.classList.remove('asc', 'desc'));
+      header.classList.toggle('asc', isAsc);
+      header.classList.toggle('desc', !isAsc);
+
+      rows.sort((rowA, rowB) => {
+        const cellA = rowA.children[index].innerText.trim();
+        const cellB = rowB.children[index].innerText.trim();
+
+        return compareCells(cellA, cellB, isAsc);
+      });
+
+      // Re-inyectar filas ordenadas
+      tbody.append(...rows);
+    });
+  });
+
+  // 2. LÓGICA DE BÚSQUEDA (FILTRO)
+  if (searchInputId) {
+    const input = document.getElementById(searchInputId);
+    if (input) {
+      input.addEventListener('keyup', (e) => {
+        const term = e.target.value.toLowerCase();
+        const rows = tbody.querySelectorAll('tr');
+
+        rows.forEach(row => {
+          // Unimos todo el texto de la fila para buscar
+          const text = row.innerText.toLowerCase();
+          row.style.display = text.includes(term) ? '' : 'none';
+        });
+      });
+    }
+  }
+}
+
+/**
+ * Compara dos valores inteligentemente (Moneda, Fecha, Número o Texto)
+ */
+function compareCells(a, b, isAsc) {
+  // 1. Limpieza de datos (Quitar $, comas, espacios extra)
+  const clean = (val) => val.replace(/[$,]/g, '').trim();
+
+  const valA = clean(a);
+  const valB = clean(b);
+
+  // 2. Intentar como Número
+  const numA = parseFloat(valA);
+  const numB = parseFloat(valB);
+
+  if (!isNaN(numA) && !isNaN(numB)) {
+    return isAsc ? numA - numB : numB - numA;
+  }
+
+  // 3. Intentar como Fecha (Formato esperado dd/mm/yyyy o yyyy-mm-dd)
+  // Simple detección: contiene '/' o '-'
+  const dateA = new Date(valA);
+  const dateB = new Date(valB);
+
+  if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime()) && (valA.includes('/') || valA.includes('-'))) {
+    return isAsc ? dateA - dateB : dateB - dateA;
+  }
+
+  // 4. Fallback: Texto normal
+  return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+}
+
 window.addEventListener('pageshow', (event) => { if (event.persisted) window.location.reload(); });
