@@ -1,7 +1,7 @@
 // --- Variables Globales ---
 let inventarioAlimentos = [];
 
-console.log("seguimiento.js cargado y listo");
+console.log("seguimiento.js cargado y listo (Versión Compatible)");
 
 // ==========================================
 // 1. CARGA DE DATOS
@@ -95,26 +95,30 @@ async function cargarSeguimientos() {
     data.forEach(s => {
       const tr = document.createElement('tr');
 
-      // Formato Decimales (4 dígitos, sin ceros extra)
-      const pesoVisual = s.pesoPromedio ? Number(s.pesoPromedio).toFixed(4).replace(/\.?0+$/, "") : '-';
+      // Mapeo de nombres antiguos (Backend) a visualización
+      // Backend: s.peso | Frontend nuevo quería: s.pesoPromedio
+      const pesoVal = s.peso !== undefined ? s.peso : s.pesoPromedio;
+      const pesoVisual = pesoVal ? Number(pesoVal).toFixed(4).replace(/\.?0+$/, "") : '-';
+
+      // Backend: s.consumo | Frontend nuevo quería: s.consumoAlimento
+      const consumoValRaw = s.consumo !== undefined ? s.consumo : s.consumoAlimento;
 
       let infoConsumo = '-';
-      if (s.consumoAlimento > 0) {
-        // Nota: Aquí mostramos lo que se guardó en BD (que es la unidad base del inventario)
-        const consumoVal = Number(s.consumoAlimento).toFixed(4).replace(/\.?0+$/, "");
+      if (consumoValRaw > 0) {
+        const consumoVal = Number(consumoValRaw).toFixed(4).replace(/\.?0+$/, "");
         const prodNombre = s.Inventario ? s.Inventario.producto : 'Alimento';
-        // Idealmente deberíamos saber la unidad, pero asumimos la del producto
-        const unidadDisplay = s.Inventario ? (s.Inventario.unidadMedida || '') : '';
-        infoConsumo = `${consumoVal} ${unidadDisplay} (${prodNombre})`;
+        // Asumimos unidad del inventario asociado si existe
+        const unidad = s.Inventario ? (s.Inventario.unidadMedida || '') : '';
+        infoConsumo = `${consumoVal} ${unidad} (${prodNombre})`;
       }
 
       tr.innerHTML = `
         <td>${s.Lote ? s.Lote.loteId : 'N/A'}</td>
-        <td>Semana ${s.semanaVida}</td>
+        <td>Semana ${s.semana || s.semanaVida}</td>
         <td>${pesoVisual} lb</td>
         <td>${infoConsumo}</td>
         <td>${s.observaciones || '-'}</td>
-        <td>${new Date(s.fechaRegistro).toLocaleDateString()}</td>
+        <td>${new Date(s.fecha || s.fechaRegistro).toLocaleDateString()}</td>
         <td>
           <button onclick="eliminarSeguimiento(${s.id})" class="btn btn-sm btn-peligro">Eliminar</button>
         </td>
@@ -125,13 +129,12 @@ async function cargarSeguimientos() {
 }
 
 // ==========================================
-// 2. CONVERSOR DE UNIDADES (El Cerebro Matemático)
+// 2. CONVERSOR DE UNIDADES
 // ==========================================
 
 function calcularCantidadBase(cantidadInput, unidadInput, unidadBase) {
   if (!unidadBase || !unidadInput) return cantidadInput;
 
-  // Normalizar strings
   const uIn = unidadInput.toLowerCase().trim().replace(/s$/, '');
   const uBase = unidadBase.toLowerCase().trim().replace(/s$/, '');
 
@@ -139,43 +142,35 @@ function calcularCantidadBase(cantidadInput, unidadInput, unidadBase) {
 
   console.log(`Convirtiendo Alimento: ${cantidadInput} ${uIn} a ${uBase}`);
 
-  // --- PESO (Lo más común en alimentos) ---
-
-  // DESTINO: QUINTALES (qq) - Muy común en balanceado
+  // --- PESO ---
   if (uBase === 'qq' || uBase === 'quintal') {
-    if (uIn === 'lb' || uIn === 'libra') return cantidadInput / 100; // 1 qq = 100 lb
+    if (uIn === 'lb' || uIn === 'libra') return cantidadInput / 100;
     if (uIn === 'kg' || uIn === 'kilo') return cantidadInput / 45.36;
-    if (uIn === 'saco') return cantidadInput; // Asumimos 1 saco = 1 qq si no se especifica
+    if (uIn === 'saco') return cantidadInput;
     if (uIn === 'g' || uIn === 'gramo') return cantidadInput / 45360;
   }
-
-  // DESTINO: LIBRAS (lb)
   if (uBase === 'lb' || uBase === 'libra') {
     if (uIn === 'kg' || uIn === 'kilo') return cantidadInput * 2.20462;
     if (uIn === 'qq' || uIn === 'quintal') return cantidadInput * 100;
     if (uIn === 'g' || uIn === 'gramo') return cantidadInput / 453.592;
-    if (uIn === 'saco') return cantidadInput * 100; // Asumiendo saco de 100lb
+    if (uIn === 'saco') return cantidadInput * 100;
   }
-
-  // DESTINO: KILOGRAMOS (kg)
   if (uBase === 'kg' || uBase === 'kilo') {
     if (uIn === 'lb' || uIn === 'libra') return cantidadInput / 2.20462;
     if (uIn === 'qq' || uIn === 'quintal') return cantidadInput * 45.36;
     if (uIn === 'g' || uIn === 'gramo') return cantidadInput / 1000;
     if (uIn === 'saco') return cantidadInput * 45.36;
   }
-
-  // DESTINO: SACOS (Si la base es 'saco')
   if (uBase === 'saco') {
     if (uIn === 'qq' || uIn === 'quintal') return cantidadInput;
-    if (uIn === 'lb') return cantidadInput / 100; // Asumiendo saco estandar 100lb
+    if (uIn === 'lb') return cantidadInput / 100;
   }
 
-  return cantidadInput; // Fallback
+  return cantidadInput;
 }
 
 // ==========================================
-// 3. LOGICA DE GUARDADO
+// 3. LOGICA DE GUARDADO (Payload Adaptado)
 // ==========================================
 
 async function guardarSeguimiento(e) {
@@ -183,7 +178,7 @@ async function guardarSeguimiento(e) {
   const token = localStorage.getItem('token');
   const granjaId = getSelectedGranjaId();
 
-  // --- VALIDACIÓN DE DOM ---
+  // Elementos HTML
   const elLote = document.getElementById('loteSelect');
   const elSemana = document.getElementById('semanaVida');
   const elPeso = document.getElementById('pesoPromedio');
@@ -191,14 +186,14 @@ async function guardarSeguimiento(e) {
   const elFecha = document.getElementById('fechaRegistro');
   const elAlimento = document.getElementById('alimentoSelect');
   const elConsumo = document.getElementById('consumoAlimento');
-  const elUnidadConsumo = document.getElementById('unidadConsumo'); // NUEVO
+  const elUnidadConsumo = document.getElementById('unidadConsumo');
 
   if (!elLote || !elSemana || !elFecha || !elUnidadConsumo) {
     console.error("Faltan elementos ID en el HTML.");
-    return alert("Error interno del formulario (IDs faltantes).");
+    return alert("Error interno del formulario.");
   }
 
-  // --- OBTENCIÓN DE VALORES ---
+  // Valores del Formulario
   const loteId = elLote.value;
   const semanaVida = elSemana.value;
   const pesoPromedio = elPeso ? (parseFloat(elPeso.value) || 0) : 0;
@@ -208,46 +203,40 @@ async function guardarSeguimiento(e) {
   // Lógica de Alimento
   const alimentoIdVal = elAlimento ? elAlimento.value : "";
   const consumoInput = elConsumo ? (parseFloat(elConsumo.value) || 0) : 0;
-  const unidadInput = elUnidadConsumo.value; // Unidad que eligió el usuario
+  const unidadInput = elUnidadConsumo.value;
 
   let alimentoId = null;
-  let consumoFinal = 0; // Esto será lo que se guarde (convertido a unidad base)
+  let consumoFinal = 0;
 
   if (alimentoIdVal && consumoInput > 0) {
     alimentoId = parseInt(alimentoIdVal);
 
-    // Obtener datos del inventario
     const opcion = elAlimento.options[elAlimento.selectedIndex];
     if (opcion && opcion.dataset.stock) {
       const stock = parseFloat(opcion.dataset.stock);
       const unidadBase = opcion.dataset.unidad;
 
-      // CONVERSIÓN
-      let consumoCalculado = calcularCantidadBase(consumoInput, unidadInput, unidadBase);
-
-      // --- CORRECCIÓN AQUÍ: Redondear a 4 decimales para evitar errores de DB ---
-      consumoFinal = parseFloat(consumoCalculado.toFixed(4));
-      // ------------------------------------------------------------------------
-
-      console.log(`Validación: Stock ${stock} vs Pedido ${consumoFinal}`);
+      consumoFinal = calcularCantidadBase(consumoInput, unidadInput, unidadBase);
 
       if (consumoFinal > (stock + 0.0001)) {
-        return alert(`❌ Stock Insuficiente.\nInventario: ${stock} ${unidadBase}\nNecesitas: ${consumoFinal} ${unidadBase}`);
+        return alert(`❌ Stock Insuficiente.\nInventario: ${stock} ${unidadBase}\nNecesitas: ${consumoFinal.toFixed(4)} ${unidadBase}\n(${consumoInput} ${unidadInput})`);
       }
     } else {
       consumoFinal = consumoInput;
     }
   }
 
+  // --- TRADUCCIÓN DE NOMBRES PARA EL BACKEND ---
+  // Convertimos las variables descriptivas del JS a los nombres de columna de la BD
   const payload = {
     granjaId,
     loteId: parseInt(loteId),
-    semanaVida: parseInt(semanaVida),
-    pesoPromedio: pesoPromedio,
-    consumoAlimento: consumoFinal, // Se guarda el valor convertido a la unidad del inventario
+    semana: parseInt(semanaVida),      // Backend espera 'semana'
+    peso: pesoPromedio,                // Backend espera 'peso'
+    consumo: consumoFinal,             // Backend espera 'consumo'
     alimentoId: alimentoId,
     observaciones,
-    fechaRegistro
+    fecha: fechaRegistro               // Backend espera 'fecha'
   };
 
   try {
@@ -264,7 +253,7 @@ async function guardarSeguimiento(e) {
       alert('Seguimiento registrado con éxito');
       cerrarFormulario();
       cargarSeguimientos();
-      cargarAlimentosParaSelect(); // Refrescar stock visual
+      cargarAlimentosParaSelect();
     } else {
       const err = await res.json();
       alert('Error: ' + (err.error || 'No se pudo guardar'));
@@ -291,34 +280,22 @@ async function eliminarSeguimiento(id) {
   }
 }
 
-// --- UI Helpers ---
 function abrirFormulario() {
-  const container = document.getElementById('formContainer');
-  if (container) container.classList.add('is-open');
-  const btn = document.getElementById('toggleFormBtn');
-  if (btn) btn.textContent = 'Cancelar';
-
+  document.getElementById('formContainer').classList.add('is-open');
+  document.getElementById('toggleFormBtn').textContent = 'Cancelar';
   const fechaIn = document.getElementById('fechaRegistro');
   if (fechaIn && !fechaIn.value) fechaIn.value = new Date().toISOString().split('T')[0];
 }
 
 function cerrarFormulario() {
-  const container = document.getElementById('formContainer');
-  if (container) container.classList.remove('is-open');
-  const btn = document.getElementById('toggleFormBtn');
-  if (btn) btn.textContent = 'Registrar Seguimiento';
-
-  const form = document.getElementById('seguimientoForm');
-  if (form) form.reset();
-
-  const idField = document.getElementById('seguimientoId');
-  if (idField) idField.value = '';
-
+  document.getElementById('formContainer').classList.remove('is-open');
+  document.getElementById('toggleFormBtn').textContent = 'Registrar Seguimiento';
+  document.getElementById('seguimientoForm').reset();
+  document.getElementById('seguimientoId').value = '';
   const stockLbl = document.getElementById('stockInfo');
   if (stockLbl) stockLbl.textContent = '';
 }
 
-// --- Event Listener Principal ---
 document.addEventListener('DOMContentLoaded', () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   const granja = JSON.parse(localStorage.getItem('selectedGranja'));
@@ -332,7 +309,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelBtn = document.getElementById('cancelBtn');
   const form = document.getElementById('seguimientoForm');
 
-  // Listener para mostrar stock al cambiar alimento
   const alimSelect = document.getElementById('alimentoSelect');
   if (alimSelect) {
     alimSelect.addEventListener('change', () => {
@@ -341,11 +317,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (opt && opt.dataset.stock && lbl) {
         lbl.textContent = `Disponible: ${opt.dataset.stock} ${opt.dataset.unidad}`;
 
-        // Intentar pre-seleccionar la unidad correcta en el input
         const unidadStock = opt.dataset.unidad.toLowerCase();
         const unidadSelect = document.getElementById('unidadConsumo');
         if (unidadSelect) {
-          // Mapeo simple para autoselección
           if (unidadStock.includes('qq') || unidadStock.includes('quintal')) unidadSelect.value = 'qq';
           else if (unidadStock.includes('lb') || unidadStock.includes('libra')) unidadSelect.value = 'lb';
           else if (unidadStock.includes('kg') || unidadStock.includes('kilo')) unidadSelect.value = 'kg';
