@@ -216,23 +216,25 @@ async function guardarSeguimiento(e) {
   if (alimentoIdVal && consumoInput > 0) {
     alimentoId = parseInt(alimentoIdVal);
 
-    // Obtener datos del inventario (Base)
+    // Obtener datos del inventario
     const opcion = elAlimento.options[elAlimento.selectedIndex];
     if (opcion && opcion.dataset.stock) {
       const stock = parseFloat(opcion.dataset.stock);
       const unidadBase = opcion.dataset.unidad;
 
-      // CONVERSIÓN MAGISTRAL
-      consumoFinal = calcularCantidadBase(consumoInput, unidadInput, unidadBase);
+      // CONVERSIÓN
+      let consumoCalculado = calcularCantidadBase(consumoInput, unidadInput, unidadBase);
 
-      console.log(`Validación: Stock ${stock} ${unidadBase} vs Pedido ${consumoFinal.toFixed(4)} ${unidadBase} (Input: ${consumoInput} ${unidadInput})`);
+      // --- CORRECCIÓN AQUÍ: Redondear a 4 decimales para evitar errores de DB ---
+      consumoFinal = parseFloat(consumoCalculado.toFixed(4));
+      // ------------------------------------------------------------------------
 
-      // Validación de Stock (con margen float)
+      console.log(`Validación: Stock ${stock} vs Pedido ${consumoFinal}`);
+
       if (consumoFinal > (stock + 0.0001)) {
-        return alert(`❌ Stock Insuficiente.\nInventario: ${stock} ${unidadBase}\nNecesitas: ${consumoFinal.toFixed(4)} ${unidadBase}\n(${consumoInput} ${unidadInput})`);
+        return alert(`❌ Stock Insuficiente.\nInventario: ${stock} ${unidadBase}\nNecesitas: ${consumoFinal} ${unidadBase}`);
       }
     } else {
-      // Si por alguna razón no hay datos de unidad, pasamos directo
       consumoFinal = consumoInput;
     }
   }
