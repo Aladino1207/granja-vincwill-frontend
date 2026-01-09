@@ -468,14 +468,30 @@ document.addEventListener('input', function (e) {
 function compareCells(a, b, isAsc) {
   const clean = (val) => val.replace(/[$,]/g, '').trim();
   const valA = clean(a); const valB = clean(b);
-  const numA = parseFloat(valA); const numB = parseFloat(valB);
 
-  if (!isNaN(numA) && !isNaN(numB) && /^\d/.test(valA) && /^\d/.test(valB)) return isAsc ? numA - numB : numB - numA;
-  if (valA.includes('/') && valB.includes('/')) {
-    const [dA, mA, yA] = valA.split('/'); const [dB, mB, yB] = valB.split('/');
-    const dateA = new Date(`${yA}-${mA}-${dA}`); const dateB = new Date(`${yB}-${mB}-${dB}`);
-    if (!isNaN(dateA) && !isNaN(dateB)) return isAsc ? dateA - dateB : dateB - dateA;
+  // 1. DETECCIÓN PRIORITARIA DE FECHAS (DD/MM/YYYY)
+  // Regex estricto para fechas como 25/04/2025
+  const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+  const matchA = valA.match(dateRegex);
+  const matchB = valB.match(dateRegex);
+
+  if (matchA && matchB) {
+    // match[1]=Día, match[2]=Mes, match[3]=Año
+    // new Date(Año, Mes-1, Día)
+    const dateA = new Date(matchA[3], matchA[2] - 1, matchA[1]);
+    const dateB = new Date(matchB[3], matchB[2] - 1, matchB[1]);
+    return isAsc ? dateA - dateB : dateB - dateA;
   }
+
+  // 2. Números (Validación estricta para no confundir con fechas parciales)
+  // Solo aceptamos números, puntos y signos de moneda
+  if (/^[0-9.,$]+$/.test(valA) && /^[0-9.,$]+$/.test(valB)) {
+    const numA = parseFloat(valA);
+    const numB = parseFloat(valB);
+    if (!isNaN(numA) && !isNaN(numB)) return isAsc ? numA - numB : numB - numA;
+  }
+
+  // 3. Texto fallback
   return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
 }
 
