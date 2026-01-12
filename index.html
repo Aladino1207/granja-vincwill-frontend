@@ -96,76 +96,96 @@
 
     <main class="dashboard-layout-vincwill">
 
-        <!-- RESUMEN GLOBAL -->
-        <div class="dashboard-main-kpis">
-            <section class="card">
-                <h2>Resumen General</h2>
-                <div class="stats-grid-vertical">
-                    <div>
-                        <h4>Total Aves Vivas</h4>
-                        <span id="totalVivos">0</span>
-                    </div>
-                    <div>
-                        <h4>Peso Promedio Actual</h4>
-                        <span id="pesoPromedio">0 kg</span>
-                    </div>
-                    <div>
-                        <h4>Conversión (ICA) Prom.</h4>
-                        <span id="conversionPromedio">0</span>
-                    </div>
-                    <div>
-                        <h4>Mortalidad Prom.</h4>
-                        <span id="mortalidadPromedio">0%</span>
-                    </div>
-                    <div>
-                        <h4>Costos Totales (Global)</h4>
-                        <span id="costosTotales">$0.00</span>
-                    </div>
-                    <div>
-                        <h4>Ingresos Totales</h4>
-                        <span id="ingresosTotales">$0.00</span>
-                    </div>
-                    <div>
-                        <h4>Rentabilidad Global</h4>
-                        <span id="rentabilidad">$0.00</span>
-                    </div>
-                </div>
-            </section>
+        <!-- 1. BARRA DE FILTROS (NUEVO) -->
+        <div class="dashboard-filters">
+            <div style="display: flex; align-items: center;">
+                <label for="dashEstado">Ver:</label>
+                <select id="dashEstado">
+                    <option value="activos" selected>En Producción (Activos)</option>
+                    <option value="todos">Historial Completo</option>
+                    <option value="vendido">Lotes Cerrados/Vendidos</option>
+                </select>
+            </div>
+            <div style="display: flex; align-items: center;">
+                <label for="dashLote">Filtrar Lote:</label>
+                <select id="dashLote">
+                    <option value="">Todos los Lotes</option>
+                    <!-- Se llena con JS -->
+                </select>
+            </div>
+            <button id="btnRefreshDash" class="btn btn-sm btn-secundario">🔄 Actualizar</button>
         </div>
 
-        <!-- NUEVA SECCIÓN: ESTADO DE LOTES (KPIs POR LOTE) -->
-        <section style="margin-top: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h2 style="color: #2c3e50; margin: 0;">Estado de Lotes Activos</h2>
-                <small style="color: #7f8c8d;">Análisis financiero en tiempo real</small>
+        <!-- 2. LAYOUT DIVIDIDO (25% Resumen | 75% Tarjetas) -->
+        <div class="dashboard-split-layout">
+
+            <!-- IZQUIERDA: RESUMEN GENERAL (KPIs) -->
+            <div class="dashboard-summary-col">
+                <section class="card">
+                    <h2 style="font-size: 1.1rem; border-bottom: 1px solid #eee; padding-bottom: 10px;">Resumen
+                        Financiero</h2>
+
+                    <div class="stats-grid-vertical">
+                        <div>
+                            <h4 style="color:#7f8c8d;">Aves (Saldo)</h4>
+                            <span id="totalVivos" style="font-size:1.2rem;">0</span>
+                        </div>
+                        <div>
+                            <h4 style="color:#7f8c8d;">Mortalidad Global</h4>
+                            <span id="mortalidadPromedio">0%</span>
+                        </div>
+                        <div>
+                            <h4 style="color:#7f8c8d;">Conversión Prom.</h4>
+                            <span id="conversionPromedio">0.00</span>
+                        </div>
+                        <div style="margin-top: 15px; border-top: 1px dashed #ddd; padding-top: 15px;">
+                            <h4 style="color:#2c3e50;">Ingresos</h4>
+                            <span id="ingresosTotales" style="color:#2980b9;">$0.00</span>
+                        </div>
+                        <div>
+                            <h4 style="color:#2c3e50;">Egresos Totales</h4>
+                            <span id="costosTotales" style="color:#c0392b;">$0.00</span>
+                        </div>
+                        <div style="background: #f8f9fa; margin-top: 10px; border-radius: 6px; padding: 10px;">
+                            <h4 style="color:#2c3e50; font-weight: bold;">UTILIDAD NETA</h4>
+                            <span id="rentabilidad" style="font-size: 1.4rem;">$0.00</span>
+                        </div>
+                    </div>
+                </section>
             </div>
 
-            <!-- Aquí se inyectarán las tarjetas con JS -->
-            <div id="lotesContainer"
-                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
-                <div class="card" style="text-align: center; color: #95a5a6; padding: 2rem;">
-                    <p>Cargando análisis financiero...</p>
+            <!-- DERECHA: TARJETAS DE LOTES -->
+            <div class="dashboard-cards-col">
+                <div style="margin-bottom: 10px;">
+                    <h2 style="font-size: 1.2rem; color: #2c3e50;">Detalle de Lotes</h2>
+                </div>
+
+                <div id="lotesContainer">
+                    <div class="card" style="text-align: center; padding: 3rem; color: #999;">
+                        <p>Cargando datos...</p>
+                    </div>
                 </div>
             </div>
-        </section>
 
-        <!-- GRÁFICOS Y CALENDARIO -->
+        </div>
+
+        <!-- 3. GRÁFICOS Y SECUNDARIOS (ABAJO) -->
         <div class="dashboard-secondary-grid">
 
             <section class="card" id="alertasSection">
                 <h3>Alertas de Producción</h3>
                 <ul id="alertasList">
-                    <li>No hay alertas activadas.</li>
+                    <li>Cargando alertas...</li>
                 </ul>
             </section>
 
             <section class="card calendario-card">
-                <h3>Calendario de Tareas</h3>
+                <h3>Calendario</h3>
                 <div id="calendario-container"></div>
             </section>
 
             <section class="card">
-                <h2>Curva de Producción</h2>
+                <h2>Curva de Crecimiento</h2>
                 <canvas id="produccionChart"></canvas>
             </section>
 
@@ -180,7 +200,7 @@
             </section>
 
             <section class="card">
-                <h2>Consumo de Agua (Últ. 7 días)</h2>
+                <h2>Consumo de Agua</h2>
                 <canvas id="aguaChart"></canvas>
             </section>
         </div>

@@ -211,15 +211,17 @@ function setupMobileMenu() {
 }
 
 // ==================================================
-// 4. LÓGICA DEL DASHBOARD (KPIs AVANZADOS Y COSTOS)
+// 4. LÓGICA DEL DASHBOARD (FILTRABLE)
 // ==================================================
 
-async function actualizarDashboard() {
+// Variables globales de datos para no recargar en cada filtro
+let dashboardData = {};
+
+async function cargarDatosDashboard() {
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
 
   try {
-    // 1. Carga Masiva de Datos
     const [lotes, salud, costos, seguimiento, ventas, agua, inventario] = await Promise.all([
       fetch(`${API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
       fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
@@ -230,165 +232,209 @@ async function actualizarDashboard() {
       fetch(`${API_URL}/inventario?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
     ]);
 
-    // Variables para Totales Globales
-    let totalCostosGlobal = 0;
-    let totalIngresosGlobal = ventas ? ventas.reduce((sum, v) => sum + (v.peso * v.precio), 0) : 0;
-    let totalVivosGlobal = 0;
+    dashboardData = { lotes, salud, costos, seguimiento, ventas, agua, inventario };
 
-    // Preparar contenedor de tarjetas
-    const lotesContainer = document.getElementById('lotesContainer');
-    if (lotesContainer) lotesContainer.innerHTML = '';
+    // Poblar filtro de lotes
+    poblarFiltroLotes(lotes);
 
-    // --- PROCESAMIENTO POR LOTE ---
-    if (lotes && lotes.length > 0) {
-      const lotesActivos = lotes.filter(l => l.estado === 'disponible' || l.estado === 'ocupado');
+    // Renderizar inicial
+    renderizarDashboard();
 
-      if (lotesActivos.length === 0 && lotesContainer) {
-        lotesContainer.innerHTML = '<div class="card" style="padding: 1.5rem; text-align: center; color: #7f8c8d;">No hay lotes en producción actualmente.</div>';
+    // Calendario y gráficos secundarios (una sola vez)
+    mostrarCalendario();
+    mostrarGraficoAgua();
+    mostrarGraficosDashboard();
+    mostrarCostosPieChart();
+    mostrarIngresosCostosBarChart();
+    mostrarAlertasProduccion();
+
+  } catch (error) { console.error('Error cargando datos dashboard:', error); }
+}
+
+function poblarFiltroLotes(lotes) {
+  const selector = document.getElementById('dashLote');
+  if (!selector) return;
+
+  const valorPrevio = selector.value;
+  selector.innerHTML = '<option value="">Todos los Lotes</option>';
+
+  if (lotes && lotes.length > 0) {
+    // Ordenar por fecha reciente
+    lotes.sort((a, b) => new Date(b.fechaIngreso) - new Date(a.fechaIngreso));
+
+    lotes.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = `${l.loteId} (${l.estado})`;
+      selector.appendChild(opt);
+    });
+  }
+
+  if (valorPrevio) selector.value = valorPrevio;
+}
+
+function renderizarDashboard() {
+  const { lotes, salud, costos, seguimiento, ventas, inventario } = dashboardData;
+
+  const filtroEstado = document.getElementById('dashEstado') ? document.getElementById('dashEstado').value : 'activos';
+  const filtroLoteId = document.getElementById('dashLote') ? document.getElementById('dashLote').value : '';
+
+  let lotesFiltrados = lotes || [];
+
+  // 1. Filtrar Lotes
+  if (filtroLoteId) {
+    lotesFiltrados = lotesFiltrados.filter(l => l.id == filtroLoteId);
+  } else {
+    if (filtroEstado === 'activos') lotesFiltrados = lotesFiltrados.filter(l => l.estado === 'disponible' || l.estado === 'ocupado');
+    else if (filtroEstado === 'vendido') lotesFiltrados = lotesFiltrados.filter(l => l.estado === 'vendido' || l.estado === 'archivado');
+    // 'todos' no filtra por estado
+  }
+
+  // 2. Variables de Acumulación
+  let totalCostosGlobal = 0;
+  let totalIngresosGlobal = 0;
+  let totalVivosGlobal = 0;
+  let totalIniciadosGlobal = 0;
+  let totalMuertesGlobal = 0;
+
+  const lotesContainer = document.getElementById('lotesContainer');
+  if (lotesContainer) lotesContainer.innerHTML = '';
+
+  if (lotesFiltrados.length === 0) {
+    if (lotesContainer) lotesContainer.innerHTML = '<div class="card" style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #7f8c8d;">No se encontraron lotes con los filtros seleccionados.</div>';
+  }
+
+  // 3. Procesar cada Lote
+  lotesFiltrados.forEach(lote => {
+    // A. Cálculos básicos
+    const fechaIngreso = new Date(lote.fechaIngreso);
+    const hoy = new Date();
+    const diasEdad = Math.floor((hoy - fechaIngreso) / (1000 * 60 * 60 * 24)) || 1;
+    const semanasEdad = Math.ceil(diasEdad / 7);
+
+    // B. Mortalidad
+    const muertes = salud ? salud.filter(s => s.loteId === lote.id && s.tipo.toLowerCase() === 'mortalidad').reduce((sum, s) => sum + s.cantidad, 0) : 0;
+    const iniciales = lote.cantidadInicial || lote.cantidad;
+    const vivos = iniciales - muertes;
+
+    totalVivosGlobal += vivos;
+    totalIniciadosGlobal += iniciales;
+    totalMuertesGlobal += muertes;
+
+    const viabilidad = (iniciales > 0) ? ((vivos / iniciales) * 100) : 0;
+
+    // C. Ventas (Ingresos)
+    const ventasLote = ventas ? ventas.filter(v => v.loteId === lote.id) : [];
+    const ingresosLote = ventasLote.reduce((sum, v) => sum + (v.peso * v.precio), 0);
+    totalIngresosGlobal += ingresosLote;
+
+    // D. Seguimiento (Peso y Alimento)
+    const regsLote = seguimiento ? seguimiento.filter(s => s.loteId === lote.id) : [];
+    regsLote.sort((a, b) => new Date(b.fecha || b.fechaRegistro) - new Date(a.fecha || a.fechaRegistro));
+
+    const pesoActualLb = regsLote.length > 0 ? regsLote[0].peso : lote.pesoInicial;
+    const consumoTotalLote = regsLote.reduce((sum, r) => sum + (r.consumo || 0), 0);
+
+    // E. Costos
+    const costoInicial = lote.costoInicial || 0;
+    const gastosDirectos = costos ? costos.filter(c => c.loteId === lote.id).reduce((sum, c) => sum + c.monto, 0) : 0;
+
+    let costoAlimentoLote = 0;
+    regsLote.forEach(r => {
+      let precioUnitario = 0;
+      if (r.Inventario && r.Inventario.costo) precioUnitario = r.Inventario.costo;
+      else if (r.alimentoId && inventario) {
+        const item = inventario.find(i => i.id === r.alimentoId);
+        if (item) precioUnitario = item.costo;
       }
+      costoAlimentoLote += (r.consumo || 0) * precioUnitario;
+    });
 
-      lotesActivos.forEach(lote => {
-        // A. DATOS BÁSICOS & TIEMPO
-        const fechaIngreso = new Date(lote.fechaIngreso);
-        const hoy = new Date();
-        const diasEdad = Math.floor((hoy - fechaIngreso) / (1000 * 60 * 60 * 24)) || 1;
-        const semanasEdad = Math.ceil(diasEdad / 7);
+    const saludLote = salud ? salud.filter(s => s.loteId === lote.id && (s.tipo === 'Vacunación' || s.tipo === 'Tratamiento')) : [];
+    let costoSanitarioLote = 0;
+    saludLote.forEach(s => {
+      if (s.vacunaId && inventario) {
+        const itemInv = inventario.find(i => i.id === s.vacunaId);
+        if (itemInv) costoSanitarioLote += (s.cantidad * itemInv.costo);
+      }
+    });
 
-        // B. MORTALIDAD & VIABILIDAD
-        const muertes = salud ? salud.filter(s => s.loteId === lote.id && s.tipo.toLowerCase() === 'mortalidad').reduce((sum, s) => sum + s.cantidad, 0) : 0;
-        const iniciales = lote.cantidadInicial || lote.cantidad;
-        const vivos = iniciales - muertes;
-        totalVivosGlobal += vivos;
-        const viabilidad = (iniciales > 0) ? ((vivos / iniciales) * 100) : 0;
+    const costoTotalLote = costoInicial + gastosDirectos + costoAlimentoLote + costoSanitarioLote;
+    totalCostosGlobal += costoTotalLote;
 
-        // C. PESO Y CONSUMO (SEGUIMIENTO)
-        const regsLote = seguimiento ? seguimiento.filter(s => s.loteId === lote.id) : [];
-        regsLote.sort((a, b) => new Date(b.fecha || b.fechaRegistro) - new Date(a.fecha || a.fechaRegistro));
+    // F. KPIs
+    const biomasaLbs = vivos * pesoActualLb;
+    const costoPorLb = biomasaLbs > 0 ? (costoTotalLote / biomasaLbs).toFixed(2) : '0.00';
+    const conversion = biomasaLbs > 0 ? (consumoTotalLote / biomasaLbs).toFixed(2) : '0.00';
+    const pesoKg = pesoActualLb / 2.20462;
+    let epef = 0;
+    if (diasEdad > 0 && parseFloat(conversion) > 0) {
+      epef = ((viabilidad * pesoKg) / (diasEdad * parseFloat(conversion))) * 100;
+    }
 
-        const pesoActualLb = regsLote.length > 0 ? regsLote[0].peso : lote.pesoInicial;
-        const consumoTotalLote = regsLote.reduce((sum, r) => sum + (r.consumo || 0), 0);
+    // Render Tarjeta
+    if (lotesContainer) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      // Color borde: Verde si gana dinero, Rojo si pierde (o EPEF malo)
+      const utilidadLote = ingresosLote - costoTotalLote;
+      const colorEstado = utilidadLote >= 0 ? '#27ae60' : '#e74c3c';
 
-        // D. FINANZAS DEL LOTE (CÁLCULO DEL COSTO REAL)
+      card.style.borderTop = `5px solid ${colorEstado}`;
+      card.style.position = 'relative';
 
-        // 1. Inversión Inicial (Costo de los pollitos)
-        const costoInicial = lote.costoInicial || 0;
-
-        // 2. Gastos Operativos Directos (Tabla Costos)
-        const gastosDirectos = costos ? costos.filter(c => c.loteId === lote.id).reduce((sum, c) => sum + c.monto, 0) : 0;
-
-        // 3. Costo Alimentación (Calculado dinámicamente)
-        let costoAlimentoLote = 0;
-        regsLote.forEach(r => {
-          let precioUnitario = 0;
-          // Si el backend envía el costo histórico (ideal)
-          if (r.Inventario && r.Inventario.costo) {
-            precioUnitario = r.Inventario.costo;
-          } else if (r.alimentoId && inventario) {
-            // Fallback: usar costo actual del inventario
-            const item = inventario.find(i => i.id === r.alimentoId);
-            if (item) precioUnitario = item.costo;
-          }
-          costoAlimentoLote += (r.consumo || 0) * precioUnitario;
-        });
-
-        // 4. Costo Sanitario (Vacunas/Medicinas calculadas desde módulo Salud)
-        const saludLote = salud ? salud.filter(s => s.loteId === lote.id && (s.tipo === 'Vacunación' || s.tipo === 'Tratamiento')) : [];
-        let costoSanitarioLote = 0;
-        saludLote.forEach(s => {
-          if (s.vacunaId && inventario) {
-            const itemInv = inventario.find(i => i.id === s.vacunaId);
-            if (itemInv) costoSanitarioLote += (s.cantidad * itemInv.costo);
-          }
-        });
-
-        // TOTAL GASTADO EN ESTE LOTE
-        const costoTotalLote = costoInicial + gastosDirectos + costoAlimentoLote + costoSanitarioLote;
-        totalCostosGlobal += costoTotalLote;
-
-        // E. KPIs AVANZADOS
-        const biomasaLbs = vivos * pesoActualLb;
-        const costoPorLb = biomasaLbs > 0 ? (costoTotalLote / biomasaLbs).toFixed(2) : '0.00';
-        const conversion = biomasaLbs > 0 ? (consumoTotalLote / biomasaLbs).toFixed(2) : '0.00';
-        const pesoKg = pesoActualLb / 2.20462;
-        let epef = 0;
-        if (diasEdad > 0 && parseFloat(conversion) > 0) {
-          epef = ((viabilidad * pesoKg) / (diasEdad * parseFloat(conversion))) * 100;
-        }
-
-        // --- RENDERIZADO DE TARJETA ---
-        if (lotesContainer) {
-          const card = document.createElement('div');
-          card.className = 'card';
-          const colorEstado = epef > 300 ? '#27ae60' : (epef > 220 ? '#f1c40f' : '#e74c3c');
-          card.style.borderTop = `5px solid ${colorEstado}`;
-          card.style.position = 'relative';
-
-          card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <h3 style="margin:0; color:#2c3e50; font-size:1.2rem;">${lote.loteId}</h3>
-                    <span class="badge" style="background:#ecf0f1; color:#555; padding: 4px 8px; border-radius:4px; font-size:0.8rem;">
-                        Semana ${semanasEdad}
-                    </span>
+      card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h3 style="margin:0; color:#2c3e50; font-size:1.1rem;">${lote.loteId}</h3>
+                    <span class="badge" style="background:#ecf0f1; color:#555; padding:2px 6px; font-size:0.75rem;">Semana ${semanasEdad}</span>
                 </div>
                 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
-                    <div style="background:#f8f9fa; padding:8px; border-radius:6px; text-align:center;">
-                        <small style="color:#7f8c8d; display:block;">Población</small>
-                        <span style="font-weight:bold; color:#2c3e50;">${vivos}</span>
-                        <span style="font-size:0.8rem; color:${viabilidad < 95 ? '#e74c3c' : '#27ae60'}">
-                            (${viabilidad.toFixed(1)}%)
-                        </span>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:10px; font-size:0.9rem;">
+                    <div style="background:#f8f9fa; padding:5px; text-align:center;">
+                        <small style="color:#7f8c8d;">Vivos</small><br><strong>${vivos}</strong>
                     </div>
-                    <div style="background:#f8f9fa; padding:8px; border-radius:6px; text-align:center;">
-                        <small style="color:#7f8c8d; display:block;">Peso Actual</small>
-                        <span style="font-weight:bold; color:#2980b9;">${parseFloat(pesoActualLb).toFixed(2)} lb</span>
+                    <div style="background:#f8f9fa; padding:5px; text-align:center;">
+                        <small style="color:#7f8c8d;">Peso</small><br><strong>${parseFloat(pesoActualLb).toFixed(2)} lb</strong>
                     </div>
                 </div>
 
-                <div style="margin-bottom:15px;">
-                    <small style="color:#95a5a6; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px;">Finanzas Acumuladas</small>
-                    <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-top:5px; border-bottom:1px dashed #eee; padding-bottom:2px;">
-                        <span>Inversión + Gastos:</span> <span>$${(costoInicial + gastosDirectos).toFixed(0)}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-top:5px; border-bottom:1px dashed #eee; padding-bottom:2px;">
-                        <span>Alimentación:</span> <span>$${costoAlimentoLote.toFixed(0)}</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; font-size:1rem; margin-top:8px; color:#2c3e50; font-weight:bold;">
-                        <span>TOTAL INVERTIDO:</span> <span>$${costoTotalLote.toFixed(2)}</span>
+                <div style="font-size:0.85rem; color:#555; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between;"><span>Inversión:</span> <span>$${(costoInicial + gastosDirectos).toFixed(0)}</span></div>
+                    <div style="display:flex; justify-content:space-between;"><span>Alimento:</span> <span>$${costoAlimentoLote.toFixed(0)}</span></div>
+                    <div style="display:flex; justify-content:space-between; font-weight:bold; color:#2c3e50; border-top:1px solid #eee; margin-top:3px;">
+                        <span>TOTAL:</span> <span>$${costoTotalLote.toFixed(2)}</span>
                     </div>
                 </div>
 
-                <div style="background:${colorEstado}15; padding:10px; border-radius:6px; text-align:center; border: 1px solid ${colorEstado}30;">
-                    <p style="margin:0; font-size:0.8rem; color:${colorEstado}; font-weight:bold;">COSTO DE PRODUCCIÓN</p>
-                    <p style="margin:5px 0 0 0; font-size:1.5rem; font-weight:bold; color:#2c3e50;">
-                        $${costoPorLb}<span style="font-size:0.9rem; color:#7f8c8d;"> / lb</span>
-                    </p>
-                </div>
-
-                <div style="display:flex; justify-content:space-between; margin-top:15px; font-size:0.85rem; color:#7f8c8d;">
-                    <div title="Conversión Alimenticia: Cuánto comen para ganar peso">C.A. Estimada: <strong>${conversion}</strong></div>
-                    <div title="Factor de Eficiencia Europeo">EPEF: <strong style="color:${colorEstado}">${epef.toFixed(0)}</strong></div>
+                <div style="background:${colorEstado}15; padding:8px; border-radius:4px; text-align:center; border: 1px solid ${colorEstado}30;">
+                     <small style="color:${colorEstado}; font-weight:bold;">COSTO / LB</small><br>
+                     <strong style="font-size:1.2rem; color:#2c3e50;">$${costoPorLb}</strong>
                 </div>
             `;
-          lotesContainer.appendChild(card);
-        }
-      });
+      lotesContainer.appendChild(card);
     }
+  });
 
-    // --- KPI GLOBALES ACTUALIZADOS ---
-    if (document.getElementById('costosTotales')) {
-      document.getElementById('costosTotales').textContent = `$${totalCostosGlobal.toFixed(2)}`;
-      document.getElementById('ingresosTotales').textContent = `$${totalIngresosGlobal.toFixed(2)}`;
+  // --- ACTUALIZAR RESUMEN IZQUIERDO ---
+  const utilidadGlobal = totalIngresosGlobal - totalCostosGlobal;
+  const mortalidadPromedio = totalIniciadosGlobal > 0 ? ((totalMuertesGlobal / totalIniciadosGlobal) * 100).toFixed(2) : '0.00';
 
-      const utilidadGlobal = totalIngresosGlobal - totalCostosGlobal;
-      const rentEl = document.getElementById('rentabilidad');
-      rentEl.textContent = `$${utilidadGlobal.toFixed(2)}`;
-      rentEl.style.color = utilidadGlobal >= 0 ? '#27ae60' : '#e74c3c';
+  // Como son promedios globales, es difícil sacar un solo "Peso" o "CA", así que mostramos sumas financieras
+  if (document.getElementById('costosTotales')) {
+    document.getElementById('costosTotales').textContent = `$${totalCostosGlobal.toFixed(2)}`;
+    document.getElementById('ingresosTotales').textContent = `$${totalIngresosGlobal.toFixed(2)}`;
 
-      document.getElementById('totalVivos').textContent = totalVivosGlobal;
-    }
+    const rentEl = document.getElementById('rentabilidad');
+    rentEl.textContent = `$${utilidadGlobal.toFixed(2)}`;
+    rentEl.style.color = utilidadGlobal >= 0 ? '#27ae60' : '#e74c3c';
 
-  } catch (error) { console.error('Error dashboard:', error); }
+    document.getElementById('totalVivos').textContent = totalVivosGlobal;
+    document.getElementById('mortalidadPromedio').textContent = `${mortalidadPromedio}%`;
+
+    // Ocultar placeholders que no aplican a la suma global
+    document.getElementById('pesoPromedio').textContent = "-";
+    document.getElementById('conversionPromedio').textContent = "-";
+  }
 }
 
 async function mostrarCalendario() {
