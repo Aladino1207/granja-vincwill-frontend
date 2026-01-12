@@ -912,3 +912,75 @@ main.dashboard-layout-vincwill {
   }
 }
 
+/* Barra de Filtros Moderna */
+.dashboard-filters {
+  background: white;
+  padding: 15px 20px;
+  border-radius: var(--borde-radio);
+  border: 1px solid var(--color-borde);
+  margin-bottom: 2rem;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.dashboard-filters label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-primario);
+  margin-right: 5px;
+}
+
+.dashboard-filters select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: #fcfcfc;
+  min-width: 160px;
+  cursor: pointer;
+}
+
+.dashboard-filters button {
+  margin-left: auto;
+  /* Empuja el botón a la derecha */
+}
+
+/* Layout Dividido (25% Resumen - 75% Tarjetas) */
+.dashboard-split-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  /* Columna fija izq, resto derecha */
+  gap: 2rem;
+  margin-bottom: 2rem;
+  align-items: start;
+}
+
+/* Columna Izquierda (Resumen) */
+.dashboard-summary-col .card {
+  background: #fff;
+  border-left: 5px solid var(--color-primario);
+  padding: 1.5rem;
+}
+
+/* Grid de Tarjetas de Lotes */
+#lotesContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  /* Tarjetas responsivas */
+  gap: 1.5rem;
+}
+
+/* Responsive para pantallas medianas */
+@media (max-width: 1100px) {
+  .dashboard-split-layout {
+    grid-template-columns: 1fr;
+    /* Una sola columna */
+  }
+
+  .dashboard-filters button {
+    margin-left: 0;
+    width: 100%;
+  }
+}

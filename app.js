@@ -1,10 +1,8 @@
 window.API_URL = 'https://granja-vincwill-backend.onrender.com';
 
 // ==================================================
-// 1. GESTIÓN DE ESTADO Y GRÁFICOS
+// 1. CONFIGURACIÓN Y UTILIDADES
 // ==================================================
-let dashboardData = {};
-let chartInstances = {}; // Almacén para destruir gráficos viejos antes de crear nuevos
 
 // Helper para evitar crashes si un ID no existe en el HTML
 function safeText(elementId, text) {
@@ -173,6 +171,9 @@ function setupMobileMenu() {
 // 4. LÓGICA DEL DASHBOARD (DATOS, KPIs Y RENDER)
 // ==================================================
 
+let dashboardData = {};
+let chartInstances = {}; // IMPORTANTE: Almacén para gráficos
+
 async function cargarDatosDashboard() {
   const granjaId = getSelectedGranjaId();
   if (!granjaId) return;
@@ -190,14 +191,9 @@ async function cargarDatosDashboard() {
 
     dashboardData = { lotes, salud, costos, seguimiento, ventas, agua, inventario };
 
-    // Poblar filtro de lotes
     poblarFiltroLotes(lotes);
-
-    // Renderizar inicial
     renderizarDashboard();
-
-    // Renderizar Gráficos (Una sola vez o actualizables)
-    renderizarGraficos();
+    renderizarGraficos(); // Llamar gráficos solo una vez cargada la data
 
   } catch (error) {
     console.error('Error cargando datos dashboard:', error);
@@ -225,7 +221,7 @@ function poblarFiltroLotes(lotes) {
 
 function renderizarDashboard() {
   const { lotes, salud, costos, seguimiento, ventas, inventario } = dashboardData;
-  if (!lotes) return; // Esperar a que carguen datos
+  if (!lotes) return;
 
   const filtroEstado = document.getElementById('dashEstado') ? document.getElementById('dashEstado').value : 'activos';
   const filtroLoteId = document.getElementById('dashLote') ? document.getElementById('dashLote').value : '';
@@ -240,7 +236,7 @@ function renderizarDashboard() {
     else if (filtroEstado === 'vendido') lotesFiltrados = lotesFiltrados.filter(l => l.estado === 'vendido' || l.estado === 'archivado');
   }
 
-  // 2. Acumuladores Globales (Izquierda)
+  // 2. Variables Globales
   let totalCostosGlobal = 0;
   let totalIngresosGlobal = 0;
   let totalVivosGlobal = 0;
@@ -251,17 +247,14 @@ function renderizarDashboard() {
   if (lotesContainer) lotesContainer.innerHTML = '';
 
   if (lotesFiltrados.length === 0) {
-    if (lotesContainer) lotesContainer.innerHTML = '<div class="card" style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #7f8c8d;">No hay lotes con los filtros seleccionados.</div>';
+    if (lotesContainer) lotesContainer.innerHTML = '<div class="card" style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #7f8c8d;">No se encontraron lotes con los filtros seleccionados.</div>';
   }
 
   // 3. Procesar Lotes
   lotesFiltrados.forEach(lote => {
-    const fechaIngreso = new Date(lote.fechaIngreso);
-    const hoy = new Date();
-    const diasEdad = Math.floor((hoy - fechaIngreso) / (1000 * 60 * 60 * 24)) || 1;
+    const diasEdad = Math.floor((new Date() - new Date(lote.fechaIngreso)) / (1000 * 60 * 60 * 24)) || 1;
     const semanasEdad = Math.ceil(diasEdad / 7);
 
-    // Mortalidad
     const muertes = salud ? salud.filter(s => s.loteId === lote.id && s.tipo.toLowerCase() === 'mortalidad').reduce((sum, s) => sum + s.cantidad, 0) : 0;
     const iniciales = lote.cantidadInicial || lote.cantidad;
     const vivos = iniciales - muertes;
@@ -272,21 +265,26 @@ function renderizarDashboard() {
 
     const viabilidad = (iniciales > 0) ? ((vivos / iniciales) * 100) : 0;
 
-    // Ventas
     const ventasLote = ventas ? ventas.filter(v => v.loteId === lote.id) : [];
     const ingresosLote = ventasLote.reduce((sum, v) => sum + (v.peso * v.precio), 0);
     totalIngresosGlobal += ingresosLote;
 
-    // Seguimiento
     const regsLote = seguimiento ? seguimiento.filter(s => s.loteId === lote.id) : [];
     regsLote.sort((a, b) => new Date(b.fecha || b.fechaRegistro) - new Date(a.fecha || a.fechaRegistro));
 
     const pesoActualLb = regsLote.length > 0 ? regsLote[0].peso : lote.pesoInicial;
     const consumoTotalLote = regsLote.reduce((sum, r) => sum + (r.consumo || 0), 0);
 
-    // Costos
+    // --- CÁLCULO FINANCIERO (CORREGIDO PARA NO DUPLICAR) ---
     const costoInicial = lote.costoInicial || 0;
-    const gastosDirectos = costos ? costos.filter(c => c.loteId === lote.id).reduce((sum, c) => sum + c.monto, 0) : 0;
+
+    // Excluir 'Alimentación' y 'Vacunación' de los costos directos porque los calculamos dinámicamente abajo
+    const gastosDirectos = costos ? costos.filter(c =>
+      c.loteId === lote.id &&
+      c.categoria !== 'Alimentación' &&
+      c.categoria !== 'Inventario/Compra' &&
+      c.categoria !== 'Vacuna'
+    ).reduce((sum, c) => sum + c.monto, 0) : 0;
 
     let costoAlimentoLote = 0;
     regsLote.forEach(r => {
@@ -321,12 +319,10 @@ function renderizarDashboard() {
       epef = ((viabilidad * pesoKg) / (diasEdad * parseFloat(conversion))) * 100;
     }
 
-    // Render Tarjeta Lote
     if (lotesContainer) {
       const card = document.createElement('div');
       card.className = 'card';
       const utilidadLote = ingresosLote - costoTotalLote;
-      // Color borde: Verde si gana dinero, Rojo si pierde
       const colorEstado = utilidadLote >= 0 ? '#27ae60' : '#e74c3c';
       card.style.borderTop = `5px solid ${colorEstado}`;
       card.style.position = 'relative';
@@ -364,11 +360,10 @@ function renderizarDashboard() {
     }
   });
 
-  // 4. Actualizar Resumen Global (Izquierda)
+  // 4. Actualizar Resumen Global
   const utilidadGlobal = totalIngresosGlobal - totalCostosGlobal;
   const mortalidadPromedio = totalIniciadosGlobal > 0 ? ((totalMuertesGlobal / totalIniciadosGlobal) * 100).toFixed(2) : '0.00';
 
-  // Usamos safeText para evitar errores
   safeText('costosTotales', `$${totalCostosGlobal.toFixed(2)}`);
   safeText('ingresosTotales', `$${totalIngresosGlobal.toFixed(2)}`);
   safeText('rentabilidad', `$${utilidadGlobal.toFixed(2)}`);
@@ -382,20 +377,17 @@ function renderizarDashboard() {
   safeText('conversionPromedio', "-");
 }
 
-// --- GRÁFICOS Y CALENDARIO (Separados y Protegidos) ---
 function renderizarGraficos() {
   const { lotes, salud, costos, seguimiento, ventas, agua } = dashboardData;
+  if (!lotes) return;
 
-  // A. Calendario
   mostrarCalendario(dashboardData);
-
-  // B. Alertas
   mostrarAlertasProduccion(salud);
 
-  // C. Gráfico Producción (Destroy first)
+  // GRÁFICOS (Destruir antes de crear)
   if (chartInstances['produccionChart']) chartInstances['produccionChart'].destroy();
   const ctxProd = document.getElementById('produccionChart');
-  if (ctxProd && seguimiento && lotes) {
+  if (ctxProd && seguimiento) {
     const labels = [...new Set(seguimiento.map(reg => `Semana ${reg.semana}`))].sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
     const dataPeso = labels.map(label => {
       const semana = parseInt(label.split(' ')[1]);
@@ -409,7 +401,6 @@ function renderizarGraficos() {
     });
   }
 
-  // D. Gráfico Costos (Destroy first)
   if (chartInstances['costosPieChart']) chartInstances['costosPieChart'].destroy();
   const ctxCostos = document.getElementById('costosPieChart');
   if (ctxCostos && costos) {
@@ -421,7 +412,6 @@ function renderizarGraficos() {
     });
   }
 
-  // E. Gráfico Ingresos (Destroy first)
   if (chartInstances['ingresosCostosBarChart']) chartInstances['ingresosCostosBarChart'].destroy();
   const ctxIng = document.getElementById('ingresosCostosBarChart');
   if (ctxIng && lotes && ventas && costos) {
@@ -436,7 +426,6 @@ function renderizarGraficos() {
     });
   }
 
-  // F. Gráfico Agua (Destroy first)
   if (chartInstances['aguaChart']) chartInstances['aguaChart'].destroy();
   const ctxAgua = document.getElementById('aguaChart');
   if (ctxAgua && agua) {
@@ -459,7 +448,7 @@ function mostrarCalendario(data) {
 
   const calContainer = document.getElementById("calendario-container");
   if (calContainer) {
-    calContainer.innerHTML = ''; // Limpiar previo
+    calContainer.innerHTML = '';
     flatpickr(calContainer, {
       inline: true, locale: "es", enable: [{ from: "today", to: "today" }, ...eventosMapa.map(e => e.date)],
       onDayCreate: function (dObj, dStr, fp, dayElem) {
@@ -484,7 +473,7 @@ function mostrarAlertasProduccion(salud) {
   }
 }
 
-// --- TABLA ---
+// --- TABLA ORDEN & FILTRO ---
 document.addEventListener('click', function (e) {
   const th = e.target.closest('table.tabla-moderna th');
   if (th) {
@@ -549,7 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const granja = JSON.parse(localStorage.getItem('selectedGranja'));
     if (granja) document.querySelector('header h1').textContent = `Dashboard (${granja.nombre})`;
 
-    // Cargar datos
+    // CARGAR DATOS CENTRALIZADOS
     cargarDatosDashboard();
 
     // Listeners de Filtros
