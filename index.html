@@ -95,116 +95,100 @@
     </aside>
 
     <main class="dashboard-layout-vincwill">
-
         <!-- 1. BARRA DE FILTROS -->
         <div class="dashboard-filters">
             <div style="display: flex; align-items: center;">
                 <label for="dashEstado">Ver:</label>
                 <select id="dashEstado">
-                    <option value="activos" selected>En Producción (Activos)</option>
+                    <option value="activos" selected>En Producción</option>
                     <option value="todos">Historial Completo</option>
-                    <option value="vendido">Lotes Cerrados/Vendidos</option>
+                    <option value="vendido">Cerrados/Vendidos</option>
                 </select>
             </div>
             <div style="display: flex; align-items: center;">
-                <label for="dashLote">Filtrar Lote:</label>
+                <label for="dashLote">Lote:</label>
                 <select id="dashLote">
-                    <option value="">Todos los Lotes</option>
-                    <!-- Se llena con JS -->
+                    <option value="">Todos</option>
+                    <!-- JS -->
                 </select>
             </div>
             <button id="btnRefreshDash" class="btn btn-sm btn-secundario">🔄 Actualizar</button>
         </div>
 
-        <!-- 2. LAYOUT DIVIDIDO (25% Resumen | 75% Tarjetas) -->
+        <!-- 2. LAYOUT DIVIDIDO -->
         <div class="dashboard-split-layout">
 
-            <!-- IZQUIERDA: RESUMEN GENERAL (KPIs) -->
+            <!-- COLUMNA IZQUIERDA: RESUMEN -->
             <div class="dashboard-summary-col">
                 <section class="card">
-                    <h2 style="font-size: 1.1rem; border-bottom: 1px solid #eee; padding-bottom: 10px;">Resumen
-                        Financiero</h2>
-
+                    <h2
+                        style="font-size: 1rem; color: #555; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+                        INDICADORES CLAVE</h2>
                     <div class="stats-grid-vertical">
                         <div>
-                            <h4 style="color:#7f8c8d;">Aves (Saldo)</h4>
-                            <span id="totalVivos" style="font-size:1.2rem;">0</span>
+                            <h4 style="color:#7f8c8d; font-size: 0.9rem;">Aves Vivas</h4>
+                            <span id="totalVivos" style="font-weight:bold;">0</span>
                         </div>
                         <div>
-                            <h4 style="color:#7f8c8d;">Mortalidad Global</h4>
+                            <h4 style="color:#7f8c8d; font-size: 0.9rem;">Mortalidad %</h4>
                             <span id="mortalidadPromedio">0%</span>
                         </div>
                         <div>
-                            <h4 style="color:#7f8c8d;">Conversión Prom.</h4>
-                            <span id="conversionPromedio">0.00</span>
-                        </div>
-                        <div style="margin-top: 15px; border-top: 1px dashed #ddd; padding-top: 15px;">
-                            <h4 style="color:#2c3e50;">Ingresos</h4>
+                            <h4 style="color:#7f8c8d; font-size: 0.9rem;">Ingresos</h4>
                             <span id="ingresosTotales" style="color:#2980b9;">$0.00</span>
                         </div>
                         <div>
-                            <h4 style="color:#2c3e50;">Egresos Totales</h4>
+                            <h4 style="color:#7f8c8d; font-size: 0.9rem;">Costos Totales</h4>
                             <span id="costosTotales" style="color:#c0392b;">$0.00</span>
                         </div>
-                        <div style="background: #f8f9fa; margin-top: 10px; border-radius: 6px; padding: 10px;">
-                            <h4 style="color:#2c3e50; font-weight: bold;">UTILIDAD NETA</h4>
-                            <span id="rentabilidad" style="font-size: 1.4rem;">$0.00</span>
+                        <div
+                            style="background: #f8f9fa; border-radius: 4px; padding: 8px; border:none; margin-top: 5px;">
+                            <h4 style="color:#2c3e50; font-weight: bold; font-size: 0.85rem;">UTILIDAD</h4>
+                            <span id="rentabilidad" style="font-size: 1.1rem; font-weight:bold;">$0.00</span>
                         </div>
                     </div>
                 </section>
             </div>
 
-            <!-- DERECHA: TARJETAS DE LOTES -->
+            <!-- COLUMNA DERECHA: TARJETAS -->
             <div class="dashboard-cards-col">
-                <div style="margin-bottom: 10px;">
-                    <h2 style="font-size: 1.2rem; color: #2c3e50;">Detalle de Lotes</h2>
-                </div>
-
                 <div id="lotesContainer">
-                    <div class="card" style="text-align: center; padding: 3rem; color: #999;">
-                        <p>Cargando datos...</p>
+                    <div class="card" style="text-align: center; padding: 2rem; color: #999;">
+                        Cargando datos...
                     </div>
                 </div>
             </div>
-
         </div>
 
-        <!-- 3. GRÁFICOS Y SECUNDARIOS (ABAJO) -->
+        <!-- 3. GRÁFICOS Y OTROS -->
         <div class="dashboard-secondary-grid">
-
             <section class="card" id="alertasSection">
-                <h3>Alertas de Producción</h3>
+                <h3>Alertas</h3>
                 <ul id="alertasList">
-                    <li>Cargando alertas...</li>
+                    <li>Cargando...</li>
                 </ul>
             </section>
-
             <section class="card calendario-card">
                 <h3>Calendario</h3>
                 <div id="calendario-container"></div>
             </section>
-
             <section class="card">
-                <h2>Curva de Crecimiento</h2>
+                <h2>Curva Producción</h2>
                 <canvas id="produccionChart"></canvas>
             </section>
-
             <section class="card">
-                <h2>Distribución de Costos</h2>
+                <h2>Costos</h2>
                 <canvas id="costosPieChart"></canvas>
             </section>
-
             <section class="card">
-                <h2>Ingresos vs. Costos</h2>
+                <h2>Finanzas</h2>
                 <canvas id="ingresosCostosBarChart"></canvas>
             </section>
-
             <section class="card">
-                <h2>Consumo de Agua</h2>
+                <h2>Agua</h2>
                 <canvas id="aguaChart"></canvas>
             </section>
         </div>
-
     </main>
 
     <script src="app.js"></script>

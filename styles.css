@@ -856,3 +856,89 @@ body.login-page main {
     /* El grid gap ya maneja el espacio */
   }
 }
+
+/* --- NUEVO LAYOUT DASHBOARD (Mejorado) --- */
+
+.dashboard-filters {
+  background: #fff;
+  padding: 10px 15px;
+  /* Menos padding */
+  border-radius: var(--borde-radio);
+  border: 1px solid var(--color-borde);
+  margin-bottom: var(--espaciado-md);
+  /* Menos margen */
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  /* Sombra sutil */
+}
+
+.dashboard-filters label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+  margin-right: 4px;
+}
+
+.dashboard-filters select {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: #fafafa;
+  min-width: 140px;
+}
+
+/* Contenedor dividido 25% | 75% */
+.dashboard-split-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  /* Columna izq fija un poco más angosta */
+  gap: var(--espaciado-lg);
+  margin-bottom: var(--espaciado-lg);
+  align-items: start;
+}
+
+/* Columna Izquierda (Resumen) */
+.dashboard-summary-col .card {
+  height: auto;
+  /* Ajuste automático */
+  background: #fff;
+  border-left: 4px solid var(--color-primario);
+  padding: 15px;
+  /* Padding interno más compacto */
+}
+
+.stats-grid-vertical>div {
+  padding: 12px 0;
+  /* Menos espacio entre items */
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.stats-grid-vertical>div:last-child {
+  border-bottom: none;
+}
+
+/* Columna Derecha (Tarjetas de Lotes) */
+.dashboard-cards-col {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Grid de tarjetas dentro de la columna derecha */
+#lotesContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  /* Tarjetas responsivas */
+  gap: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .dashboard-split-layout {
+    grid-template-columns: 1fr;
+    /* Pila vertical en pantallas medianas */
+  }
+}

@@ -1,8 +1,18 @@
 window.API_URL = 'https://granja-vincwill-backend.onrender.com';
 
 // ==================================================
-// 1. CONFIGURACIÓN Y UTILIDADES GLOBALES
+// 1. CONFIGURACIÓN Y UTILIDADES
 // ==================================================
+
+// Helper para evitar crashes si un ID no existe en el HTML
+function safeText(elementId, text) {
+  const el = document.getElementById(elementId);
+  if (el) {
+    el.textContent = text;
+  } else {
+    console.warn(`Elemento no encontrado en DOM: ${elementId}`);
+  }
+}
 
 // --- LOGO ---
 async function cargarLogoSistema() {
@@ -11,7 +21,6 @@ async function cargarLogoSistema() {
   try {
     const configLocal = JSON.parse(localStorage.getItem('granjaConfig'));
     const aplicarLogo = (url) => document.querySelectorAll('.app-logo-img').forEach(img => img.src = url);
-
     if (configLocal && configLocal.logoUrl) aplicarLogo(configLocal.logoUrl);
 
     const token = localStorage.getItem('token');
@@ -24,22 +33,17 @@ async function cargarLogoSistema() {
   } catch (e) { console.error("Error cargando logo", e); }
 }
 
-// --- PERMISOS (RBAC) ---
 const PERMISOS = {
   admin: { acceso: ['*'], sidebar: ['operaciones', 'finanzas', 'admin'] },
-  empleado: {
-    acceso: ['index.html', 'granjas.html', 'login.html', 'galpones.html', 'lotes.html', 'salud.html', 'agua.html', 'seguimiento.html', 'inventarios.html'],
-    sidebar: ['operaciones']
-  },
+  empleado: { acceso: ['index.html', 'granjas.html', 'login.html', 'galpones.html', 'lotes.html', 'salud.html', 'agua.html', 'seguimiento.html', 'inventarios.html'], sidebar: ['operaciones'] },
   viewer: { acceso: ['index.html', 'granjas.html', 'login.html'], sidebar: [] }
 };
 
-// --- AYUDAS ---
 function getSelectedGranjaId() {
   try {
     const granja = JSON.parse(localStorage.getItem('selectedGranja'));
     if (granja && granja.id) return granja.id;
-  } catch (e) { console.error(e); }
+  } catch (e) { }
   const path = window.location.pathname.split('/').pop();
   if (path !== 'login.html' && path !== 'granjas.html') window.location.href = 'granjas.html';
   return null;
@@ -51,23 +55,14 @@ async function handleJsonResponse(res) {
     const text = await res.text();
     throw new Error(`HTTP ${res.status}: ${text}`);
   }
-  const contentType = res.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) return null;
   return await res.json();
 }
 
-// ==================================================
-// 2. AUTENTICACIÓN
-// ==================================================
-
+// --- AUTH ---
 async function login(e) {
   e.preventDefault();
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
-  const errorMessage = document.getElementById('errorMessage');
-
-  if (!email || !password) { if (errorMessage) errorMessage.textContent = 'Datos incompletos.'; return; }
-
   try {
     const res = await fetch(`${API_URL}/login`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -75,15 +70,14 @@ async function login(e) {
     });
     const text = await res.text();
     if (!res.ok) {
-      const errorData = text ? JSON.parse(text).error || text : 'Error';
-      if (errorMessage) errorMessage.textContent = `Error: ${errorData}`;
+      document.getElementById('errorMessage').textContent = JSON.parse(text).error || 'Error';
       return;
     }
     const data = JSON.parse(text);
     localStorage.setItem('token', data.token);
     localStorage.setItem('currentUser', JSON.stringify(data.user));
     window.location.href = 'granjas.html';
-  } catch (error) { if (errorMessage) errorMessage.textContent = 'Error de conexión.'; }
+  } catch (error) { document.getElementById('errorMessage').textContent = 'Error de conexión.'; }
 }
 
 function logout() {
@@ -111,7 +105,6 @@ async function checkAccess() {
     document.querySelector('.sidebar').style.display = 'none';
     throw new Error("Acceso denegado");
   }
-
   if (rol === 'viewer') {
     document.querySelectorAll('.form-desplegable-container, #toggleFormBtn, .btn-peligro, .btn-primario').forEach(el => {
       if (el.tagName === 'BUTTON' || el.classList.contains('form-desplegable-container')) el.style.display = 'none';
@@ -119,15 +112,10 @@ async function checkAccess() {
   }
 }
 
-// ==================================================
-// 3. UI, SIDEBAR Y MENÚS
-// ==================================================
-
 function filtrarMenuPorRol() {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   if (!currentUser) return;
   const reglas = PERMISOS[currentUser.role];
-
   if (reglas && !reglas.acceso.includes('*')) {
     document.querySelectorAll('.nav-group').forEach(grupo => {
       const titulo = grupo.querySelector('.nav-category-title');
@@ -147,23 +135,15 @@ function initializeUserProfile() {
   const currentGranja = JSON.parse(localStorage.getItem('selectedGranja'));
 
   if (!userBtn || !currentUser) return;
-
   const nombre = currentUser.name || 'Usuario';
-  const inicial = nombre.charAt(0).toUpperCase();
-
-  const initialsEls = [document.getElementById('userInitials'), document.getElementById('dropdownInitials')];
-  initialsEls.forEach(el => { if (el) el.textContent = inicial; });
-
-  if (document.getElementById('dropdownName')) document.getElementById('dropdownName').textContent = nombre;
-  if (document.getElementById('dropdownBranch') && currentGranja) document.getElementById('dropdownBranch').textContent = currentGranja.nombre;
+  safeText('userInitials', nombre.charAt(0).toUpperCase());
+  safeText('dropdownInitials', nombre.charAt(0).toUpperCase());
+  safeText('dropdownName', nombre);
+  if (currentGranja) safeText('dropdownBranch', currentGranja.nombre);
 
   userBtn.addEventListener('click', (e) => { e.stopPropagation(); dropdown.classList.toggle('is-active'); });
   document.addEventListener('click', (e) => { if (!userBtn.contains(e.target)) dropdown.classList.remove('is-active'); });
-
-  if (changeBranchBtn) changeBranchBtn.addEventListener('click', () => {
-    localStorage.removeItem('selectedGranja');
-    window.location.href = 'granjas.html';
-  });
+  if (changeBranchBtn) changeBranchBtn.addEventListener('click', () => { localStorage.removeItem('selectedGranja'); window.location.href = 'granjas.html'; });
 }
 
 function initializeSidebar() {
@@ -173,39 +153,18 @@ function initializeSidebar() {
       if (target) target.classList.toggle('is-collapsed');
     });
   });
-
-  const path = window.location.pathname.split('/').pop();
-  try {
-    let activeLink;
-    if (path === '' || path === 'index.html') activeLink = document.querySelector(`.sidebar nav a[href="index.html"]`);
-    else activeLink = document.querySelector(`.sidebar nav a[href="${path}"]`);
-
-    if (activeLink) {
-      activeLink.classList.add('active');
-      const parentContainer = activeLink.closest('.nav-links-container');
-      if (parentContainer) parentContainer.classList.remove('is-collapsed');
-    }
-  } catch (e) { }
 }
 
 function setupMobileMenu() {
   const header = document.querySelector('header');
   if (!header || document.getElementById('mobileMenuBtn')) return;
-
   const btn = document.createElement('button');
   btn.id = 'mobileMenuBtn'; btn.className = 'mobile-menu-btn'; btn.innerHTML = '☰';
   header.insertBefore(btn, header.firstChild);
-
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    document.querySelector('.sidebar').classList.toggle('is-mobile-open');
-  });
-
+  btn.addEventListener('click', (e) => { e.stopPropagation(); document.querySelector('.sidebar').classList.toggle('is-mobile-open'); });
   document.addEventListener('click', (e) => {
     const sb = document.querySelector('.sidebar');
-    if (sb && sb.classList.contains('is-mobile-open') && !sb.contains(e.target) && !btn.contains(e.target)) {
-      sb.classList.remove('is-mobile-open');
-    }
+    if (sb && sb.classList.contains('is-mobile-open') && !sb.contains(e.target) && !btn.contains(e.target)) sb.classList.remove('is-mobile-open');
   });
 }
 
@@ -213,7 +172,6 @@ function setupMobileMenu() {
 // 4. LÓGICA DEL DASHBOARD (FILTRABLE Y KPIs)
 // ==================================================
 
-// Variables globales de datos para no recargar en cada filtro
 let dashboardData = {};
 
 async function cargarDatosDashboard() {
@@ -239,7 +197,7 @@ async function cargarDatosDashboard() {
     // Renderizar inicial
     renderizarDashboard();
 
-    // Calendario y gráficos secundarios (una sola vez)
+    // Cargar gráficos solo después de que los datos estén listos
     mostrarCalendario();
     mostrarGraficoAgua();
     mostrarGraficosDashboard();
@@ -247,7 +205,10 @@ async function cargarDatosDashboard() {
     mostrarIngresosCostosBarChart();
     mostrarAlertasProduccion();
 
-  } catch (error) { console.error('Error cargando datos dashboard:', error); }
+  } catch (error) {
+    console.error('Error cargando datos dashboard:', error);
+    // Si falla, intentamos renderizar lo que haya o mostrar error en pantalla
+  }
 }
 
 function poblarFiltroLotes(lotes) {
@@ -258,9 +219,7 @@ function poblarFiltroLotes(lotes) {
   selector.innerHTML = '<option value="">Todos los Lotes</option>';
 
   if (lotes && lotes.length > 0) {
-    // Ordenar por fecha reciente
     lotes.sort((a, b) => new Date(b.fechaIngreso) - new Date(a.fechaIngreso));
-
     lotes.forEach(l => {
       const opt = document.createElement('option');
       opt.value = l.id;
@@ -268,14 +227,13 @@ function poblarFiltroLotes(lotes) {
       selector.appendChild(opt);
     });
   }
-
   if (valorPrevio) selector.value = valorPrevio;
 }
 
 function renderizarDashboard() {
   const { lotes, salud, costos, seguimiento, ventas, inventario } = dashboardData;
 
-  // Si no hay datos cargados aún, salimos
+  // Si no hay datos cargados aún, salimos sin error
   if (!lotes) return;
 
   const filtroEstado = document.getElementById('dashEstado') ? document.getElementById('dashEstado').value : 'activos';
@@ -283,16 +241,15 @@ function renderizarDashboard() {
 
   let lotesFiltrados = lotes || [];
 
-  // 1. Filtrar Lotes
+  // 1. Filtrar
   if (filtroLoteId) {
     lotesFiltrados = lotesFiltrados.filter(l => l.id == filtroLoteId);
   } else {
     if (filtroEstado === 'activos') lotesFiltrados = lotesFiltrados.filter(l => l.estado === 'disponible' || l.estado === 'ocupado');
     else if (filtroEstado === 'vendido') lotesFiltrados = lotesFiltrados.filter(l => l.estado === 'vendido' || l.estado === 'archivado');
-    // 'todos' no filtra por estado
   }
 
-  // 2. Variables de Acumulación Global
+  // 2. Variables Globales
   let totalCostosGlobal = 0;
   let totalIngresosGlobal = 0;
   let totalVivosGlobal = 0;
@@ -306,15 +263,13 @@ function renderizarDashboard() {
     if (lotesContainer) lotesContainer.innerHTML = '<div class="card" style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #7f8c8d;">No se encontraron lotes con los filtros seleccionados.</div>';
   }
 
-  // 3. Procesar cada Lote
+  // 3. Procesar
   lotesFiltrados.forEach(lote => {
-    // A. Cálculos básicos
     const fechaIngreso = new Date(lote.fechaIngreso);
     const hoy = new Date();
     const diasEdad = Math.floor((hoy - fechaIngreso) / (1000 * 60 * 60 * 24)) || 1;
     const semanasEdad = Math.ceil(diasEdad / 7);
 
-    // B. Mortalidad
     const muertes = salud ? salud.filter(s => s.loteId === lote.id && s.tipo.toLowerCase() === 'mortalidad').reduce((sum, s) => sum + s.cantidad, 0) : 0;
     const iniciales = lote.cantidadInicial || lote.cantidad;
     const vivos = iniciales - muertes;
@@ -325,31 +280,22 @@ function renderizarDashboard() {
 
     const viabilidad = (iniciales > 0) ? ((vivos / iniciales) * 100) : 0;
 
-    // C. Ventas (Ingresos)
     const ventasLote = ventas ? ventas.filter(v => v.loteId === lote.id) : [];
     const ingresosLote = ventasLote.reduce((sum, v) => sum + (v.peso * v.precio), 0);
     totalIngresosGlobal += ingresosLote;
 
-    // D. Seguimiento (Peso y Alimento)
     const regsLote = seguimiento ? seguimiento.filter(s => s.loteId === lote.id) : [];
     regsLote.sort((a, b) => new Date(b.fecha || b.fechaRegistro) - new Date(a.fecha || a.fechaRegistro));
 
     const pesoActualLb = regsLote.length > 0 ? regsLote[0].peso : lote.pesoInicial;
     const consumoTotalLote = regsLote.reduce((sum, r) => sum + (r.consumo || 0), 0);
 
-    // E. Costos (Lógica Financiera Detallada)
-
-    // 1. Inversión Inicial
     const costoInicial = lote.costoInicial || 0;
-
-    // 2. Gastos Directos (Tabla Costos)
     const gastosDirectos = costos ? costos.filter(c => c.loteId === lote.id).reduce((sum, c) => sum + c.monto, 0) : 0;
 
-    // 3. Costo Alimento (Calculado)
     let costoAlimentoLote = 0;
     regsLote.forEach(r => {
       let precioUnitario = 0;
-      // Prioridad: Costo histórico guardado -> Costo actual inventario
       if (r.Inventario && r.Inventario.costo) precioUnitario = r.Inventario.costo;
       else if (r.alimentoId && inventario) {
         const item = inventario.find(i => i.id === r.alimentoId);
@@ -358,7 +304,6 @@ function renderizarDashboard() {
       costoAlimentoLote += (r.consumo || 0) * precioUnitario;
     });
 
-    // 4. Costo Sanitario (Calculado)
     const saludLote = salud ? salud.filter(s => s.loteId === lote.id && (s.tipo === 'Vacunación' || s.tipo === 'Tratamiento')) : [];
     let costoSanitarioLote = 0;
     saludLote.forEach(s => {
@@ -371,26 +316,20 @@ function renderizarDashboard() {
     const costoTotalLote = costoInicial + gastosDirectos + costoAlimentoLote + costoSanitarioLote;
     totalCostosGlobal += costoTotalLote;
 
-    // F. KPIs Avanzados
     const biomasaLbs = vivos * pesoActualLb;
     const costoPorLb = biomasaLbs > 0 ? (costoTotalLote / biomasaLbs).toFixed(2) : '0.00';
-    // Conversión estimada (Consumo Total / Biomasa Total Actual)
     const conversion = biomasaLbs > 0 ? (consumoTotalLote / biomasaLbs).toFixed(2) : '0.00';
-
-    // EPEF
     const pesoKg = pesoActualLb / 2.20462;
     let epef = 0;
     if (diasEdad > 0 && parseFloat(conversion) > 0) {
       epef = ((viabilidad * pesoKg) / (diasEdad * parseFloat(conversion))) * 100;
     }
 
-    // G. Renderizar Tarjeta
     if (lotesContainer) {
       const card = document.createElement('div');
       card.className = 'card';
-      // Semáforo EPEF
-      const colorEstado = epef > 300 ? '#27ae60' : (epef > 220 ? '#f1c40f' : '#e74c3c');
-
+      const utilidadLote = ingresosLote - costoTotalLote;
+      const colorEstado = utilidadLote >= 0 ? '#27ae60' : '#e74c3c';
       card.style.borderTop = `5px solid ${colorEstado}`;
       card.style.position = 'relative';
 
@@ -399,7 +338,6 @@ function renderizarDashboard() {
                     <h3 style="margin:0; color:#2c3e50; font-size:1.1rem;">${lote.loteId}</h3>
                     <span class="badge" style="background:#ecf0f1; color:#555; padding:2px 6px; font-size:0.75rem;">Semana ${semanasEdad}</span>
                 </div>
-                
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:10px; font-size:0.9rem;">
                     <div style="background:#f8f9fa; padding:5px; text-align:center;">
                         <small style="color:#7f8c8d;">Vivos</small><br><strong>${vivos}</strong>
@@ -408,7 +346,6 @@ function renderizarDashboard() {
                         <small style="color:#7f8c8d;">Peso</small><br><strong>${parseFloat(pesoActualLb).toFixed(2)} lb</strong>
                     </div>
                 </div>
-
                 <div style="font-size:0.85rem; color:#555; margin-bottom:10px;">
                     <div style="display:flex; justify-content:space-between;"><span>Inversión:</span> <span>$${(costoInicial + gastosDirectos).toFixed(0)}</span></div>
                     <div style="display:flex; justify-content:space-between;"><span>Alimento:</span> <span>$${costoAlimentoLote.toFixed(0)}</span></div>
@@ -416,12 +353,10 @@ function renderizarDashboard() {
                         <span>TOTAL:</span> <span>$${costoTotalLote.toFixed(2)}</span>
                     </div>
                 </div>
-
                 <div style="background:${colorEstado}15; padding:8px; border-radius:4px; text-align:center; border: 1px solid ${colorEstado}30;">
                      <small style="color:${colorEstado}; font-weight:bold;">COSTO / LB</small><br>
                      <strong style="font-size:1.2rem; color:#2c3e50;">$${costoPorLb}</strong>
                 </div>
-                
                 <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:0.8rem; color:#7f8c8d;">
                     <div>CA: <strong>${conversion}</strong></div>
                     <div>EPEF: <strong style="color:${colorEstado}">${epef.toFixed(0)}</strong></div>
@@ -431,29 +366,24 @@ function renderizarDashboard() {
     }
   });
 
-  // --- ACTUALIZAR RESUMEN IZQUIERDO (GLOBAL) ---
+  // --- ACTUALIZAR RESUMEN IZQUIERDO (Usando safeText para evitar crashes) ---
   const utilidadGlobal = totalIngresosGlobal - totalCostosGlobal;
   const mortalidadPromedio = totalIniciadosGlobal > 0 ? ((totalMuertesGlobal / totalIniciadosGlobal) * 100).toFixed(2) : '0.00';
 
-  if (document.getElementById('costosTotales')) {
-    document.getElementById('costosTotales').textContent = `$${totalCostosGlobal.toFixed(2)}`;
-    document.getElementById('ingresosTotales').textContent = `$${totalIngresosGlobal.toFixed(2)}`;
+  safeText('costosTotales', `$${totalCostosGlobal.toFixed(2)}`);
+  safeText('ingresosTotales', `$${totalIngresosGlobal.toFixed(2)}`);
+  safeText('rentabilidad', `$${utilidadGlobal.toFixed(2)}`);
 
-    const rentEl = document.getElementById('rentabilidad');
-    rentEl.textContent = `$${utilidadGlobal.toFixed(2)}`;
-    rentEl.style.color = utilidadGlobal >= 0 ? '#27ae60' : '#e74c3c';
+  const rentEl = document.getElementById('rentabilidad');
+  if (rentEl) rentEl.style.color = utilidadGlobal >= 0 ? '#27ae60' : '#e74c3c';
 
-    document.getElementById('totalVivos').textContent = totalVivosGlobal;
-    document.getElementById('mortalidadPromedio').textContent = `${mortalidadPromedio}%`;
-
-    // Ocultar placeholders que no aplican a la suma global
-    document.getElementById('pesoPromedio').textContent = "-";
-    document.getElementById('conversionPromedio').textContent = "-";
-  }
+  safeText('totalVivos', totalVivosGlobal);
+  safeText('mortalidadPromedio', `${mortalidadPromedio}%`);
+  safeText('pesoPromedio', "-");
+  safeText('conversionPromedio', "-");
 }
 
-
-// --- GRÁFICOS Y OTROS (Sin Cambios) ---
+// --- GRÁFICOS Y OTROS (Helpers Blindados) ---
 async function mostrarCalendario() {
   const granjaId = getSelectedGranjaId(); if (!granjaId) return;
   try {
@@ -468,11 +398,7 @@ async function mostrarCalendario() {
         inline: true, locale: "es", enable: [{ from: "today", to: "today" }, ...eventosMapa.map(e => e.date)],
         onDayCreate: function (dObj, dStr, fp, dayElem) {
           const fechaStr = dayElem.dateObj.toISOString().split('T')[0]; const eventosDelDia = eventosMapa.filter(e => e.date === fechaStr);
-          if (eventosDelDia.length > 0) { dayElem.classList.remove('evento-retiro', 'evento-pendiente'); dayElem.classList.add(eventosDelDia.some(e => e.tipo === 'retiro') ? 'evento-retiro' : 'evento-pendiente'); dayElem.title = eventosDelDia.map(e => e.title).join('\n'); }
-        },
-        onChange: function (selectedDates, dateStr) {
-          const eventosHoy = eventosMapa.filter(e => e.date === dateStr);
-          if (eventosHoy.length > 0) alert(`📅 ${dateStr}:\n\n${eventosHoy.map(e => `• ${e.title}`).join('\n')}`);
+          if (eventosDelDia.length > 0) { dayElem.classList.add(eventosDelDia.some(e => e.tipo === 'retiro') ? 'evento-retiro' : 'evento-pendiente'); dayElem.title = eventosDelDia.map(e => e.title).join('\n'); }
         }
       });
       if (!document.getElementById('estilos-calendario-vincwill')) { const style = document.createElement('style'); style.id = 'estilos-calendario-vincwill'; style.innerHTML = `.flatpickr-day.evento-retiro { background: #e74c3c !important; color: white !important; } .flatpickr-day.evento-pendiente { background: #f39c12 !important; color: white !important; }`; document.head.appendChild(style); }
@@ -551,10 +477,8 @@ document.addEventListener('click', function (e) {
     const rows = Array.from(tbody.querySelectorAll('tr'));
     const index = Array.from(th.parentNode.children).indexOf(th);
     const isAsc = !th.classList.contains('asc');
-
     table.querySelectorAll('th').forEach(h => h.classList.remove('asc', 'desc'));
     th.classList.toggle('asc', isAsc); th.classList.toggle('desc', !isAsc);
-
     rows.sort((rowA, rowB) => {
       const cellA = rowA.children[index]?.innerText.trim() || '';
       const cellB = rowB.children[index]?.innerText.trim() || '';
@@ -563,7 +487,6 @@ document.addEventListener('click', function (e) {
     tbody.append(...rows);
   }
 });
-
 document.addEventListener('input', function (e) {
   if (e.target.matches('.table-search')) {
     const input = e.target;
@@ -579,27 +502,20 @@ document.addEventListener('input', function (e) {
     }
   }
 });
-
 function compareCells(a, b, isAsc) {
   const clean = (val) => val.replace(/[$,]/g, '').trim();
   const valA = clean(a); const valB = clean(b);
-
   const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
-  const matchA = valA.match(dateRegex);
-  const matchB = valB.match(dateRegex);
-
+  const matchA = valA.match(dateRegex); const matchB = valB.match(dateRegex);
   if (matchA && matchB) {
     const dateA = new Date(matchA[3], matchA[2] - 1, matchA[1]);
     const dateB = new Date(matchB[3], matchB[2] - 1, matchB[1]);
     return isAsc ? dateA - dateB : dateB - dateA;
   }
-
   if (/^[0-9.,$]+$/.test(valA) && /^[0-9.,$]+$/.test(valB)) {
-    const numA = parseFloat(valA);
-    const numB = parseFloat(valB);
+    const numA = parseFloat(valA); const numB = parseFloat(valB);
     if (!isNaN(numA) && !isNaN(numB)) return isAsc ? numA - numB : numB - numA;
   }
-
   return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
 }
 
@@ -609,19 +525,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (path === 'login.html') { const lf = document.getElementById('loginForm'); if (lf) lf.onsubmit = login; return; }
   checkAccess();
   if (path !== 'login.html' && path !== 'granjas.html') { initializeUserProfile(); initializeSidebar(); setupMobileMenu(); cargarLogoSistema(); filtrarMenuPorRol(); }
-
   if (path === 'index.html') {
     const granja = JSON.parse(localStorage.getItem('selectedGranja'));
     if (granja) document.querySelector('header h1').textContent = `Dashboard (${granja.nombre})`;
-
     // Cargar datos
     cargarDatosDashboard();
-
     // Listeners de Filtros
     if (document.getElementById('dashEstado')) document.getElementById('dashEstado').addEventListener('change', renderizarDashboard);
     if (document.getElementById('dashLote')) document.getElementById('dashLote').addEventListener('change', renderizarDashboard);
     if (document.getElementById('btnRefreshDash')) document.getElementById('btnRefreshDash').addEventListener('click', cargarDatosDashboard);
   }
 });
-
 window.addEventListener('pageshow', (event) => { if (event.persisted) window.location.reload(); });
