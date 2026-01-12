@@ -635,33 +635,21 @@ function compareCells(a, b, isAsc) {
 // --- INIT ---
 document.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname.split('/').pop();
-
-  if (path === 'login.html') {
-    const lf = document.getElementById('loginForm');
-    if (lf) lf.onsubmit = login;
-    return;
-  }
-
+  if (path === 'login.html') { const lf = document.getElementById('loginForm'); if (lf) lf.onsubmit = login; return; }
   checkAccess();
-
-  if (path !== 'login.html' && path !== 'granjas.html') {
-    initializeUserProfile();
-    initializeSidebar();
-    setupMobileMenu();
-    cargarLogoSistema();
-    filtrarMenuPorRol();
-  }
+  if (path !== 'login.html' && path !== 'granjas.html') { initializeUserProfile(); initializeSidebar(); setupMobileMenu(); cargarLogoSistema(); filtrarMenuPorRol(); }
 
   if (path === 'index.html') {
     const granja = JSON.parse(localStorage.getItem('selectedGranja'));
     if (granja) document.querySelector('header h1').textContent = `Dashboard (${granja.nombre})`;
-    actualizarDashboard();
-    mostrarCalendario();
-    mostrarGraficoAgua();
-    if (typeof mostrarGraficosDashboard === 'function') mostrarGraficosDashboard();
-    if (typeof mostrarCostosPieChart === 'function') mostrarCostosPieChart();
-    if (typeof mostrarIngresosCostosBarChart === 'function') mostrarIngresosCostosBarChart();
-    if (typeof mostrarAlertasProduccion === 'function') mostrarAlertasProduccion();
+
+    // Cargar datos
+    cargarDatosDashboard();
+
+    // Listeners de Filtros
+    document.getElementById('dashEstado').addEventListener('change', renderizarDashboard);
+    document.getElementById('dashLote').addEventListener('change', renderizarDashboard);
+    document.getElementById('btnRefreshDash').addEventListener('click', cargarDatosDashboard);
   }
 });
 
