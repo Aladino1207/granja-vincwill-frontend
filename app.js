@@ -11,7 +11,6 @@ async function cargarLogoSistema() {
   try {
     const configLocal = JSON.parse(localStorage.getItem('granjaConfig'));
     const aplicarLogo = (url) => document.querySelectorAll('.app-logo-img').forEach(img => img.src = url);
-
     if (configLocal && configLocal.logoUrl) aplicarLogo(configLocal.logoUrl);
 
     const token = localStorage.getItem('token');
@@ -212,7 +211,7 @@ function setupMobileMenu() {
 }
 
 // ==================================================
-// 4. LÓGICA DEL DASHBOARD (GRÁFICOS Y DATOS)
+// 4. LÓGICA DEL DASHBOARD (KPIs AVANZADOS Y COSTOS)
 // ==================================================
 
 async function actualizarDashboard() {
@@ -252,7 +251,7 @@ async function actualizarDashboard() {
         // A. DATOS BÁSICOS & TIEMPO
         const fechaIngreso = new Date(lote.fechaIngreso);
         const hoy = new Date();
-        const diasEdad = Math.floor((hoy - fechaIngreso) / (1000 * 60 * 60 * 24)) || 1; // Evitar división por 0
+        const diasEdad = Math.floor((hoy - fechaIngreso) / (1000 * 60 * 60 * 24)) || 1;
         const semanasEdad = Math.ceil(diasEdad / 7);
 
         // B. MORTALIDAD & VIABILIDAD
@@ -264,29 +263,28 @@ async function actualizarDashboard() {
 
         // C. PESO Y CONSUMO (SEGUIMIENTO)
         const regsLote = seguimiento ? seguimiento.filter(s => s.loteId === lote.id) : [];
-        // Ordenar por fecha descendente para obtener el último peso registrado
         regsLote.sort((a, b) => new Date(b.fecha || b.fechaRegistro) - new Date(a.fecha || a.fechaRegistro));
 
-        const pesoActualLb = regsLote.length > 0 ? regsLote[0].peso : lote.pesoInicial; // Peso actual en LIBRAS
-        const consumoTotalLote = regsLote.reduce((sum, r) => sum + (r.consumo || 0), 0); // Consumo acumulado (unidades base)
+        const pesoActualLb = regsLote.length > 0 ? regsLote[0].peso : lote.pesoInicial;
+        const consumoTotalLote = regsLote.reduce((sum, r) => sum + (r.consumo || 0), 0);
 
         // D. FINANZAS DEL LOTE (CÁLCULO DEL COSTO REAL)
 
         // 1. Inversión Inicial (Costo de los pollitos)
         const costoInicial = lote.costoInicial || 0;
 
-        // 2. Gastos Operativos Directos (Tabla Costos: Gas, Viruta, etc asignados al lote)
+        // 2. Gastos Operativos Directos (Tabla Costos)
         const gastosDirectos = costos ? costos.filter(c => c.loteId === lote.id).reduce((sum, c) => sum + c.monto, 0) : 0;
 
-        // 3. Costo Alimentación (El Gigante)
+        // 3. Costo Alimentación (Calculado dinámicamente)
         let costoAlimentoLote = 0;
         regsLote.forEach(r => {
           let precioUnitario = 0;
-          // Si el registro guardó el costo (futuro), o lo sacamos del inventario actual
+          // Si el backend envía el costo histórico (ideal)
           if (r.Inventario && r.Inventario.costo) {
             precioUnitario = r.Inventario.costo;
           } else if (r.alimentoId && inventario) {
-            // Fallback: buscar precio actual en inventario si el histórico no existe
+            // Fallback: usar costo actual del inventario
             const item = inventario.find(i => i.id === r.alimentoId);
             if (item) precioUnitario = item.costo;
           }
@@ -308,28 +306,11 @@ async function actualizarDashboard() {
         totalCostosGlobal += costoTotalLote;
 
         // E. KPIs AVANZADOS
-
-        // 1. Biomasa Total (Carne en pie)
         const biomasaLbs = vivos * pesoActualLb;
-
-        // 2. Costo de Producción (Break-even Point)
-        // ¿Cuánto me cuesta producir 1 libra de carne hoy?
         const costoPorLb = biomasaLbs > 0 ? (costoTotalLote / biomasaLbs).toFixed(2) : '0.00';
-
-        // 3. Conversión Alimenticia (CA)
-        // Cuánto alimento comieron para producir esa carne
-        // Nota: Si el consumo está en Quintales, convertir a Libras para que la división sea Lb/Lb
-        // Asumimos que consumoTotalLote está en la unidad base del inventario. Si es qq, multiplicamos por 100.
-        // *Mejora futura: Estandarizar unidad de consumo. Por ahora asumimos ratio directo si es Lb o Kg.*
-        // Para simplificar visualización:
         const conversion = biomasaLbs > 0 ? (consumoTotalLote / biomasaLbs).toFixed(2) : '0.00';
-        // Nota: Este cálculo de CA es aproximado si las unidades de alimento no son libras. 
-
-        // 4. EPEF (European Production Efficiency Factor)
-        // Fórmula: (Viabilidad % * Peso kg * 100) / (Edad dias * CA)
         const pesoKg = pesoActualLb / 2.20462;
         let epef = 0;
-        // Validación anti-división por cero
         if (diasEdad > 0 && parseFloat(conversion) > 0) {
           epef = ((viabilidad * pesoKg) / (diasEdad * parseFloat(conversion))) * 100;
         }
@@ -338,7 +319,6 @@ async function actualizarDashboard() {
         if (lotesContainer) {
           const card = document.createElement('div');
           card.className = 'card';
-          // Borde superior de color según eficiencia (Semáforo EPEF)
           const colorEstado = epef > 300 ? '#27ae60' : (epef > 220 ? '#f1c40f' : '#e74c3c');
           card.style.borderTop = `5px solid ${colorEstado}`;
           card.style.position = 'relative';
@@ -396,7 +376,6 @@ async function actualizarDashboard() {
     }
 
     // --- KPI GLOBALES ACTUALIZADOS ---
-    // Actualizamos los contadores superiores con la suma real de todos los lotes
     if (document.getElementById('costosTotales')) {
       document.getElementById('costosTotales').textContent = `$${totalCostosGlobal.toFixed(2)}`;
       document.getElementById('ingresosTotales').textContent = `$${totalIngresosGlobal.toFixed(2)}`;
@@ -406,7 +385,6 @@ async function actualizarDashboard() {
       rentEl.textContent = `$${utilidadGlobal.toFixed(2)}`;
       rentEl.style.color = utilidadGlobal >= 0 ? '#27ae60' : '#e74c3c';
 
-      // Datos zootécnicos globales
       document.getElementById('totalVivos').textContent = totalVivosGlobal;
     }
 
@@ -446,7 +424,6 @@ async function mostrarCalendario() {
           if (eventosHoy.length > 0) alert(`📅 ${dateStr}:\n\n${eventosHoy.map(e => `• ${e.title}`).join('\n')}`);
         }
       });
-      // Inyección CSS
       if (!document.getElementById('estilos-calendario-vincwill')) {
         const style = document.createElement('style');
         style.id = 'estilos-calendario-vincwill';
@@ -547,11 +524,7 @@ function mostrarAlertasProduccion() {
     });
 }
 
-// ==================================================
-// 🔥 5. SISTEMA AUTOMÁTICO DE TABLAS (ORDENAR Y FILTRAR)
-// ==================================================
-
-// Ordenar al hacer clic en TH
+// --- TABLA ORDEN & FILTRO ---
 document.addEventListener('click', function (e) {
   const th = e.target.closest('table.tabla-moderna th');
   if (th) {
@@ -574,7 +547,6 @@ document.addEventListener('click', function (e) {
   }
 });
 
-// Filtrar al escribir en .table-search
 document.addEventListener('input', function (e) {
   if (e.target.matches('.table-search')) {
     const input = e.target;
@@ -591,41 +563,30 @@ document.addEventListener('input', function (e) {
   }
 });
 
-// --- FUNCIÓN CORREGIDA PARA FECHAS ESTRICTAS (DD/MM/AAAA) ---
 function compareCells(a, b, isAsc) {
   const clean = (val) => val.replace(/[$,]/g, '').trim();
   const valA = clean(a); const valB = clean(b);
 
-  // 1. DETECCIÓN MANUAL DE FECHA (DD/MM/YYYY)
-  // Evitamos new Date(string) porque confunde Mes con Día
-  const partsA = valA.split('/');
-  const partsB = valB.split('/');
+  const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+  const matchA = valA.match(dateRegex);
+  const matchB = valB.match(dateRegex);
 
-  // Si tiene 3 partes y el último parece un año (4 dígitos)
-  if (partsA.length === 3 && partsB.length === 3 && partsA[2].length === 4 && partsB[2].length === 4) {
-    // Convertimos a entero YYYYMMDD para comparar matemáticamente
-    // Ejemplo: 25/04/2024 -> 20240425
-    const numA = parseInt(partsA[2] + partsA[1].padStart(2, '0') + partsA[0].padStart(2, '0'));
-    const numB = parseInt(partsB[2] + partsB[1].padStart(2, '0') + partsB[0].padStart(2, '0'));
-    return isAsc ? numA - numB : numB - numA;
+  if (matchA && matchB) {
+    const dateA = new Date(matchA[3], matchA[2] - 1, matchA[1]);
+    const dateB = new Date(matchB[3], matchB[2] - 1, matchB[1]);
+    return isAsc ? dateA - dateB : dateB - dateA;
   }
 
-  // 2. Números
-  const numA = parseFloat(valA);
-  const numB = parseFloat(valB);
-  // Solo si es un número válido y NO parece una fecha
-  if (!isNaN(numA) && !isNaN(numB) && /^[0-9.,$]+$/.test(valA) && /^[0-9.,$]+$/.test(valB)) {
-    return isAsc ? numA - numB : numB - numA;
+  if (/^[0-9.,$]+$/.test(valA) && /^[0-9.,$]+$/.test(valB)) {
+    const numA = parseFloat(valA);
+    const numB = parseFloat(valB);
+    if (!isNaN(numA) && !isNaN(numB)) return isAsc ? numA - numB : numB - numA;
   }
 
-  // 3. Texto
   return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
 }
 
-// ==================================================
-// 6. INICIALIZACIÓN
-// ==================================================
-
+// --- INIT ---
 document.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname.split('/').pop();
 
@@ -658,5 +619,4 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Fix para caché de navegador en botón atrás
 window.addEventListener('pageshow', (event) => { if (event.persisted) window.location.reload(); });
