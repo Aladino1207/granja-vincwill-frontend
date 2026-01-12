@@ -109,7 +109,7 @@
                 <label for="dashLote">Lote:</label>
                 <select id="dashLote">
                     <option value="">Todos</option>
-                    <!-- JS -->
+                    <!-- JS llena esto -->
                 </select>
             </div>
             <button id="btnRefreshDash" class="btn btn-sm btn-secundario">🔄 Actualizar</button>
@@ -146,6 +146,9 @@
                             <h4 style="color:#2c3e50; font-weight: bold; font-size: 0.85rem;">UTILIDAD</h4>
                             <span id="rentabilidad" style="font-size: 1.1rem; font-weight:bold;">$0.00</span>
                         </div>
+                        <!-- Placeholders ocultos para evitar errores si app.js los busca -->
+                        <span id="pesoPromedio" style="display:none;"></span>
+                        <span id="conversionPromedio" style="display:none;"></span>
                     </div>
                 </section>
             </div>

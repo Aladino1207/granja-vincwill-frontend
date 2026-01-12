@@ -788,91 +788,15 @@ body.login-page main {
 
 .dashboard-filters {
   background: white;
-  padding: 15px;
-  border-radius: var(--borde-radio);
-  border: 1px solid var(--color-borde);
-  margin-bottom: var(--espaciado-lg);
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.dashboard-filters label {
-  font-size: 0.85rem;
-  font-weight: bold;
-  margin-right: 5px;
-}
-
-.dashboard-filters select {
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  min-width: 150px;
-}
-
-/* Contenedor dividido 25% | 75% */
-.dashboard-split-layout {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  /* 300px fijo izq, el resto derecha */
-  gap: var(--espaciado-lg);
-  margin-bottom: var(--espaciado-lg);
-  align-items: start;
-  /* Para que no se estiren */
-}
-
-/* Columna Izquierda (Resumen) */
-.dashboard-summary-col .card {
-  height: 100%;
-  /* Llenar altura */
-  background: #fdfdfd;
-  border-left: 4px solid var(--color-primario);
-}
-
-/* Columna Derecha (Tarjetas de Lotes) */
-.dashboard-cards-col {
-  display: flex;
-  flex-direction: column;
-}
-
-/* Grid de tarjetas dentro de la columna derecha */
-#lotesContainer {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  /* Responsive automático */
-  gap: 1.5rem;
-}
-
-/* Ajuste Responsive para Tablets/Móviles */
-@media (max-width: 1100px) {
-  .dashboard-split-layout {
-    grid-template-columns: 1fr;
-    /* Una sola columna */
-  }
-
-  .dashboard-summary-col {
-    margin-bottom: 0;
-    /* El grid gap ya maneja el espacio */
-  }
-}
-
-/* --- NUEVO LAYOUT DASHBOARD (Mejorado) --- */
-
-.dashboard-filters {
-  background: #fff;
   padding: 10px 15px;
-  /* Menos padding */
   border-radius: var(--borde-radio);
   border: 1px solid var(--color-borde);
   margin-bottom: var(--espaciado-md);
-  /* Menos margen */
   display: flex;
   gap: 15px;
   align-items: center;
   flex-wrap: wrap;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-  /* Sombra sutil */
 }
 
 .dashboard-filters label {
@@ -891,11 +815,11 @@ body.login-page main {
   min-width: 140px;
 }
 
-/* Contenedor dividido 25% | 75% */
+/* Contenedor dividido: Resumen (Izquierda) | Tarjetas (Derecha) */
 .dashboard-split-layout {
   display: grid;
+  /* 280px fijo a la izquierda, el resto (1fr) a la derecha */
   grid-template-columns: 280px 1fr;
-  /* Columna izq fija un poco más angosta */
   gap: var(--espaciado-lg);
   margin-bottom: var(--espaciado-lg);
   align-items: start;
@@ -904,16 +828,13 @@ body.login-page main {
 /* Columna Izquierda (Resumen) */
 .dashboard-summary-col .card {
   height: auto;
-  /* Ajuste automático */
   background: #fff;
   border-left: 4px solid var(--color-primario);
   padding: 15px;
-  /* Padding interno más compacto */
 }
 
 .stats-grid-vertical>div {
   padding: 12px 0;
-  /* Menos espacio entre items */
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -930,15 +851,14 @@ body.login-page main {
 /* Grid de tarjetas dentro de la columna derecha */
 #lotesContainer {
   display: grid;
+  /* Tarjetas responsivas que se ajustan */
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  /* Tarjetas responsivas */
   gap: 1rem;
 }
 
-/* Responsive */
+/* Responsive: En pantallas medianas y pequeñas, se apilan */
 @media (max-width: 1100px) {
   .dashboard-split-layout {
     grid-template-columns: 1fr;
-    /* Pila vertical en pantallas medianas */
   }
 }

@@ -1,16 +1,16 @@
 window.API_URL = 'https://granja-vincwill-backend.onrender.com';
 
 // ==================================================
-// 1. CONFIGURACIÓN Y UTILIDADES
+// 1. GESTIÓN DE ESTADO Y GRÁFICOS
 // ==================================================
+let dashboardData = {};
+let chartInstances = {}; // Almacén para destruir gráficos viejos antes de crear nuevos
 
 // Helper para evitar crashes si un ID no existe en el HTML
 function safeText(elementId, text) {
   const el = document.getElementById(elementId);
   if (el) {
     el.textContent = text;
-  } else {
-    console.warn(`Elemento no encontrado en DOM: ${elementId}`);
   }
 }
 
@@ -21,6 +21,7 @@ async function cargarLogoSistema() {
   try {
     const configLocal = JSON.parse(localStorage.getItem('granjaConfig'));
     const aplicarLogo = (url) => document.querySelectorAll('.app-logo-img').forEach(img => img.src = url);
+
     if (configLocal && configLocal.logoUrl) aplicarLogo(configLocal.logoUrl);
 
     const token = localStorage.getItem('token');
@@ -169,10 +170,8 @@ function setupMobileMenu() {
 }
 
 // ==================================================
-// 4. LÓGICA DEL DASHBOARD (FILTRABLE Y KPIs)
+// 4. LÓGICA DEL DASHBOARD (DATOS, KPIs Y RENDER)
 // ==================================================
-
-let dashboardData = {};
 
 async function cargarDatosDashboard() {
   const granjaId = getSelectedGranjaId();
@@ -197,17 +196,11 @@ async function cargarDatosDashboard() {
     // Renderizar inicial
     renderizarDashboard();
 
-    // Cargar gráficos solo después de que los datos estén listos
-    mostrarCalendario();
-    mostrarGraficoAgua();
-    mostrarGraficosDashboard();
-    mostrarCostosPieChart();
-    mostrarIngresosCostosBarChart();
-    mostrarAlertasProduccion();
+    // Renderizar Gráficos (Una sola vez o actualizables)
+    renderizarGraficos();
 
   } catch (error) {
     console.error('Error cargando datos dashboard:', error);
-    // Si falla, intentamos renderizar lo que haya o mostrar error en pantalla
   }
 }
 
@@ -232,9 +225,7 @@ function poblarFiltroLotes(lotes) {
 
 function renderizarDashboard() {
   const { lotes, salud, costos, seguimiento, ventas, inventario } = dashboardData;
-
-  // Si no hay datos cargados aún, salimos sin error
-  if (!lotes) return;
+  if (!lotes) return; // Esperar a que carguen datos
 
   const filtroEstado = document.getElementById('dashEstado') ? document.getElementById('dashEstado').value : 'activos';
   const filtroLoteId = document.getElementById('dashLote') ? document.getElementById('dashLote').value : '';
@@ -249,7 +240,7 @@ function renderizarDashboard() {
     else if (filtroEstado === 'vendido') lotesFiltrados = lotesFiltrados.filter(l => l.estado === 'vendido' || l.estado === 'archivado');
   }
 
-  // 2. Variables Globales
+  // 2. Acumuladores Globales (Izquierda)
   let totalCostosGlobal = 0;
   let totalIngresosGlobal = 0;
   let totalVivosGlobal = 0;
@@ -260,16 +251,17 @@ function renderizarDashboard() {
   if (lotesContainer) lotesContainer.innerHTML = '';
 
   if (lotesFiltrados.length === 0) {
-    if (lotesContainer) lotesContainer.innerHTML = '<div class="card" style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #7f8c8d;">No se encontraron lotes con los filtros seleccionados.</div>';
+    if (lotesContainer) lotesContainer.innerHTML = '<div class="card" style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #7f8c8d;">No hay lotes con los filtros seleccionados.</div>';
   }
 
-  // 3. Procesar
+  // 3. Procesar Lotes
   lotesFiltrados.forEach(lote => {
     const fechaIngreso = new Date(lote.fechaIngreso);
     const hoy = new Date();
     const diasEdad = Math.floor((hoy - fechaIngreso) / (1000 * 60 * 60 * 24)) || 1;
     const semanasEdad = Math.ceil(diasEdad / 7);
 
+    // Mortalidad
     const muertes = salud ? salud.filter(s => s.loteId === lote.id && s.tipo.toLowerCase() === 'mortalidad').reduce((sum, s) => sum + s.cantidad, 0) : 0;
     const iniciales = lote.cantidadInicial || lote.cantidad;
     const vivos = iniciales - muertes;
@@ -280,16 +272,19 @@ function renderizarDashboard() {
 
     const viabilidad = (iniciales > 0) ? ((vivos / iniciales) * 100) : 0;
 
+    // Ventas
     const ventasLote = ventas ? ventas.filter(v => v.loteId === lote.id) : [];
     const ingresosLote = ventasLote.reduce((sum, v) => sum + (v.peso * v.precio), 0);
     totalIngresosGlobal += ingresosLote;
 
+    // Seguimiento
     const regsLote = seguimiento ? seguimiento.filter(s => s.loteId === lote.id) : [];
     regsLote.sort((a, b) => new Date(b.fecha || b.fechaRegistro) - new Date(a.fecha || a.fechaRegistro));
 
     const pesoActualLb = regsLote.length > 0 ? regsLote[0].peso : lote.pesoInicial;
     const consumoTotalLote = regsLote.reduce((sum, r) => sum + (r.consumo || 0), 0);
 
+    // Costos
     const costoInicial = lote.costoInicial || 0;
     const gastosDirectos = costos ? costos.filter(c => c.loteId === lote.id).reduce((sum, c) => sum + c.monto, 0) : 0;
 
@@ -316,6 +311,7 @@ function renderizarDashboard() {
     const costoTotalLote = costoInicial + gastosDirectos + costoAlimentoLote + costoSanitarioLote;
     totalCostosGlobal += costoTotalLote;
 
+    // KPIs
     const biomasaLbs = vivos * pesoActualLb;
     const costoPorLb = biomasaLbs > 0 ? (costoTotalLote / biomasaLbs).toFixed(2) : '0.00';
     const conversion = biomasaLbs > 0 ? (consumoTotalLote / biomasaLbs).toFixed(2) : '0.00';
@@ -325,10 +321,12 @@ function renderizarDashboard() {
       epef = ((viabilidad * pesoKg) / (diasEdad * parseFloat(conversion))) * 100;
     }
 
+    // Render Tarjeta Lote
     if (lotesContainer) {
       const card = document.createElement('div');
       card.className = 'card';
       const utilidadLote = ingresosLote - costoTotalLote;
+      // Color borde: Verde si gana dinero, Rojo si pierde
       const colorEstado = utilidadLote >= 0 ? '#27ae60' : '#e74c3c';
       card.style.borderTop = `5px solid ${colorEstado}`;
       card.style.position = 'relative';
@@ -366,10 +364,11 @@ function renderizarDashboard() {
     }
   });
 
-  // --- ACTUALIZAR RESUMEN IZQUIERDO (Usando safeText para evitar crashes) ---
+  // 4. Actualizar Resumen Global (Izquierda)
   const utilidadGlobal = totalIngresosGlobal - totalCostosGlobal;
   const mortalidadPromedio = totalIniciadosGlobal > 0 ? ((totalMuertesGlobal / totalIniciadosGlobal) * 100).toFixed(2) : '0.00';
 
+  // Usamos safeText para evitar errores
   safeText('costosTotales', `$${totalCostosGlobal.toFixed(2)}`);
   safeText('ingresosTotales', `$${totalIngresosGlobal.toFixed(2)}`);
   safeText('rentabilidad', `$${utilidadGlobal.toFixed(2)}`);
@@ -383,91 +382,109 @@ function renderizarDashboard() {
   safeText('conversionPromedio', "-");
 }
 
-// --- GRÁFICOS Y OTROS (Helpers Blindados) ---
-async function mostrarCalendario() {
-  const granjaId = getSelectedGranjaId(); if (!granjaId) return;
-  try {
-    const [agendaRes, saludRes] = await Promise.all([fetch(`${API_URL}/agenda?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }), fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })]);
-    const agendaData = await handleJsonResponse(agendaRes); const saludData = await handleJsonResponse(saludRes);
-    const eventosMapa = [];
-    if (agendaData) agendaData.forEach(ev => eventosMapa.push({ date: ev.fecha, title: `AGENDA: ${ev.descripcion}`, tipo: 'pendiente' }));
-    if (saludData) saludData.forEach(s => { if (s.fechaRetiro) eventosMapa.push({ date: s.fechaRetiro.split('T')[0], title: `BIOSEGURIDAD: Fin Retiro ${s.nombre}`, tipo: 'retiro' }); });
+// --- GRÁFICOS Y CALENDARIO (Separados y Protegidos) ---
+function renderizarGraficos() {
+  const { lotes, salud, costos, seguimiento, ventas, agua } = dashboardData;
 
-    if (window.flatpickr) {
-      flatpickr("#calendario-container", {
-        inline: true, locale: "es", enable: [{ from: "today", to: "today" }, ...eventosMapa.map(e => e.date)],
-        onDayCreate: function (dObj, dStr, fp, dayElem) {
-          const fechaStr = dayElem.dateObj.toISOString().split('T')[0]; const eventosDelDia = eventosMapa.filter(e => e.date === fechaStr);
-          if (eventosDelDia.length > 0) { dayElem.classList.add(eventosDelDia.some(e => e.tipo === 'retiro') ? 'evento-retiro' : 'evento-pendiente'); dayElem.title = eventosDelDia.map(e => e.title).join('\n'); }
-        }
-      });
-      if (!document.getElementById('estilos-calendario-vincwill')) { const style = document.createElement('style'); style.id = 'estilos-calendario-vincwill'; style.innerHTML = `.flatpickr-day.evento-retiro { background: #e74c3c !important; color: white !important; } .flatpickr-day.evento-pendiente { background: #f39c12 !important; color: white !important; }`; document.head.appendChild(style); }
-    }
-  } catch (error) { console.error(error); }
-}
-async function mostrarGraficoAgua() {
-  const granjaId = getSelectedGranjaId(); if (!granjaId) return;
-  try {
-    const res = await fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-    const aguaData = await handleJsonResponse(res); if (!aguaData) return;
-    const hoy = new Date(); const dataPorDia = {};
-    for (let i = 6; i >= 0; i--) { const f = new Date(hoy); f.setDate(hoy.getDate() - i); dataPorDia[f.toISOString().split('T')[0]] = 0; }
-    aguaData.forEach(r => { const f = r.fecha.split('T')[0]; if (dataPorDia[f] !== undefined) dataPorDia[f] += r.cantidad; });
-    const ctx = document.getElementById('aguaChart');
-    if (ctx) new Chart(ctx.getContext('2d'), { type: 'bar', data: { labels: Object.keys(dataPorDia), datasets: [{ label: 'Agua (L)', data: Object.values(dataPorDia), backgroundColor: '#3498db' }] } });
-  } catch (e) { }
-}
-function mostrarGraficosDashboard() {
-  const granjaId = getSelectedGranjaId(); if (!granjaId) return;
-  fetch(`${API_URL}/seguimiento?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse).then(seguimiento => {
-    if (!seguimiento) return;
+  // A. Calendario
+  mostrarCalendario(dashboardData);
+
+  // B. Alertas
+  mostrarAlertasProduccion(salud);
+
+  // C. Gráfico Producción (Destroy first)
+  if (chartInstances['produccionChart']) chartInstances['produccionChart'].destroy();
+  const ctxProd = document.getElementById('produccionChart');
+  if (ctxProd && seguimiento && lotes) {
     const labels = [...new Set(seguimiento.map(reg => `Semana ${reg.semana}`))].sort((a, b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
-    const dataPeso = labels.map(label => { const semana = parseInt(label.split(' ')[1]); const pesos = seguimiento.filter(reg => reg.semana === semana).map(reg => reg.peso); return pesos.length ? pesos.reduce((a, b) => a + b) / pesos.length : 0; });
-    const ctx = document.getElementById('produccionChart');
-    if (ctx) new Chart(ctx.getContext('2d'), { type: 'line', data: { labels, datasets: [{ label: 'Peso Promedio (kg)', data: dataPeso, borderColor: 'blue', tension: 0.1 }] }, options: { scales: { y: { beginAtZero: true } } } });
-  }).catch(error => console.error('Error gráfico prod:', error));
-}
-function mostrarCostosPieChart() {
-  const granjaId = getSelectedGranjaId(); if (!granjaId) return;
-  fetch(`${API_URL}/costos?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse).then(costos => {
-    if (!costos) return;
-    const categories = {}; costos.forEach(c => { categories[c.categoria] = (categories[c.categoria] || 0) + c.monto; });
-    const ctx = document.getElementById('costosPieChart');
-    if (ctx) new Chart(ctx.getContext('2d'), { type: 'pie', data: { labels: Object.keys(categories), datasets: [{ data: Object.values(categories), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'] }] } });
-  });
-}
-function mostrarIngresosCostosBarChart() {
-  const granjaId = getSelectedGranjaId(); if (!granjaId) return;
-  Promise.all([
-    fetch(`${API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-    fetch(`${API_URL}/ventas?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-    fetch(`${API_URL}/costos?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
-  ]).then(([lotes, ventas, costos]) => {
-    if (!lotes || !ventas || !costos) return;
+    const dataPeso = labels.map(label => {
+      const semana = parseInt(label.split(' ')[1]);
+      const pesos = seguimiento.filter(reg => reg.semana === semana).map(reg => reg.peso);
+      return pesos.length ? pesos.reduce((a, b) => a + b) / pesos.length : 0;
+    });
+    chartInstances['produccionChart'] = new Chart(ctxProd.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'Peso Promedio (kg)', data: dataPeso, borderColor: 'blue', tension: 0.1 }] },
+      options: { scales: { y: { beginAtZero: true } } }
+    });
+  }
+
+  // D. Gráfico Costos (Destroy first)
+  if (chartInstances['costosPieChart']) chartInstances['costosPieChart'].destroy();
+  const ctxCostos = document.getElementById('costosPieChart');
+  if (ctxCostos && costos) {
+    const categories = {};
+    costos.forEach(c => { categories[c.categoria] = (categories[c.categoria] || 0) + c.monto; });
+    chartInstances['costosPieChart'] = new Chart(ctxCostos.getContext('2d'), {
+      type: 'pie',
+      data: { labels: Object.keys(categories), datasets: [{ data: Object.values(categories), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'] }] }
+    });
+  }
+
+  // E. Gráfico Ingresos (Destroy first)
+  if (chartInstances['ingresosCostosBarChart']) chartInstances['ingresosCostosBarChart'].destroy();
+  const ctxIng = document.getElementById('ingresosCostosBarChart');
+  if (ctxIng && lotes && ventas && costos) {
     const dataIngresos = {}, dataCostos = {};
     lotes.forEach(l => {
       dataIngresos[l.loteId] = ventas.filter(v => v.loteId === l.id).reduce((sum, v) => sum + (v.peso * v.precio), 0);
       dataCostos[l.loteId] = costos.filter(c => c.loteId === l.id).reduce((sum, c) => sum + c.monto, 0);
     });
-    const ctx = document.getElementById('ingresosCostosBarChart');
-    if (ctx) new Chart(ctx.getContext('2d'), { type: 'bar', data: { labels: Object.keys(dataIngresos), datasets: [{ label: 'Ingresos ($)', data: Object.values(dataIngresos), backgroundColor: '#36A2EB' }, { label: 'Costos ($)', data: Object.values(dataCostos), backgroundColor: '#FF6384' }] } });
-  });
-}
-function mostrarAlertasProduccion() {
-  const granjaId = getSelectedGranjaId(); if (!granjaId) return;
-  fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse).then(salud => {
-    if (!salud) return;
-    const alertasList = document.getElementById('alertasList');
-    if (alertasList) {
-      alertasList.innerHTML = '';
-      const mortalidadAlta = salud.filter(s => s.tipo.toLowerCase() === 'mortalidad' && s.cantidad > 10);
-      if (mortalidadAlta.length > 0) mortalidadAlta.forEach(s => { const li = document.createElement('li'); li.textContent = `Alerta: Alta mortalidad Lote ${s.loteId} (${s.cantidad} aves)`; alertasList.appendChild(li); });
-      else alertasList.innerHTML = '<li>No hay alertas.</li>';
-    }
-  });
+    chartInstances['ingresosCostosBarChart'] = new Chart(ctxIng.getContext('2d'), {
+      type: 'bar',
+      data: { labels: Object.keys(dataIngresos), datasets: [{ label: 'Ingresos ($)', data: Object.values(dataIngresos), backgroundColor: '#36A2EB' }, { label: 'Costos ($)', data: Object.values(dataCostos), backgroundColor: '#FF6384' }] }
+    });
+  }
+
+  // F. Gráfico Agua (Destroy first)
+  if (chartInstances['aguaChart']) chartInstances['aguaChart'].destroy();
+  const ctxAgua = document.getElementById('aguaChart');
+  if (ctxAgua && agua) {
+    const hoy = new Date(); const dataPorDia = {};
+    for (let i = 6; i >= 0; i--) { const f = new Date(hoy); f.setDate(hoy.getDate() - i); dataPorDia[f.toISOString().split('T')[0]] = 0; }
+    agua.forEach(r => { const f = r.fecha.split('T')[0]; if (dataPorDia[f] !== undefined) dataPorDia[f] += r.cantidad; });
+    chartInstances['aguaChart'] = new Chart(ctxAgua.getContext('2d'), {
+      type: 'bar',
+      data: { labels: Object.keys(dataPorDia), datasets: [{ label: 'Agua (L)', data: Object.values(dataPorDia), backgroundColor: '#3498db' }] }
+    });
+  }
 }
 
-// --- TABLA ORDEN & FILTRO ---
+function mostrarCalendario(data) {
+  if (!window.flatpickr) return;
+  const { agenda, salud } = data || {};
+  const eventosMapa = [];
+  if (agenda) agenda.forEach(ev => eventosMapa.push({ date: ev.fecha, title: `AGENDA: ${ev.descripcion}`, tipo: 'pendiente' }));
+  if (salud) salud.forEach(s => { if (s.fechaRetiro) eventosMapa.push({ date: s.fechaRetiro.split('T')[0], title: `BIOSEGURIDAD: Fin Retiro ${s.nombre}`, tipo: 'retiro' }); });
+
+  const calContainer = document.getElementById("calendario-container");
+  if (calContainer) {
+    calContainer.innerHTML = ''; // Limpiar previo
+    flatpickr(calContainer, {
+      inline: true, locale: "es", enable: [{ from: "today", to: "today" }, ...eventosMapa.map(e => e.date)],
+      onDayCreate: function (dObj, dStr, fp, dayElem) {
+        const fechaStr = dayElem.dateObj.toISOString().split('T')[0]; const eventosDelDia = eventosMapa.filter(e => e.date === fechaStr);
+        if (eventosDelDia.length > 0) { dayElem.classList.add(eventosDelDia.some(e => e.tipo === 'retiro') ? 'evento-retiro' : 'evento-pendiente'); dayElem.title = eventosDelDia.map(e => e.title).join('\n'); }
+      },
+      onChange: function (selectedDates, dateStr) {
+        const eventosHoy = eventosMapa.filter(e => e.date === dateStr);
+        if (eventosHoy.length > 0) alert(`📅 ${dateStr}:\n\n${eventosHoy.map(e => `• ${e.title}`).join('\n')}`);
+      }
+    });
+  }
+}
+
+function mostrarAlertasProduccion(salud) {
+  const alertasList = document.getElementById('alertasList');
+  if (alertasList && salud) {
+    alertasList.innerHTML = '';
+    const mortalidadAlta = salud.filter(s => s.tipo.toLowerCase() === 'mortalidad' && s.cantidad > 10);
+    if (mortalidadAlta.length > 0) mortalidadAlta.forEach(s => { const li = document.createElement('li'); li.textContent = `Alerta: Alta mortalidad Lote ${s.loteId} (${s.cantidad} aves)`; alertasList.appendChild(li); });
+    else alertasList.innerHTML = '<li>No hay alertas activas.</li>';
+  }
+}
+
+// --- TABLA ---
 document.addEventListener('click', function (e) {
   const th = e.target.closest('table.tabla-moderna th');
   if (th) {
@@ -487,6 +504,7 @@ document.addEventListener('click', function (e) {
     tbody.append(...rows);
   }
 });
+
 document.addEventListener('input', function (e) {
   if (e.target.matches('.table-search')) {
     const input = e.target;
@@ -502,6 +520,7 @@ document.addEventListener('input', function (e) {
     }
   }
 });
+
 function compareCells(a, b, isAsc) {
   const clean = (val) => val.replace(/[$,]/g, '').trim();
   const valA = clean(a); const valB = clean(b);
@@ -525,11 +544,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (path === 'login.html') { const lf = document.getElementById('loginForm'); if (lf) lf.onsubmit = login; return; }
   checkAccess();
   if (path !== 'login.html' && path !== 'granjas.html') { initializeUserProfile(); initializeSidebar(); setupMobileMenu(); cargarLogoSistema(); filtrarMenuPorRol(); }
+
   if (path === 'index.html') {
     const granja = JSON.parse(localStorage.getItem('selectedGranja'));
     if (granja) document.querySelector('header h1').textContent = `Dashboard (${granja.nombre})`;
+
     // Cargar datos
     cargarDatosDashboard();
+
     // Listeners de Filtros
     if (document.getElementById('dashEstado')) document.getElementById('dashEstado').addEventListener('change', renderizarDashboard);
     if (document.getElementById('dashLote')) document.getElementById('dashLote').addEventListener('change', renderizarDashboard);
