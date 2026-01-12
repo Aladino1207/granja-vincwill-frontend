@@ -911,3 +911,65 @@ main.dashboard-layout-vincwill {
     grid-template-columns: 1fr;
   }
 }
+
+/* Mejoras específicas para página de Galpones */
+.galpones-page .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.2rem;
+}
+
+.form-actions,
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.conditional-group {
+  display: grid;
+  gap: 1rem;
+}
+
+.loading-row td {
+  color: #777;
+  font-style: italic;
+}
+
+/* Botón secundario más claro (para cancelar) */
+.btn-secundario {
+  background: #95a5a6;
+  color: white;
+}
+
+.btn-secundario:hover {
+  background: #7f8c8d;
+}
+
+/* Mejora visual en estados (opcional pero recomendado) */
+.badge-disponible {
+  background: #27ae60;
+}
+
+.badge-ocupado {
+  background: #e74c3c;
+}
+
+.badge-mantenimiento {
+  background: #f39c12;
+}
+
+.badge-disponible,
+.badge-ocupado,
+.badge-mantenimiento {
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
