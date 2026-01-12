@@ -3,66 +3,108 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Galpones - Granja VincWill</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 
 <body>
-    <!-- Header y Sidebar (igual que en index.html - puedes extraerlo a un include si usas backend) -->
     <header>
-        <div class="header-left">
+        <div style="display: flex; align-items: center; gap: 15px;">
             <img src="" class="app-logo-img" alt="Logo" style="max-height: 40px;">
-            <h1>Gestión de Galpones</h1>
+            <h1>Infraestructura (Galpones)</h1>
         </div>
+        <!-- ESTRUCTURA COMPLETA DEL PERFIL (Corrección) -->
         <div class="user-profile-container">
             <div id="userMenuBtn" class="user-avatar-btn" title="Menú de Usuario">
                 <span id="userInitials">U</span>
             </div>
             <div id="userDropdown" class="user-dropdown-menu">
-                <!-- mismo contenido que ya tienes -->
+                <div class="dropdown-header">
+                    <div class="dropdown-avatar-large"><span id="dropdownInitials">U</span></div>
+                    <div class="dropdown-user-info">
+                        <h4 id="dropdownName">Cargando...</h4>
+                        <p id="dropdownBranch">Cargando...</p>
+                    </div>
+                </div>
+                <ul class="dropdown-actions">
+                    <li><button id="changeBranchBtn" class="dropdown-item">🔄 Cambiar Almacén</button></li>
+                    <li><button onclick="logout()" class="dropdown-item logout-item">🚪 Cerrar Sesión</button></li>
+                </ul>
             </div>
         </div>
     </header>
-
     <aside class="sidebar">
-        <!-- mismo sidebar que ya tienes -->
-    </aside>
+        <nav>
+            <div class="nav-group nav-group-main">
+                <div class="nav-links-container">
+                    <a href="index.html" class="nav-link">Dashboard</a>
+                </div>
+            </div>
 
-    <main class="main-content galpones-page">
-        <!-- 1. Formulario desplegable para crear/editar -->
+            <div class="nav-group">
+                <h4 class="nav-category-title" data-target="#operaciones-links">Operaciones</h4>
+                <div class="nav-links-container" id="operaciones-links">
+                    <a href="galpones.html" class="nav-link">Galpones</a>
+                    <a href="lotes.html" class="nav-link">Lotes</a>
+                    <a href="inventarios.html" class="nav-link">Inventario</a>
+                    <a href="agua.html" class="nav-link">Agua</a>
+                    <a href="salud.html" class="nav-link">Salud</a>
+                    <a href="seguimiento.html" class="nav-link">Seguimiento</a>
+
+                </div>
+            </div>
+
+            <div class="nav-group">
+                <h4 class="nav-category-title" data-target="#finanzas-links">Finanzas</h4>
+                <div class="nav-links-container" id="finanzas-links">
+                    <a href="clientes.html" class="nav-link">Clientes</a>
+                    <a href="proveedores.html" class="nav-link">Proveedores</a>
+                    <a href="ventas.html" class="nav-link">Ventas</a>
+                    <a href="costos.html" class="nav-link">Costos</a>
+                    <a href="reportes.html" class="nav-link">Reportes</a>
+                </div>
+            </div>
+
+            <div class="nav-group">
+                <h4 class="nav-category-title" data-target="#admin-links">Administración</h4>
+                <div class="nav-links-container" id="admin-links">
+                    <a href="usuarios.html" class="nav-link">Usuarios y Granjas</a>
+                    <a href="configuracion.html" class="nav-link">Configuración</a>
+                </div>
+            </div>
+        </nav>
+    </aside>
+    <main class="main-content">
+
+        <!-- Formulario Crear -->
         <div id="formContainer" class="form-desplegable-container">
             <section class="card">
                 <h2 id="formTitle">Crear Nuevo Galpón</h2>
                 <form id="galponForm" class="form-grid form-grid-2-col">
                     <input type="hidden" id="galponId">
-
                     <div class="form-group">
-                        <label for="nombre">Nombre / Identificador</label>
+                        <label>Nombre / Identificador</label>
                         <input type="text" id="nombre" class="form-control" placeholder="Ej: Galpón Norte 1" required>
                     </div>
-
                     <div class="form-group">
-                        <label for="capacidad">Capacidad Máxima (Aves)</label>
-                        <input type="number" id="capacidad" class="form-control" min="1" placeholder="Ej: 5000"
-                            required>
+                        <label>Capacidad Máxima (Aves)</label>
+                        <input type="number" id="capacidad" class="form-control" placeholder="Ej: 5000" required>
                     </div>
-
-                    <div class="form-actions" style="grid-column: 1 / -1;">
+                    <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
                         <button type="submit" class="btn btn-primario">Guardar Galpón</button>
-                        <button type="button" id="cancelBtn" class="btn btn-secundario">Cancelar</button>
+                        <button type="button" id="cancelBtn" class="btn btn-peligro"
+                            style="background-color: #7f8c8d;">Cancelar</button>
                     </div>
                 </form>
             </section>
         </div>
 
-        <!-- 2. Tabla principal -->
         <section class="card">
-            <div class="card-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2>Mis Galpones</h2>
-                <button id="toggleFormBtn" class="btn btn-primario">+ Nuevo Galpón</button>
+                <button id="toggleFormBtn" class="btn btn-primario">Nuevo Galpón</button>
             </div>
-
             <div class="tabla-responsive-wrapper">
                 <table class="tabla-moderna">
                     <thead>
@@ -73,68 +115,65 @@
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="tablaGalpones">
-                        <tr class="loading-row">
-                            <td colspan="4" style="text-align:center; padding:2rem;">
-                                Cargando galpones...
-                            </td>
-                        </tr>
-                    </tbody>
+                    <tbody id="tablaGalpones"></tbody>
                 </table>
             </div>
         </section>
     </main>
 
-    <!-- Modal Mantenimiento (mejorado) -->
+    <!-- MODAL: REGISTRAR MANTENIMIENTO -->
     <div id="mantenimientoModal" class="modal-wrapper">
-        <div class="modal-content" style="max-width: 520px;">
+        <div class="modal-content">
             <div class="modal-header">
-                <h2 id="modalTitle">Registrar Mantenimiento</h2>
-                <span class="modal-close-btn" id="closeMantenimientoModal">×</span>
+                <h2 id="modalTitle">Gasto de Mantenimiento</h2>
+                <span class="modal-close-btn" id="closeMantenimientoModal">&times;</span>
             </div>
-
             <form id="mantenimientoForm" class="form-grid form-grid-2-col">
                 <input type="hidden" id="mantGalponId">
 
-                <div class="form-group full-width">
+                <div class="form-group" style="grid-column: 1 / -1;">
                     <label>Tipo de Gasto</label>
                     <select id="tipoGasto" class="form-control">
-                        <option value="Inventario">Usar del Inventario</option>
-                        <option value="Directo">Gasto Directo ($$)</option>
+                        <option value="Inventario">Usar del Inventario (Cama, Químicos)</option>
+                        <option value="Directo">Gasto Directo (Mano de obra, Reparación)</option>
                     </select>
                 </div>
 
-                <div id="groupInventario" class="full-width conditional-group">
+                <!-- Opción A: Inventario -->
+                <div id="groupInventario" style="grid-column: 1 / -1; display: grid; gap: 1rem;">
                     <div class="form-group">
                         <label>Producto</label>
-                        <select id="inventarioSelect" class="form-control"></select>
+                        <select id="inventarioSelect" class="form-control">
+                            <option value="">Cargando...</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label>Cantidad</label>
-                        <input type="number" id="mantCantidad" class="form-control" step="0.01" min="0.01">
-                        <small id="stockInfo"></small>
+                        <label>Cantidad a Usar</label>
+                        <input type="number" id="mantCantidad" class="form-control" step="0.01">
+                        <small id="stockInfo" style="color: var(--color-secundario);"></small>
                     </div>
                 </div>
 
-                <div id="groupDirecto" class="full-width conditional-group" style="display:none;">
+                <!-- Opción B: Dinero Directo -->
+                <div id="groupDirecto" style="grid-column: 1 / -1; display: none;">
                     <div class="form-group">
                         <label>Monto ($)</label>
-                        <input type="number" id="mantMonto" class="form-control" step="0.01" min="0.01">
+                        <input type="number" id="mantMonto" class="form-control" step="0.01">
                     </div>
                 </div>
 
-                <div class="form-group full-width">
+                <div class="form-group" style="grid-column: 1 / -1;">
                     <label>Detalle / Descripción</label>
                     <input type="text" id="mantDescripcion" class="form-control" required
-                        placeholder="Ej: Desinfección completa">
+                        placeholder="Ej: Desinfección pre-lote">
                 </div>
 
-                <div class="form-group full-width">
+                <div class="form-group" style="grid-column: 1 / -1;">
                     <label>Fecha</label>
                     <input type="date" id="mantFecha" class="form-control" required>
                 </div>
 
-                <div class="form-actions full-width">
+                <div class="form-group" style="grid-column: 1 / -1;">
                     <button type="submit" class="btn btn-primario">Registrar Gasto</button>
                 </div>
             </form>
