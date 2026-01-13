@@ -440,26 +440,115 @@ function renderizarGraficos() {
 }
 
 function mostrarCalendario(data) {
+  // Verificar si la librería existe
   if (!window.flatpickr) return;
+
   const { agenda, salud } = data || {};
   const eventosMapa = [];
-  if (agenda) agenda.forEach(ev => eventosMapa.push({ date: ev.fecha, title: `AGENDA: ${ev.descripcion}`, tipo: 'pendiente' }));
-  if (salud) salud.forEach(s => { if (s.fechaRetiro) eventosMapa.push({ date: s.fechaRetiro.split('T')[0], title: `BIOSEGURIDAD: Fin Retiro ${s.nombre}`, tipo: 'retiro' }); });
+
+  // 1. Procesar Agenda
+  if (agenda && Array.isArray(agenda)) {
+    agenda.forEach(ev => {
+      // Aseguramos formato YYYY-MM-DD cortando cualquier hora extra
+      const fechaLimpia = String(ev.fecha).split('T')[0];
+      eventosMapa.push({
+        date: fechaLimpia,
+        title: `AGENDA: ${ev.descripcion}`,
+        tipo: 'pendiente'
+      });
+    });
+  }
+
+  // 2. Procesar Retiros de Salud
+  if (salud && Array.isArray(salud)) {
+    salud.forEach(s => {
+      if (s.fechaRetiro) {
+        const fechaLimpia = String(s.fechaRetiro).split('T')[0];
+        eventosMapa.push({
+          date: fechaLimpia,
+          title: `BIOSEGURIDAD: Fin Retiro ${s.nombre}`,
+          tipo: 'retiro'
+        });
+      }
+    });
+  }
 
   const calContainer = document.getElementById("calendario-container");
   if (calContainer) {
-    calContainer.innerHTML = '';
+    calContainer.innerHTML = ''; // Limpiar previo
+
     flatpickr(calContainer, {
-      inline: true, locale: "es", enable: [{ from: "today", to: "today" }, ...eventosMapa.map(e => e.date)],
+      inline: true,
+      locale: "es",
+      // IMPORTANTE: Quitamos 'enable' para ver todo el mes, no solo los días con eventos
+      // enable: [{ from: "today", to: "today" }, ...eventosMapa.map(e => e.date)], 
+
       onDayCreate: function (dObj, dStr, fp, dayElem) {
-        const fechaStr = dayElem.dateObj.toISOString().split('T')[0]; const eventosDelDia = eventosMapa.filter(e => e.date === fechaStr);
-        if (eventosDelDia.length > 0) { dayElem.classList.add(eventosDelDia.some(e => e.tipo === 'retiro') ? 'evento-retiro' : 'evento-pendiente'); dayElem.title = eventosDelDia.map(e => e.title).join('\n'); }
+        // TRUCO DE ZONA HORARIA: Construir string local manualmente
+        // dayElem.dateObj es la fecha del calendario a las 00:00:00 local
+        const rawDate = dayElem.dateObj;
+        const year = rawDate.getFullYear();
+        // getMonth() devuelve 0-11, sumamos 1 y rellenamos con 0
+        const month = String(rawDate.getMonth() + 1).padStart(2, '0');
+        const day = String(rawDate.getDate()).padStart(2, '0');
+
+        const fechaCalendario = `${year}-${month}-${day}`;
+
+        // Buscar eventos que coincidan con esta fecha exacta
+        const eventosDelDia = eventosMapa.filter(e => e.date === fechaCalendario);
+
+        if (eventosDelDia.length > 0) {
+          // Limpiar clases previas por si acaso
+          dayElem.classList.remove('evento-retiro', 'evento-pendiente');
+
+          // Prioridad: Rojo (Retiro) sobre Naranja (Pendiente)
+          if (eventosDelDia.some(e => e.tipo === 'retiro')) {
+            dayElem.classList.add('evento-retiro');
+          } else {
+            dayElem.classList.add('evento-pendiente');
+          }
+
+          // Tooltip con saltos de línea
+          dayElem.title = eventosDelDia.map(e => e.title).join('\n');
+        }
       },
       onChange: function (selectedDates, dateStr) {
         const eventosHoy = eventosMapa.filter(e => e.date === dateStr);
-        if (eventosHoy.length > 0) alert(`📅 ${dateStr}:\n\n${eventosHoy.map(e => `• ${e.title}`).join('\n')}`);
+        if (eventosHoy.length > 0) {
+          alert(`📅 ${dateStr}:\n\n${eventosHoy.map(e => `• ${e.title}`).join('\n')}`);
+        }
       }
     });
+
+    // Inyectar Estilos CSS forzados si no existen
+    if (!document.getElementById('estilos-calendario-vincwill')) {
+      const style = document.createElement('style');
+      style.id = 'estilos-calendario-vincwill';
+      style.innerHTML = `
+            /* Evento Pendiente (Agenda) - Naranja */
+            .flatpickr-day.evento-pendiente { 
+                background: #f39c12 !important; 
+                color: white !important; 
+                border-color: #f39c12 !important;
+                font-weight: bold;
+            }
+            /* Evento Retiro (Salud) - Rojo */
+            .flatpickr-day.evento-retiro { 
+                background: #e74c3c !important; 
+                color: white !important; 
+                border-color: #e74c3c !important;
+                font-weight: bold;
+            }
+            /* Efecto Hover */
+            .flatpickr-day.evento-retiro:hover, 
+            .flatpickr-day.evento-pendiente:hover { 
+                transform: scale(1.1); 
+                z-index: 2; 
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+            `;
+      document.head.appendChild(style);
+    }
   }
 }
 
