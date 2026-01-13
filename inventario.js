@@ -152,17 +152,27 @@ async function eliminarInventario(id) {
   }
 }
 
-// --- LÓGICA DE REABASTECIMIENTO (NUEVO) ---
+// ==========================================
+// 3. LÓGICA DE REABASTECIMIENTO (+ STOCK)
+// ==========================================
 
 function abrirModalReabastecer(id, nombreProducto, unidad, proveedorIdActual) {
   const modal = document.getElementById('reabastecerModal');
-  if (!modal) return;
+  if (!modal) {
+    alert("Error: No se encuentra el modal de reabastecimiento en el HTML.");
+    return;
+  }
 
+  // Llenar datos ocultos y visuales
   document.getElementById('reabastecerId').value = id;
-  document.getElementById('reabastecerInfo').textContent = `Producto: ${nombreProducto}`;
-  document.getElementById('reabastecerUnidad').textContent = unidad;
 
-  // Resetear form
+  const infoEl = document.getElementById('reabastecerInfo');
+  if (infoEl) infoEl.textContent = `Producto: ${nombreProducto}`;
+
+  const unidadEl = document.getElementById('reabastecerUnidad');
+  if (unidadEl) unidadEl.textContent = unidad;
+
+  // Resetear formulario del modal
   document.getElementById('reab_cantidad').value = '';
   document.getElementById('reab_costoTotal').value = '';
   document.getElementById('reab_factura').value = '';
@@ -175,7 +185,8 @@ function abrirModalReabastecer(id, nombreProducto, unidad, proveedorIdActual) {
 }
 
 function cerrarModalReabastecer() {
-  document.getElementById('reabastecerModal').classList.remove('is-open');
+  const modal = document.getElementById('reabastecerModal');
+  if (modal) modal.classList.remove('is-open');
 }
 
 async function guardarReabastecimiento(e) {
@@ -184,20 +195,28 @@ async function guardarReabastecimiento(e) {
   const granjaId = getSelectedGranjaId();
   const id = document.getElementById('reabastecerId').value;
 
+  // Validación Numérica Segura (Igual que en Cargar)
+  const cantidadNueva = parseFloat(document.getElementById('reab_cantidad').value);
+  const costoTotalCompra = parseFloat(document.getElementById('reab_costoTotal').value);
+
+  if (isNaN(cantidadNueva) || cantidadNueva <= 0) {
+    return alert("Por favor ingresa una cantidad válida mayor a 0.");
+  }
+  if (isNaN(costoTotalCompra) || costoTotalCompra < 0) {
+    return alert("Por favor ingresa un costo válido.");
+  }
+
   const payload = {
-    cantidadNueva: parseFloat(document.getElementById('reab_cantidad').value),
-    costoTotalCompra: parseFloat(document.getElementById('reab_costoTotal').value),
+    cantidadNueva: cantidadNueva,
+    costoTotalCompra: costoTotalCompra,
     proveedorId: document.getElementById('reab_proveedor').value || null,
     numeroFactura: document.getElementById('reab_factura').value,
     granjaId: granjaId
   };
 
-  if (payload.cantidadNueva <= 0 || payload.costoTotalCompra < 0) {
-    return alert("Por favor ingresa cantidades válidas.");
-  }
-
   try {
     const btn = e.target.querySelector('button[type="submit"]');
+    const txtOriginal = btn.textContent;
     btn.textContent = "Procesando...";
     btn.disabled = true;
 
@@ -212,22 +231,30 @@ async function guardarReabastecimiento(e) {
 
     if (res.ok) {
       const data = await res.json();
-      // También redondeamos aquí para el mensaje de alerta
-      const stockVisual = parseFloat(data.nuevoStock).toFixed(4).replace(/\.?0+$/, "");
-      alert(`Stock actualizado.\nNuevo Stock: ${stockVisual}\nNuevo Costo Promedio: $${parseFloat(data.nuevoCosto).toFixed(2)}`);
+      // Formateo visual para el mensaje de éxito
+      const nuevoStock = parseFloat(data.nuevoStock).toFixed(4).replace(/\.?0+$/, "");
+      const nuevoCosto = parseFloat(data.nuevoCosto).toFixed(4);
+
+      alert(`✅ Stock actualizado.\n\nNuevo Stock Total: ${nuevoStock}\nNuevo Costo Promedio: $${nuevoCosto}`);
+
       cerrarModalReabastecer();
-      cargarInventario();
+      cargarInventario(); // Recargar la tabla principal
     } else {
       const err = await res.json();
       alert("Error: " + (err.error || "No se pudo actualizar"));
     }
+
+    btn.textContent = txtOriginal;
+    btn.disabled = false;
+
   } catch (err) {
     console.error(err);
     alert("Error de conexión");
-  } finally {
     const btn = e.target.querySelector('button[type="submit"]');
-    btn.textContent = "Confirmar Compra e Ingreso";
-    btn.disabled = false;
+    if (btn) {
+      btn.textContent = "Confirmar Compra e Ingreso";
+      btn.disabled = false;
+    }
   }
 }
 
