@@ -179,21 +179,24 @@ async function cargarDatosDashboard() {
   if (!granjaId) return;
 
   try {
-    const [lotes, salud, costos, seguimiento, ventas, agua, inventario] = await Promise.all([
+    // --- AQUÍ ESTABA EL ERROR: FALTABA CARGAR LA AGENDA ---
+    const [lotes, salud, costos, seguimiento, ventas, agua, inventario, agenda] = await Promise.all([
       fetch(`${API_URL}/lotes?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
       fetch(`${API_URL}/salud?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
       fetch(`${API_URL}/costos?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
       fetch(`${API_URL}/seguimiento?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
       fetch(`${API_URL}/ventas?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
       fetch(`${API_URL}/agua?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
-      fetch(`${API_URL}/inventario?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse)
+      fetch(`${API_URL}/inventario?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse),
+      fetch(`${API_URL}/agenda?granjaId=${granjaId}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }).then(handleJsonResponse) // <--- NUEVO
     ]);
 
-    dashboardData = { lotes, salud, costos, seguimiento, ventas, agua, inventario };
+    // Guardamos todo en la variable global
+    dashboardData = { lotes, salud, costos, seguimiento, ventas, agua, inventario, agenda };
 
     poblarFiltroLotes(lotes);
     renderizarDashboard();
-    renderizarGraficos(); // Llamar gráficos solo una vez cargada la data
+    renderizarGraficos();
 
   } catch (error) {
     console.error('Error cargando datos dashboard:', error);
