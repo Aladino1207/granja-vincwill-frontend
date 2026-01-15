@@ -102,7 +102,10 @@ function llenarSelectProveedores(selectId) {
   });
 }
 
-// --- CRUD BÁSICO (Crear Nuevo Producto) ---
+// ==========================================
+// 2. CREAR PRODUCTO (AHORA SOLO CATALOGO)
+// ==========================================
+
 async function guardarInventario(e) {
   e.preventDefault();
   const token = localStorage.getItem('token');
@@ -114,10 +117,13 @@ async function guardarInventario(e) {
     producto: document.getElementById('producto').value,
     categoria: document.getElementById('categoria').value,
     proveedorId: document.getElementById('proveedorSelect').value || null,
-    cantidad: parseFloat(document.getElementById('cantidad').value),
     unidadMedida: document.getElementById('unidadMedida').value,
-    costo: parseFloat(document.getElementById('costo').value),
-    fecha: document.getElementById('fecha').value
+
+    // VALORES POR DEFECTO PARA CREACIÓN
+    cantidad: 0,
+    costo: 0,
+    costoTotal: 0,
+    fecha: new Date().toISOString() // Fecha de creación del registro
   };
 
   try {
@@ -128,14 +134,14 @@ async function guardarInventario(e) {
     });
 
     if (res.ok) {
-      alert('Producto registrado');
+      alert('Producto creado. Ahora usa "+ Stock" para ingresar compras.');
       cerrarFormulario();
       cargarInventario();
     } else {
       const err = await res.json();
       alert('Error: ' + err.error);
     }
-  } catch (error) { console.error(error); }
+  } catch (error) { console.error(error); alert("Error de conexión"); }
 }
 
 async function eliminarInventario(id) {

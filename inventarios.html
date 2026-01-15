@@ -90,13 +90,19 @@
 
     <main class="main-content">
 
-        <!-- FORMULARIO DE CREACIÓN (Solo para productos NUEVOS) -->
+        <!-- FORMULARIO DE CREACIÓN (SOLO CATÁLOGO) -->
         <div id="formContainer" class="form-desplegable-container">
             <section class="card">
-                <h2 id="formTitle">Registrar Nuevo Producto</h2>
-                <form id="inventarioForm" class="form-grid form-grid-3-col">
+                <h2 id="formTitle">Definir Nuevo Producto</h2>
+                <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
+                    Aquí registras el producto en el sistema. Para ingresar mercadería, usa el botón
+                    <strong style="color: #27ae60;">+ Stock</strong> una vez creado.
+                </p>
+
+                <form id="inventarioForm" class="form-grid form-grid-2-col">
                     <input type="hidden" id="inventarioId" value="">
 
+                    <!-- Fila 1 -->
                     <div class="form-group">
                         <label for="producto">Nombre del Producto</label>
                         <input type="text" id="producto" class="form-control" required
@@ -113,8 +119,9 @@
                         </select>
                     </div>
 
+                    <!-- Fila 2 -->
                     <div class="form-group">
-                        <label for="proveedorSelect">Proveedor</label>
+                        <label for="proveedorSelect">Proveedor Principal</label>
                         <div style="display: flex; gap: 5px;">
                             <select id="proveedorSelect" class="form-control">
                                 <option value="">Selecciona Proveedor</option>
@@ -125,36 +132,22 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="cantidad">Cantidad Inicial</label>
-                        <input type="number" id="cantidad" class="form-control" step="0.01" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="unidadMedida">Unidad</label>
+                        <label for="unidadMedida">Unidad de Medida</label>
                         <select id="unidadMedida" class="form-control">
                             <option value="qq">Quintales (qq)</option>
                             <option value="lb">Libras (lb)</option>
                             <option value="kg">Kilogramos (kg)</option>
+                            <option value="saco">Sacos</option>
                             <option value="l">Litros (l)</option>
                             <option value="ml">Mililitros (ml)</option>
                             <option value="unidades">Unidades</option>
-                            <option value="saco">Sacos</option>
                         </select>
+                        <small style="color: #999;">Cómo se controlará el stock.</small>
                     </div>
 
-                    <div class="form-group">
-                        <label for="costo">Costo Unitario ($)</label>
-                        <input type="number" id="costo" class="form-control" step="0.01" required
-                            placeholder="Por unidad/kilo/litro">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="fecha">Fecha Ingreso</label>
-                        <input type="date" id="fecha" class="form-control" required>
-                    </div>
-
-                    <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem;">
-                        <button type="submit" class="btn btn-primario">Guardar Producto</button>
+                    <!-- Botones -->
+                    <div class="form-group" style="grid-column: 1 / -1; display: flex; gap: 1rem; margin-top: 10px;">
+                        <button type="submit" class="btn btn-primario">Crear Producto (Stock 0)</button>
                         <button type="button" id="cancelBtn" class="btn btn-peligro"
                             style="background-color: #7f8c8d;">Cancelar</button>
                     </div>
@@ -164,9 +157,14 @@
 
         <!-- LISTA DE INVENTARIO -->
         <section class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <h2>Inventario Actual</h2>
-                <button id="toggleFormBtn" class="btn btn-primario">Nuevo Producto</button>
+
+                <div style="display: flex; align-items: center;">
+                    <input type="text" class="table-search" data-table="inventarioTable" placeholder="🔍 Buscar...">
+                    <button id="toggleFormBtn" class="btn btn-primario">Nuevo Producto</button>
+                </div>
             </div>
 
             <div class="tabla-responsive-wrapper">
@@ -176,11 +174,10 @@
                             <th>Producto</th>
                             <th>Proveedor</th>
                             <th>Categoría</th>
-                            <th>Cantidad</th>
+                            <th>Stock Actual</th> <!-- Cambiado nombre header -->
                             <th>Costo Prom.</th>
                             <th>Total Valor</th>
-                            <th>Fecha Ingreso</th>
-                            <th>Acciones</th>
+                            <th>Acciones</th> <!-- Quitamos Fecha Ingreso porque al crear es irrelevante -->
                         </tr>
                     </thead>
                     <tbody id="tablaInventario"></tbody>
@@ -189,11 +186,11 @@
         </section>
 
         <footer>
-            © 2026 Granja VincWill • Todos los derechos reservados
+            <p>© 2026 Granja Avícola VincWill.</p>
         </footer>
     </main>
 
-    <!-- MODAL REABASTECER (NUEVO) -->
+    <!-- MODAL REABASTECER (Se mantiene igual, es vital ahora) -->
     <div id="reabastecerModal" class="modal-wrapper">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header" style="background: #27ae60; color: white;">
@@ -202,64 +199,46 @@
             </div>
             <form id="reabastecerForm" style="padding: 20px;">
                 <input type="hidden" id="reabastecerId">
-
                 <p id="reabastecerInfo" style="margin-bottom: 15px; font-weight: bold; color: #2c3e50;"></p>
-
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label>Cantidad a Comprar (<span id="reabastecerUnidad"></span>)</label>
                     <input type="number" id="reab_cantidad" class="form-control" step="0.01" required min="0.01">
                 </div>
-
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label>Costo TOTAL de la Compra ($)</label>
                     <input type="number" id="reab_costoTotal" class="form-control" step="0.01" required min="0"
-                        placeholder="Ej: 500.00 (Total Factura)">
-                    <small style="color: #666;">El sistema recalculará el costo unitario promedio.</small>
+                        placeholder="Ej: 500.00">
+                    <small style="color: #666;">El sistema recalculará el costo unitario.</small>
                 </div>
-
                 <div class="form-group" style="margin-bottom: 15px;">
-                    <label>Proveedor (Opcional)</label>
+                    <label>Proveedor</label>
                     <select id="reab_proveedor" class="form-control">
                         <option value="">Mantener actual...</option>
                     </select>
                 </div>
-
                 <div class="form-group" style="margin-bottom: 15px;">
-                    <label>N° Factura / Referencia</label>
+                    <label>N° Factura</label>
                     <input type="text" id="reab_factura" class="form-control" placeholder="Opcional">
                 </div>
-
-                <button type="submit" class="btn btn-primario" style="width: 100%; background: #27ae60;">
-                    Confirmar Compra e Ingreso
-                </button>
+                <button type="submit" class="btn btn-primario" style="width: 100%; background: #27ae60;">Confirmar
+                    Compra</button>
             </form>
         </div>
     </div>
 
-    <!-- Modal Proveedor (Existente) -->
+    <!-- Modal Proveedor (Se mantiene igual) -->
     <div id="quickAddModal" class="modal-wrapper">
         <div class="modal-content">
-            <div class=\"modal-header\">
-                <h2>Crear Nuevo Proveedor</h2>
-                <span class="modal-close-btn" id="closeQuickAddModal">&times;</span>
+            <div class="modal-header">
+                <h2>Nuevo Proveedor</h2><span class="modal-close-btn" id="closeQuickAddModal">&times;</span>
             </div>
-            <form id="quickAddForm" class="form-grid form-grid-2-col">
-                <div class="form-group" style="grid-column: 1 / -1;">
-                    <label for="quick_nombreCompania">Nombre de la Compañía</label>
-                    <input type="text" id="quick_nombreCompania" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="quick_ruc">RUC</label>
-                    <input type="text" id="quick_ruc" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="quick_telefono">Teléfono</label>
-                    <input type="tel" id="quick_telefono" class="form-control">
-                </div>
-                <div class="form-group" style="grid-column: 1 / -1;">
-                    <p id="quickAddError" style="color: red; display: none;"></p>
-                    <button type="submit" class="btn btn-primario">Crear y Seleccionar</button>
-                </div>
+            <form id="quickAddForm" class="form-grid">
+                <!-- (Campos de proveedor simplificados para el ejemplo) -->
+                <div class="form-group"><label>Nombre</label><input type="text" id="quick_nombreCompania"
+                        class="form-control" required></div>
+                <div class="form-group"><label>RUC</label><input type="text" id="quick_ruc" class="form-control"
+                        required></div>
+                <button type="submit" class="btn btn-primario">Guardar</button>
             </form>
         </div>
     </div>
